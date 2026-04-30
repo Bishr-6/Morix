@@ -262,6 +262,244 @@
         </div>
       </section>
 
+      <!-- ============ 1️⃣ خطة درس ذكية ============ -->
+      <section v-show="cur==='lesson_plan'" class="body pad">
+        <div class="card">
+          <h3>📋 مولد خطط الدروس التكيفي</h3>
+          <input v-model="lp.topic" placeholder="موضوع الدرس" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <input v-model="lp.grade" placeholder="المرحلة (مثال: الصف الخامس)" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <input v-model.number="lp.duration_minutes" type="number" placeholder="المدة بالدقائق" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <textarea v-model="lp.objectives" placeholder="النتائج المرجوة (اختياري)" rows="3" class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn-primary" :disabled="lpLoading" @click="genLessonPlan">{{ lpLoading?'⏳ يولّد...':'🚀 ولّد الخطة' }}</button>
+          <div v-if="lpResult" class="card mt" style="margin-top:16px">
+            <h4 style="color:var(--accent)">{{ lpResult.title || 'الخطة' }}</h4>
+            <div v-if="lpResult.objectives"><b>🎯 الأهداف:</b><ul><li v-for="o in lpResult.objectives" :key="o">{{o}}</li></ul></div>
+            <div v-if="lpResult.warm_up"><b>🔥 التمهيد:</b><p>{{ lpResult.warm_up }}</p></div>
+            <div v-if="lpResult.main_activities"><b>📚 الأنشطة الرئيسية:</b>
+              <div v-for="(a,i) in lpResult.main_activities" :key="i" style="background:var(--card);padding:8px;border-radius:6px;margin:6px 0">
+                <b>{{a.name}}</b> — {{a.duration}} دقيقة<br><span style="color:var(--t2)">{{a.description}}</span>
+              </div>
+            </div>
+            <div v-if="lpResult.assessment"><b>✅ التقييم:</b><p>{{ lpResult.assessment }}</p></div>
+            <div v-if="lpResult.discussion_questions"><b>❓ أسئلة نقاشية:</b><ul><li v-for="q in lpResult.discussion_questions" :key="q">{{q}}</li></ul></div>
+            <div v-if="lpResult.homework"><b>🏠 الواجب:</b><p>{{ lpResult.homework }}</p></div>
+            <div v-if="lpResult.materials"><b>🧰 المواد:</b><p>{{ lpResult.materials.join(' • ') }}</p></div>
+            <pre v-if="lpResult.raw" style="white-space:pre-wrap">{{ lpResult.raw }}</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 2️⃣ محول الوسائط ============ -->
+      <section v-show="cur==='multimedia'" class="body pad">
+        <div class="card">
+          <h3>🔄 محول الوسائط المتعددة</h3>
+          <textarea v-model="mm.text" rows="6" placeholder="ألصق نص الدرس هنا..." class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <button v-for="m in [{k:'bullets',l:'📝 نقاط'},{k:'slides',l:'🎯 شرائح'},{k:'quiz',l:'❓ اختبار'},{k:'mindmap',l:'🧠 خريطة'}]"
+                    :key="m.k" class="btn-s" :class="{active: mm.mode===m.k}" @click="mm.mode=m.k"
+                    :style="{background: mm.mode===m.k?'var(--accent)':'var(--card)'}">{{ m.l }}</button>
+          </div>
+          <button class="btn-primary" :disabled="mmLoading" @click="convertMM">{{ mmLoading?'⏳':'🚀 حوّل' }}</button>
+          <div v-if="mmResult" class="card mt" style="margin-top:16px">
+            <pre v-if="typeof mmResult==='string'" style="white-space:pre-wrap;color:var(--text)">{{ mmResult }}</pre>
+            <div v-else>
+              <div v-if="mmResult.slides"><h4>🎯 الشرائح</h4>
+                <div v-for="(s,i) in mmResult.slides" :key="i" style="background:var(--card);padding:10px;border-radius:8px;margin:6px 0">
+                  <b>{{i+1}}. {{s.title}}</b><ul><li v-for="b in s.bullets" :key="b">{{b}}</li></ul>
+                </div>
+              </div>
+              <div v-if="mmResult.questions"><h4>❓ الأسئلة</h4>
+                <div v-for="(q,i) in mmResult.questions" :key="i" style="background:var(--card);padding:10px;border-radius:8px;margin:6px 0">
+                  <b>{{i+1}}. {{q.q}}</b>
+                  <ul><li v-for="(o,j) in q.options" :key="j" :style="{color: j===q.correct?'#10b981':'var(--text)'}">{{o}}<span v-if="j===q.correct"> ✓</span></li></ul>
+                </div>
+              </div>
+              <div v-if="mmResult.central"><h4>🧠 خريطة المفاهيم: {{ mmResult.central }}</h4>
+                <div v-for="(b,i) in mmResult.branches" :key="i" style="background:var(--card);padding:10px;border-radius:8px;margin:6px 0">
+                  <b>🌿 {{b.label}}</b><ul><li v-for="s in b.sub" :key="s">{{s}}</li></ul>
+                </div>
+              </div>
+              <pre v-if="mmResult.raw" style="white-space:pre-wrap">{{ mmResult.raw }}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 3️⃣ تصميم أنشطة ============ -->
+      <section v-show="cur==='activity'" class="body pad">
+        <div class="card">
+          <h3>🎯 مساعد تصميم الأنشطة الصفية</h3>
+          <input v-model="act.topic" placeholder="موضوع النشاط" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <input v-model.number="act.student_count" type="number" placeholder="عدد الطلاب" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <label style="display:block;margin-bottom:8px;color:var(--text)"><input type="checkbox" v-model="act.has_internet" /> يوجد إنترنت متاح</label>
+          <select v-model="act.activity_type" class="memorix-input" style="width:100%;margin-bottom:8px">
+            <option value="أي">أي نوع</option>
+            <option value="حركي">حركي</option>
+            <option value="جماعي">جماعي</option>
+            <option value="فردي">فردي</option>
+          </select>
+          <textarea v-model="act.constraints" placeholder="قيود إضافية..." rows="2" class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn-primary" :disabled="actLoading" @click="genActivity">{{ actLoading?'⏳':'💡 اقترح أنشطة' }}</button>
+          <div v-if="actResult?.activities" class="mt" style="margin-top:16px">
+            <div v-for="(a,i) in actResult.activities" :key="i" class="card" style="margin-bottom:8px">
+              <h4 style="color:var(--accent)">{{i+1}}. {{a.name}} ({{a.duration_minutes}} دقيقة)</h4>
+              <p><b>🧰 المواد:</b> {{ (a.materials||[]).join(' • ') }}</p>
+              <ol><li v-for="s in a.steps" :key="s">{{s}}</li></ol>
+              <p><b>🎯 المخرجات:</b> {{ (a.learning_outcomes||[]).join(' • ') }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 4️⃣ صياغة رسائل ============ -->
+      <section v-show="cur==='compose'" class="body pad">
+        <div class="card">
+          <h3>✉️ مساعد صياغة الرسائل</h3>
+          <select v-model="cm.recipient" class="memorix-input" style="width:100%;margin-bottom:8px">
+            <option value="ولي الأمر">ولي الأمر</option>
+            <option value="الإدارة">الإدارة</option>
+            <option value="زميل معلم">زميل معلم</option>
+          </select>
+          <select v-model="cm.tone" class="memorix-input" style="width:100%;margin-bottom:8px">
+            <option value="ودودة">ودودة</option>
+            <option value="رسمية">رسمية</option>
+            <option value="حازمة">حازمة</option>
+          </select>
+          <input v-model="cm.student_name" placeholder="اسم الطالب (اختياري)" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <textarea v-model="cm.purpose" rows="2" placeholder="غرض الرسالة..." class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <textarea v-model="cm.notes" rows="3" placeholder="ملاحظات إضافية..." class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn-primary" :disabled="cmLoading" @click="composeMsg">{{ cmLoading?'⏳':'✍️ اكتب الرسالة' }}</button>
+          <div v-if="cmResult" class="card mt" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ cmResult }}</div>
+        </div>
+      </section>
+
+      <!-- ============ 5️⃣ تقارير ذكية ============ -->
+      <section v-show="cur==='feedback'" class="body pad">
+        <div class="card">
+          <h3>📝 أتمتة التقارير التربوية</h3>
+          <input v-model="fb.student_name" placeholder="اسم الطالب" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <input v-model="fb.subject" placeholder="المادة" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <textarea v-model="fb.strengths" rows="2" placeholder="نقاط القوة (اكتب بسرعة، AI ينظمها)" class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <textarea v-model="fb.weaknesses" rows="2" placeholder="نقاط الضعف (اكتب بسرعة، AI ينظمها)" class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn-primary" :disabled="fbLoading" @click="genFeedback">{{ fbLoading?'⏳':'📋 ولّد التقرير' }}</button>
+          <div v-if="fbResult" class="card mt" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ fbResult }}</div>
+        </div>
+      </section>
+
+      <!-- ============ 6️⃣ تحليل الأداء ============ -->
+      <section v-show="cur==='insights'" class="body pad">
+        <div class="card">
+          <h3>📊 محلل بيانات الأداء</h3>
+          <button class="btn-primary" :disabled="insLoading" @click="loadInsights">{{ insLoading?'⏳':'🔍 حلّل الآن' }}</button>
+          <div v-if="insights" style="margin-top:16px">
+            <div v-if="insights.alert" style="padding:12px;background:rgba(251,191,36,.15);border:1px solid #fbbf24;border-radius:8px;margin-bottom:12px;color:#fbbf24">
+              {{ insights.alert }}
+            </div>
+            <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+              <div class="card"><b>👥 الطلاب</b><div style="font-size:24px">{{ insights.total_students }}</div></div>
+              <div class="card"><b>📊 المتوسط</b><div style="font-size:24px">{{ insights.avg_score }}%</div></div>
+              <div class="card"><b>⚠️ مواضيع ضعف</b><div style="font-size:24px">{{ insights.weak_topics?.length || 0 }}</div></div>
+              <div class="card"><b>✅ مواضيع قوة</b><div style="font-size:24px">{{ insights.strong_topics?.length || 0 }}</div></div>
+            </div>
+            <div v-if="insights.weak_topics?.length" class="mt" style="margin-top:12px">
+              <h4 style="color:#ef4444">⚠️ نقاط الضعف</h4>
+              <div v-for="t in insights.weak_topics" :key="t.topic" class="card" style="margin:4px 0">
+                {{ t.topic }} — متوسط: <b>{{ t.avg }}%</b>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 7️⃣ تبسيط المحتوى ============ -->
+      <section v-show="cur==='simplify'" class="body pad">
+        <div class="card">
+          <h3>🔍 مبسط المحتوى</h3>
+          <textarea v-model="sm.text" rows="5" placeholder="النص المراد تبسيطه..." class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <select v-model="sm.level" class="memorix-input" style="width:100%;margin-bottom:8px">
+            <option value="beginner">🟢 مبتدئ (صعوبات تعلم)</option>
+            <option value="intermediate">🟡 متوسط</option>
+            <option value="advanced">🔴 متقدم</option>
+          </select>
+          <button class="btn-primary" :disabled="smLoading" @click="simplify">{{ smLoading?'⏳':'✨ بسّط' }}</button>
+          <div v-if="smResult" class="card mt" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ smResult }}</div>
+        </div>
+      </section>
+
+      <!-- ============ 8️⃣ تعلم متمايز ============ -->
+      <section v-show="cur==='differentiate'" class="body pad">
+        <div class="card">
+          <h3>🌈 استراتيجيات التعلم المتمايز</h3>
+          <input v-model="diff.concept" placeholder="المفهوم التعليمي" class="memorix-input" style="width:100%;margin-bottom:8px" />
+          <button class="btn-primary" :disabled="diffLoading" @click="genDiff">{{ diffLoading?'⏳':'🎨 اقترح طرقاً' }}</button>
+          <div v-if="diffResult" class="mt" style="margin-top:16px;display:grid;gap:8px">
+            <div v-if="diffResult.visual" class="card" style="border-right:4px solid #6366f1">
+              <h4>👁️ بصري</h4>
+              <p><b>الأسلوب:</b> {{ diffResult.visual.approach }}</p>
+              <p><b>النشاط:</b> {{ diffResult.visual.activity }}</p>
+              <p><b>الأدوات:</b> {{ (diffResult.visual.tools||[]).join(' • ') }}</p>
+            </div>
+            <div v-if="diffResult.auditory" class="card" style="border-right:4px solid #10b981">
+              <h4>👂 سمعي</h4>
+              <p><b>الأسلوب:</b> {{ diffResult.auditory.approach }}</p>
+              <p><b>النشاط:</b> {{ diffResult.auditory.activity }}</p>
+              <p><b>الأدوات:</b> {{ (diffResult.auditory.tools||[]).join(' • ') }}</p>
+            </div>
+            <div v-if="diffResult.kinesthetic" class="card" style="border-right:4px solid #f59e0b">
+              <h4>✋ حركي</h4>
+              <p><b>الأسلوب:</b> {{ diffResult.kinesthetic.approach }}</p>
+              <p><b>النشاط:</b> {{ diffResult.kinesthetic.activity }}</p>
+              <p><b>الأدوات:</b> {{ (diffResult.kinesthetic.tools||[]).join(' • ') }}</p>
+            </div>
+            <pre v-if="diffResult.raw" style="white-space:pre-wrap">{{ diffResult.raw }}</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 9️⃣ مدرب تربوي ============ -->
+      <section v-show="cur==='coach'" class="body pad">
+        <div class="card">
+          <h3>🧠 الموجه التربوي الذكي</h3>
+          <textarea v-model="coachInput" rows="4" placeholder="اوصف التحدي الصفي..." class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn-primary" :disabled="coachLoading" @click="askCoach">{{ coachLoading?'⏳':'💬 احصل على نصيحة' }}</button>
+          <div v-if="coachAdvice" class="card mt" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ coachAdvice }}</div>
+        </div>
+      </section>
+
+      <!-- ============ 🔟 أبحاث تربوية ============ -->
+      <section v-show="cur==='research'" class="body pad">
+        <div class="card">
+          <h3>📰 ملخصات الأبحاث التربوية</h3>
+          <button class="btn-primary" :disabled="rdLoading" @click="loadResearch">{{ rdLoading?'⏳':'📡 احصل على ملخصات هذا الأسبوع' }}</button>
+          <div v-if="rdResult?.digest?.length" class="mt" style="margin-top:16px">
+            <div v-for="(r,i) in rdResult.digest" :key="i" class="card" style="margin-bottom:8px">
+              <h4 style="color:var(--accent)">{{i+1}}. {{r.title}}</h4>
+              <p style="color:var(--text)">{{r.summary}}</p>
+              <p style="color:#10b981"><b>💡 نصيحة:</b> {{r.actionable_tip}}</p>
+              <small style="color:var(--t2)">{{r.source_type}}</small>
+            </div>
+          </div>
+          <pre v-else-if="rdResult?.raw" style="white-space:pre-wrap;margin-top:16px">{{ rdResult.raw }}</pre>
+        </div>
+      </section>
+
+      <!-- ============ 1️⃣1️⃣ مكتبة قوالب ============ -->
+      <section v-show="cur==='prompts'" class="body pad">
+        <div class="card">
+          <h3>📚 مكتبة قوالب الـ Prompts</h3>
+          <p style="color:var(--t2);margin-bottom:12px">انسخ القالب وعدّل ما بين [الأقواس] ثم استخدمه في مساعد AI</p>
+          <button v-if="!promptCats.length" class="btn-primary" :disabled="plLoading" @click="loadPrompts">{{ plLoading?'⏳':'📥 حمّل المكتبة' }}</button>
+          <div v-for="cat in promptCats" :key="cat.name" style="margin-top:16px">
+            <h4 style="color:var(--accent)">{{cat.name}}</h4>
+            <div v-for="p in cat.prompts" :key="p.title" class="card" style="margin:6px 0;background:var(--card)">
+              <b>{{p.title}}</b>
+              <p style="color:var(--t2);font-size:13px;margin:6px 0">{{p.template}}</p>
+              <button class="btn-s" @click="copyPrompt(p.template)">📋 نسخ</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== SETTINGS ===== -->
       <section v-show="cur==='settings'" class="body pad">
         <div class="settings-grid">
@@ -334,6 +572,17 @@ const sections = [
   {id:'video',icon:'🎬',label:'سكريبت فيديو'},
   {id:'chat',icon:'💬',label:'مساعد AI'},
   {id:'image',icon:'🎨',label:'توليد صور'},
+  {id:'lesson_plan',icon:'📋',label:'خطة درس ذكية'},
+  {id:'multimedia',icon:'🔄',label:'محول الوسائط'},
+  {id:'activity',icon:'🎯',label:'تصميم أنشطة'},
+  {id:'compose',icon:'✉️',label:'صياغة رسائل'},
+  {id:'feedback',icon:'📝',label:'تقارير ذكية'},
+  {id:'insights',icon:'📊',label:'تحليل الأداء'},
+  {id:'simplify',icon:'🔍',label:'تبسيط المحتوى'},
+  {id:'differentiate',icon:'🌈',label:'تعلم متمايز'},
+  {id:'coach',icon:'🧠',label:'مدرب تربوي'},
+  {id:'research',icon:'📰',label:'أبحاث تربوية'},
+  {id:'prompts',icon:'📚',label:'مكتبة قوالب'},
   {id:'settings',icon:'⚙️',label:'الإعدادات'},
 ]
 
@@ -525,6 +774,140 @@ function fmt(t) {
   return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>')
     .replace(/`(.*?)`/g,'<code>$1</code>').replace(/\n/g,'<br>')
+}
+
+// ============================================================
+// 🎓 ميزات المعلم الذكية (11 ميزة) — State + Methods
+// ============================================================
+
+// 1️⃣ Lesson Plan
+const lp = ref({ topic:'', grade:'', duration_minutes:45, objectives:'' })
+const lpLoading = ref(false)
+const lpResult = ref(null)
+async function genLessonPlan() {
+  if (!lp.value.topic.trim()) return alert('أدخل موضوع الدرس')
+  lpLoading.value = true; lpResult.value = null
+  try { lpResult.value = (await teacherAPI.generateLessonPlan(lp.value)).data.plan }
+  catch (e) { alert('فشل التوليد: ' + (e.response?.data?.detail || e.message)) }
+  lpLoading.value = false
+}
+
+// 2️⃣ Multimedia Convert
+const mm = ref({ text:'', mode:'bullets' })
+const mmLoading = ref(false)
+const mmResult = ref(null)
+async function convertMM() {
+  if (!mm.value.text.trim()) return alert('أدخل النص')
+  mmLoading.value = true; mmResult.value = null
+  try { mmResult.value = (await teacherAPI.multimediaConvert(mm.value.text, mm.value.mode)).data.data }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  mmLoading.value = false
+}
+
+// 3️⃣ Activity Designer
+const act = ref({ topic:'', student_count:30, has_internet:true, activity_type:'أي', constraints:'' })
+const actLoading = ref(false)
+const actResult = ref(null)
+async function genActivity() {
+  if (!act.value.topic.trim()) return alert('أدخل الموضوع')
+  actLoading.value = true; actResult.value = null
+  try { actResult.value = (await teacherAPI.designActivity(act.value)).data }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  actLoading.value = false
+}
+
+// 4️⃣ Compose Message
+const cm = ref({ recipient:'ولي الأمر', tone:'ودودة', purpose:'', student_name:'', notes:'' })
+const cmLoading = ref(false)
+const cmResult = ref('')
+async function composeMsg() {
+  if (!cm.value.purpose.trim()) return alert('اكتب غرض الرسالة')
+  cmLoading.value = true; cmResult.value = ''
+  try { cmResult.value = (await teacherAPI.composeMessage(cm.value)).data.message }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  cmLoading.value = false
+}
+
+// 5️⃣ Auto Feedback
+const fb = ref({ student_name:'', subject:'', strengths:'', weaknesses:'' })
+const fbLoading = ref(false)
+const fbResult = ref('')
+async function genFeedback() {
+  if (!fb.value.strengths.trim() && !fb.value.weaknesses.trim()) return alert('أدخل نقاط القوة أو الضعف')
+  fbLoading.value = true; fbResult.value = ''
+  try { fbResult.value = (await teacherAPI.autoFeedback(fb.value)).data.report }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  fbLoading.value = false
+}
+
+// 6️⃣ Performance Insights
+const insights = ref(null)
+const insLoading = ref(false)
+async function loadInsights() {
+  insLoading.value = true
+  try { insights.value = (await teacherAPI.getPerformanceInsights()).data }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  insLoading.value = false
+}
+
+// 7️⃣ Simplify
+const sm = ref({ text:'', level:'beginner' })
+const smLoading = ref(false)
+const smResult = ref('')
+async function simplify() {
+  if (!sm.value.text.trim()) return alert('أدخل النص')
+  smLoading.value = true; smResult.value = ''
+  try { smResult.value = (await teacherAPI.simplifyContent(sm.value.text, sm.value.level)).data.simplified }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  smLoading.value = false
+}
+
+// 8️⃣ Differentiated Strategies
+const diff = ref({ concept:'' })
+const diffLoading = ref(false)
+const diffResult = ref(null)
+async function genDiff() {
+  if (!diff.value.concept.trim()) return alert('أدخل المفهوم')
+  diffLoading.value = true; diffResult.value = null
+  try { diffResult.value = (await teacherAPI.differentiatedStrategies(diff.value.concept)).data }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  diffLoading.value = false
+}
+
+// 9️⃣ Pedagogical Coach
+const coachInput = ref('')
+const coachLoading = ref(false)
+const coachAdvice = ref('')
+async function askCoach() {
+  if (!coachInput.value.trim()) return alert('اوصف التحدي')
+  coachLoading.value = true; coachAdvice.value = ''
+  try { coachAdvice.value = (await teacherAPI.pedagogicalCoach(coachInput.value)).data.advice }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  coachLoading.value = false
+}
+
+// 🔟 Research Digest
+const rdResult = ref(null)
+const rdLoading = ref(false)
+async function loadResearch() {
+  rdLoading.value = true
+  try { rdResult.value = (await teacherAPI.researchDigest()).data }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  rdLoading.value = false
+}
+
+// 1️⃣1️⃣ Prompt Library
+const promptCats = ref([])
+const plLoading = ref(false)
+async function loadPrompts() {
+  plLoading.value = true
+  try { promptCats.value = (await teacherAPI.promptLibrary()).data.categories || [] }
+  catch (e) { alert('فشل: ' + (e.response?.data?.detail || e.message)) }
+  plLoading.value = false
+}
+function copyPrompt(t) {
+  navigator.clipboard?.writeText(t)
+  alert('✅ تم نسخ القالب')
 }
 </script>
 

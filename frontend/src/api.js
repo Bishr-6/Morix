@@ -160,6 +160,19 @@ export const teacherAPI = {
   // الإعدادات
   getSettings: () => api.get('/teacher/settings'),
   updateSettings: (data) => api.put('/teacher/settings', data),
+
+  // 🎓 الميزات الذكية الجديدة (11)
+  generateLessonPlan: (data) => api.post('/teacher/lesson-plan', data),
+  multimediaConvert: (text, mode) => api.post('/teacher/multimedia-convert', { text, mode }),
+  designActivity: (data) => api.post('/teacher/activity-designer', data),
+  composeMessage: (data) => api.post('/teacher/compose-message', data),
+  autoFeedback: (data) => api.post('/teacher/auto-feedback', data),
+  getPerformanceInsights: () => api.get('/teacher/performance-insights'),
+  simplifyContent: (text, level) => api.post('/teacher/simplify-content', { text, level }),
+  differentiatedStrategies: (concept) => api.post('/teacher/differentiated-strategies', { concept }),
+  pedagogicalCoach: (challenge) => api.post('/teacher/pedagogical-coach', { challenge }),
+  researchDigest: () => api.get('/teacher/research-digest'),
+  promptLibrary: () => api.get('/teacher/prompt-library'),
 }
 
 // ============================================

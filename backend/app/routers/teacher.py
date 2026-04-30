@@ -323,3 +323,366 @@ async def update_settings(body: dict, current_user: dict = Depends(_require_teac
         db.table("users").update({"avatar_url": body["avatar_url"]}).eq("id", current_user["id"]).execute()
 
     return {"message": "تم حفظ الإعدادات"}
+
+
+# ============================================================
+# 🎓 ميزات المعلم الذكية الجديدة (11 ميزة)
+# ============================================================
+async def _ai_text(prompt: str, full_name: str = "Teacher") -> str:
+    """مولد نص عام يستخدم Gemini مع fallback chain"""
+    from app.services.ai_service import chat_with_gemini
+    try:
+        text, _ = await chat_with_gemini(
+            message=prompt,
+            learning_style=None,
+            full_name=full_name,
+            role="teacher",
+            difficulty="medium",
+        )
+        return text or ""
+    except Exception as e:
+        logger.error(f"AI text gen failed: {e}")
+        return ""
+
+
+# 1️⃣ مولد خطط الدروس التكيفي
+@router.post("/lesson-plan")
+async def generate_lesson_plan(
+    body: dict,
+    current_user: dict = Depends(_require_teacher),
+    db=Depends(get_db),
+):
+    topic = (body.get("topic") or "").strip()
+    grade = body.get("grade", "")
+    duration = body.get("duration_minutes", 45)
+    objectives = body.get("objectives", "")
+    if not topic:
+        raise HTTPException(400, "أدخل موضوع الدرس")
+    prompt = f"""أنشئ خطة درس متكاملة بالعربية باستخدام JSON فقط بدون أي شرح خارجي.
+الموضوع: {topic}
+المرحلة: {grade}
+المدة: {duration} دقيقة
+الأهداف المرجوة: {objectives or 'حدد الأهداف بنفسك'}
+
+أرجع JSON بهذه البنية بالضبط:
+{{
+  "title": "عنوان الدرس",
+  "objectives": ["هدف 1", "هدف 2", "هدف 3"],
+  "warm_up": "نشاط تمهيدي 5 دقائق",
+  "main_activities": [
+    {{"name": "نشاط 1", "duration": 10, "description": "..."}},
+    {{"name": "نشاط 2", "duration": 15, "description": "..."}}
+  ],
+  "assessment": "طريقة التقييم",
+  "discussion_questions": ["سؤال 1", "سؤال 2", "سؤال 3"],
+  "homework": "الواجب المنزلي",
+  "materials": ["مادة 1", "مادة 2"]
+}}"""
+    text = await _ai_text(prompt, current_user.get("full_name", ""))
+    import json, re
+    try:
+        m = re.search(r"\{[\s\S]*\}", text)
+        plan = json.loads(m.group(0)) if m else {"raw": text}
+    except Exception:
+        plan = {"raw": text}
+    try:
+        db.table("analytics").insert({
+            "student_id": current_user["id"],
+            "school_id": current_user.get("school_id"),
+            "event_type": "lesson_plan_generated",
+            "event_data": {"topic": topic, "grade": grade},
+        }).execute()
+    except Exception:
+        pass
+    return {"plan": plan}
+
+
+# 2️⃣ محول الوسائط المتعددة (نص → ملخص/شرائح/أسئلة/خريطة)
+@router.post("/multimedia-convert")
+async def multimedia_convert(
+    body: dict,
+    current_user: dict = Depends(_require_teacher),
+):
+    text = (body.get("text") or "").strip()
+    mode = body.get("mode", "bullets")  # bullets | slides | quiz | mindmap
+    if not text:
+        raise HTTPException(400, "أدخل النص المراد تحويله")
+    prompts = {
+        "bullets": f"حول النص التالي إلى قائمة نقاط رئيسية مختصرة وواضحة بالعربية (8-12 نقطة):\n\n{text}\n\nأرجع النقاط فقط مع رمز • قبل كل نقطة.",
+        "slides":  f"حول النص التالي إلى عرض تقديمي 6-8 شرائح. أرجع JSON فقط:\n{{\"slides\":[{{\"title\":\"...\",\"bullets\":[\"...\"]}}]}}\n\nالنص:\n{text}",
+        "quiz":    f"حول النص إلى 5 أسئلة اختيار من متعدد. JSON فقط:\n{{\"questions\":[{{\"q\":\"...\",\"options\":[\"a\",\"b\",\"c\",\"d\"],\"correct\":0}}]}}\n\nالنص:\n{text}",
+        "mindmap": f"حول النص إلى خريطة مفاهيم. JSON فقط:\n{{\"central\":\"الموضوع\",\"branches\":[{{\"label\":\"...\",\"sub\":[\"...\"]}}]}}\n\nالنص:\n{text}",
+    }
+    p = prompts.get(mode, prompts["bullets"])
+    out = await _ai_text(p, current_user.get("full_name", ""))
+    if mode in ("slides", "quiz", "mindmap"):
+        import json, re
+        try:
+            m = re.search(r"\{[\s\S]*\}", out)
+            return {"mode": mode, "data": json.loads(m.group(0)) if m else {"raw": out}}
+        except Exception:
+            return {"mode": mode, "data": {"raw": out}}
+    return {"mode": mode, "data": out}
+
+
+# 3️⃣ مساعد تصميم الأنشطة الصفية
+@router.post("/activity-designer")
+async def design_activity(
+    body: dict,
+    current_user: dict = Depends(_require_teacher),
+):
+    topic = (body.get("topic") or "").strip()
+    student_count = body.get("student_count", 30)
+    has_internet = body.get("has_internet", True)
+    activity_type = body.get("activity_type", "أي")  # حركي / جماعي / فردي
+    constraints = body.get("constraints", "")
+    if not topic:
+        raise HTTPException(400, "أدخل موضوع النشاط")
+    prompt = f"""اقترح 3 أنشطة صفية مبتكرة لموضوع: {topic}
+عدد الطلاب: {student_count}
+متاح إنترنت: {'نعم' if has_internet else 'لا'}
+نوع النشاط المفضل: {activity_type}
+قيود إضافية: {constraints or 'لا يوجد'}
+
+لكل نشاط أعطني JSON بالشكل:
+{{"activities":[{{"name":"...","duration_minutes":N,"materials":["..."],"steps":["1...","2..."],"learning_outcomes":["..."]}}]}}
+أرجع JSON فقط."""
+    out = await _ai_text(prompt, current_user.get("full_name", ""))
+    import json, re
+    try:
+        m = re.search(r"\{[\s\S]*\}", out)
+        return json.loads(m.group(0)) if m else {"raw": out}
+    except Exception:
+        return {"raw": out}
+
+
+# 4️⃣ مساعد صياغة الرسائل الاحترافي
+@router.post("/compose-message")
+async def compose_message(
+    body: dict,
+    current_user: dict = Depends(_require_teacher),
+):
+    purpose = (body.get("purpose") or "").strip()
+    recipient = body.get("recipient", "ولي الأمر")  # ولي أمر / إدارة / زميل
+    tone = body.get("tone", "ودودة")  # ودودة / رسمية / حازمة
+    student_name = body.get("student_name", "")
+    notes = body.get("notes", "")
+    if not purpose:
+        raise HTTPException(400, "اكتب الغرض من الرسالة")
+    prompt = f"""اكتب رسالة احترافية بالعربية موجهة إلى: {recipient}
+نبرة الرسالة: {tone}
+الغرض: {purpose}
+اسم الطالب (إن وُجد): {student_name}
+ملاحظات إضافية: {notes}
+
+اكتب الرسالة كاملة جاهزة للإرسال — تبدأ بـ "السلام عليكم" وتنتهي بختام مناسب."""
+    out = await _ai_text(prompt, current_user.get("full_name", ""))
+    return {"message": out}
+
+
+# 5️⃣ أتمتة التغذية الراجعة
+@router.post("/auto-feedback")
+async def auto_feedback(
+    body: dict,
+    current_user: dict = Depends(_require_teacher),
+):
+    student_name = body.get("student_name", "الطالب")
+    strengths = body.get("strengths", "")
+    weaknesses = body.get("weaknesses", "")
+    subject = body.get("subject", "")
+    if not strengths and not weaknesses:
+        raise HTTPException(400, "أدخل نقاط القوة أو الضعف")
+    prompt = f"""اكتب تقرير تربوي احترافي وداعم للطالب {student_name} في مادة {subject}.
+نقاط القوة (مدخلات سريعة): {strengths}
+نقاط الضعف (مدخلات سريعة): {weaknesses}
+
+التقرير يجب أن يكون:
+- إيجابياً ومحفزاً
+- يبدأ بنقاط القوة
+- يقدم اقتراحات عملية للتحسين
+- ينتهي بتشجيع شخصي
+- 3-4 فقرات منظمة"""
+    out = await _ai_text(prompt, current_user.get("full_name", ""))
+    return {"report": out}
+
+
+# 6️⃣ محلل بيانات أداء الطلاب
+@router.get("/performance-insights")
+async def performance_insights(
+    current_user: dict = Depends(_require_teacher),
+    db=Depends(get_db),
+):
+    insights = {"total_students": 0, "avg_score": 0, "weak_topics": [], "strong_topics": [], "alert": ""}
+    try:
+        school_id = current_user.get("school_id")
+        students = db.table("users").select("id, full_name").eq("role", "student").eq(
+            "school_id", school_id
+        ).eq("is_active", True).execute()
+        insights["total_students"] = len(students.data or [])
+        scores = db.table("analytics").select("event_data").eq(
+            "school_id", school_id
+        ).eq("event_type", "test_completed").limit(200).execute()
+        all_scores = []
+        topic_scores = {}
+        for s in (scores.data or []):
+            d = s.get("event_data") or {}
+            sc = d.get("score")
+            tp = d.get("topic", "عام")
+            if isinstance(sc, (int, float)):
+                all_scores.append(sc)
+                topic_scores.setdefault(tp, []).append(sc)
+        if all_scores:
+            insights["avg_score"] = round(sum(all_scores) / len(all_scores), 1)
+        for tp, lst in topic_scores.items():
+            avg = sum(lst) / len(lst)
+            if avg < 60:
+                insights["weak_topics"].append({"topic": tp, "avg": round(avg, 1)})
+            elif avg >= 80:
+                insights["strong_topics"].append({"topic": tp, "avg": round(avg, 1)})
+        if insights["weak_topics"]:
+            top = insights["weak_topics"][0]
+            insights["alert"] = f"⚠️ {top['topic']} — متوسط {top['avg']}%. هل تعيد شرحه بأسلوب مختلف؟"
+    except Exception as e:
+        logger.error(f"Insights failed: {e}")
+    return insights
+
+
+# 7️⃣ مبسط المحتوى (3 مستويات)
+@router.post("/simplify-content")
+async def simplify_content(
+    body: dict,
+    current_user: dict = Depends(_require_teacher),
+):
+    text = (body.get("text") or "").strip()
+    level = body.get("level", "beginner")  # beginner | intermediate | advanced
+    if not text:
+        raise HTTPException(400, "أدخل النص")
+    level_desc = {
+        "beginner": "بسيط جداً، كلمات سهلة، أمثلة من الحياة اليومية، مناسب لطفل 8 سنوات أو طالب صعوبات تعلم",
+        "intermediate": "متوسط الصعوبة، مناسب لطالب متوسط",
+        "advanced": "متقدم، مفصل، يحتوي مصطلحات علمية دقيقة",
+    }.get(level, "متوسط")
+    prompt = f"""أعد صياغة النص التالي بمستوى: {level_desc}.
+حافظ على المعنى الأصلي لكن عدّل التعقيد اللغوي.
+
+النص الأصلي:
+{text}
+
+أرجع النص المعاد صياغته فقط بدون مقدمة."""
+    out = await _ai_text(prompt, current_user.get("full_name", ""))
+    return {"simplified": out, "level": level}
+
+
+# 8️⃣ مولد استراتيجيات التعلم المتمايز
+@router.post("/differentiated-strategies")
+async def differentiated_strategies(
+    body: dict,
+    current_user: dict = Depends(_require_teacher),
+):
+    concept = (body.get("concept") or "").strip()
+    if not concept:
+        raise HTTPException(400, "أدخل المفهوم")
+    prompt = f"""لدينا مفهوم تعليمي: {concept}
+اقترح 3 طرق لتدريسه تخدم الأنماط الثلاثة (بصري، سمعي، حركي).
+JSON فقط:
+{{
+  "visual": {{"approach":"...","activity":"...","tools":["..."]}},
+  "auditory": {{"approach":"...","activity":"...","tools":["..."]}},
+  "kinesthetic": {{"approach":"...","activity":"...","tools":["..."]}}
+}}"""
+    out = await _ai_text(prompt, current_user.get("full_name", ""))
+    import json, re
+    try:
+        m = re.search(r"\{[\s\S]*\}", out)
+        return json.loads(m.group(0)) if m else {"raw": out}
+    except Exception:
+        return {"raw": out}
+
+
+# 9️⃣ الموجه التربوي الذكي
+@router.post("/pedagogical-coach")
+async def pedagogical_coach(
+    body: dict,
+    current_user: dict = Depends(_require_teacher),
+):
+    challenge = (body.get("challenge") or "").strip()
+    if not challenge:
+        raise HTTPException(400, "اوصف التحدي")
+    prompt = f"""أنت مدرب تربوي خبير عالمياً. معلم يواجه التحدي التالي ويطلب نصيحة:
+
+"{challenge}"
+
+قدم نصيحة عملية مستندة إلى استراتيجيات تربوية معتمدة (مثل CBT, PBIS, Bloom, Vygotsky).
+الرد يجب أن يكون:
+1. تحليل سريع للموقف
+2. 3 استراتيجيات عملية مرقمة
+3. تحذير من خطأ شائع
+4. عبارة تشجيعية للمعلم"""
+    out = await _ai_text(prompt, current_user.get("full_name", ""))
+    return {"advice": out}
+
+
+# 🔟 ملخصات الأبحاث التربوية
+@router.get("/research-digest")
+async def research_digest(
+    current_user: dict = Depends(_require_teacher),
+):
+    subject = current_user.get("subject", "التعليم العام")
+    prompt = f"""أنت محرر مجلة تربوية. لخص 3 اتجاهات بحثية حديثة (2024-2025) في مجال تدريس: {subject}.
+JSON فقط:
+{{
+  "digest": [
+    {{"title":"...", "summary":"3 جمل مكثفة", "actionable_tip":"نصيحة عملية للمعلم", "source_type":"بحث/مقال/تقرير"}}
+  ]
+}}"""
+    out = await _ai_text(prompt, current_user.get("full_name", ""))
+    import json, re
+    try:
+        m = re.search(r"\{[\s\S]*\}", out)
+        return json.loads(m.group(0)) if m else {"digest": [], "raw": out}
+    except Exception:
+        return {"digest": [], "raw": out}
+
+
+# 1️⃣1️⃣ مكتبة قوالب الـ Prompts
+@router.get("/prompt-library")
+async def prompt_library(current_user: dict = Depends(_require_teacher)):
+    return {
+        "categories": [
+            {
+                "name": "📚 خطط الدروس",
+                "prompts": [
+                    {"title": "خطة درس 45 دقيقة", "template": "أنشئ خطة درس عن [الموضوع] للصف [الصف] مدتها 45 دقيقة مع نشاط حركي."},
+                    {"title": "درس مع تجربة عملية", "template": "صمم درساً عن [الموضوع] يتضمن تجربة آمنة للصف [الصف]."},
+                ]
+            },
+            {
+                "name": "📝 الاختبارات والأسئلة",
+                "prompts": [
+                    {"title": "أسئلة بلوم", "template": "اكتب 10 أسئلة عن [الموضوع] موزعة على مستويات بلوم الستة."},
+                    {"title": "اختبار قصير", "template": "اختبار 5 أسئلة MCQ + سؤال مقالي عن [الموضوع]."},
+                ]
+            },
+            {
+                "name": "💬 التواصل",
+                "prompts": [
+                    {"title": "رسالة لولي أمر", "template": "اكتب رسالة ودودة لولي أمر الطالب [الاسم] عن [السبب]."},
+                    {"title": "تقرير سلوك إيجابي", "template": "اكتب تقريراً قصيراً يثني على سلوك الطالب [الاسم] في [الموقف]."},
+                ]
+            },
+            {
+                "name": "🎯 الأنشطة",
+                "prompts": [
+                    {"title": "نشاط جماعي", "template": "صمم نشاطاً جماعياً عن [الموضوع] لـ [العدد] طالب في [المدة] دقيقة."},
+                    {"title": "لعبة تعليمية", "template": "اخترع لعبة تعليمية لتعليم [المفهوم] للصف [الصف]."},
+                ]
+            },
+            {
+                "name": "🧠 التمايز والشمولية",
+                "prompts": [
+                    {"title": "تبسيط مفهوم", "template": "اشرح [المفهوم الصعب] بطريقة بسيطة جداً لطالب صعوبات تعلم."},
+                    {"title": "تحدي للمتفوقين", "template": "صمم تحدياً إثرائياً عن [الموضوع] لطلاب المرحلة [الصف] المتفوقين."},
+                ]
+            },
+        ]
+    }
