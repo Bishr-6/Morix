@@ -1,6 +1,0 @@
-{
-  "experimentalServices": {
-    "frontend": { ... },
-    "backend": { ... }
-  }
-}
