@@ -396,6 +396,121 @@
         </div>
       </section>
 
+      <!-- ===== 🏆 LEADERBOARD ===== -->
+      <section v-show="currentSection === 'leaderboard'" class="section-body pad">
+        <div class="card">
+          <h3 style="margin-bottom:16px">🏆 أبطال مدرستك — أفضل 10 طلاب</h3>
+          <div v-if="!leaderboard.length" style="color:var(--text2);text-align:center;padding:32px">جاري التحميل...</div>
+          <div v-for="u in leaderboard" :key="u.id"
+               :style="{display:'flex',alignItems:'center',gap:12,padding:'12px',marginBottom:'8px',borderRadius:'12px',background:u.is_me?'linear-gradient(90deg,rgba(99,102,241,.25),transparent)':'var(--card)',border:u.is_me?'2px solid var(--accent)':'1px solid var(--border)'}">
+            <div style="font-size:24px;font-weight:bold;width:40px;text-align:center">
+              <span v-if="u.rank===1">🥇</span>
+              <span v-else-if="u.rank===2">🥈</span>
+              <span v-else-if="u.rank===3">🥉</span>
+              <span v-else style="color:var(--text2)">#{{ u.rank }}</span>
+            </div>
+            <img v-if="u.avatar_url" :src="u.avatar_url" style="width:42px;height:42px;border-radius:50%;object-fit:cover" />
+            <div v-else style="width:42px;height:42px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold">
+              {{ (u.full_name||'?').charAt(0) }}
+            </div>
+            <div style="flex:1">
+              <div style="font-weight:bold;color:var(--text)">{{ u.full_name }} <span v-if="u.is_me" style="font-size:12px;color:var(--accent)">(أنت)</span></div>
+              <div style="font-size:12px;color:var(--text2)">{{ u.grade }}</div>
+            </div>
+            <div style="text-align:left">
+              <div style="color:#fbbf24;font-weight:bold">⭐ {{ u.stars_count }}</div>
+              <div style="font-size:12px;color:#f97316">🔥 {{ u.streak_count }}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 🎯 DAILY CHALLENGE ===== -->
+      <section v-show="currentSection === 'daily'" class="section-body pad">
+        <div class="card" style="max-width:600px;margin:0 auto">
+          <h3 style="margin-bottom:16px">🎯 التحدي اليومي</h3>
+          <div v-if="dailyState==='loading'" style="text-align:center;color:var(--text2);padding:32px">جاري التحميل...</div>
+          <div v-else-if="dailyState==='answered'" style="text-align:center;padding:32px">
+            <div style="font-size:64px">✅</div>
+            <h3 style="margin:12px 0">أجبت على تحدي اليوم!</h3>
+            <p style="color:var(--text2)">عد غداً لتحدي جديد 🌅</p>
+            <p style="color:#fbbf24;margin-top:12px">⭐ كسبت {{ dailyResult?.stars_earned || 0 }} نجمة</p>
+          </div>
+          <div v-else-if="dailyState==='ready' && dailyChallenge?.question">
+            <div style="background:var(--card);padding:12px;border-radius:8px;margin-bottom:16px;font-size:13px;color:var(--text2)">
+              📚 المادة: <strong style="color:var(--text)">{{ dailyChallenge.subject }}</strong>
+            </div>
+            <h4 style="color:var(--text);margin-bottom:16px">{{ dailyChallenge.question.question || dailyChallenge.question.q }}</h4>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button v-for="(opt,i) in (dailyChallenge.question.options || [])" :key="i"
+                      @click="answerDaily(opt, i)"
+                      :disabled="dailyAnswering"
+                      class="btn-primary" style="text-align:right">
+                {{ opt.text || opt }}
+              </button>
+            </div>
+          </div>
+          <div v-else-if="dailyState==='result'" style="text-align:center;padding:24px">
+            <div style="font-size:64px">{{ dailyResult?.stars_earned >= 25 ? '🎉' : '💪' }}</div>
+            <h3 style="margin:12px 0">{{ dailyResult?.message }}</h3>
+          </div>
+          <div v-else style="color:var(--text2);text-align:center">لا يوجد تحدي اليوم، حاول غداً.</div>
+        </div>
+      </section>
+
+      <!-- ===== ⏱️ POMODORO ===== -->
+      <section v-show="currentSection === 'pomodoro'" class="section-body pad">
+        <div class="card" style="max-width:500px;margin:0 auto;text-align:center">
+          <h3 style="margin-bottom:24px">⏱️ مؤقت بومودورو</h3>
+          <div style="font-size:96px;font-weight:bold;color:var(--accent);font-family:monospace">
+            {{ pomoDisplay }}
+          </div>
+          <div style="margin:12px 0;color:var(--text2)">
+            {{ pomoMode==='work' ? '🎯 وقت التركيز' : '☕ استراحة' }}
+            — جلسة #{{ pomoSessions+1 }}
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+            <button @click="startPomo" v-if="!pomoRunning" class="btn-primary">▶️ ابدأ</button>
+            <button @click="pausePomo" v-else class="btn-primary">⏸️ إيقاف</button>
+            <button @click="resetPomo" class="btn-primary" style="background:var(--bg3)">🔄 تصفير</button>
+          </div>
+          <div v-if="pomoMessage" style="margin-top:16px;color:#fbbf24">{{ pomoMessage }}</div>
+        </div>
+      </section>
+
+      <!-- ===== 😊 MOOD ===== -->
+      <section v-show="currentSection === 'mood'" class="section-body pad">
+        <div class="card" style="max-width:600px;margin:0 auto">
+          <h3 style="margin-bottom:16px">😊 كيف تشعر اليوم؟</h3>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+            <button v-for="m in moods" :key="m.key"
+                    @click="logMood(m.key)"
+                    class="btn-primary"
+                    style="flex-direction:column;padding:20px;background:var(--card);border:1px solid var(--border)">
+              <div style="font-size:36px">{{ m.emoji }}</div>
+              <div style="margin-top:8px;color:var(--text)">{{ m.label }}</div>
+            </button>
+          </div>
+          <div v-if="moodSuggestion" style="padding:16px;background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(99,102,241,.05));border-radius:12px;border:1px solid var(--accent);color:var(--text)">
+            {{ moodSuggestion }}
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 🌅 REFLECTION ===== -->
+      <section v-show="currentSection === 'reflection'" class="section-body pad">
+        <div class="card" style="max-width:600px;margin:0 auto">
+          <h3 style="margin-bottom:8px">🌅 التأمل اليومي</h3>
+          <p style="color:var(--text2);margin-bottom:16px">ماذا تعلمت اليوم؟ ما هو أفضل جزء من يومك الدراسي؟</p>
+          <textarea v-model="reflectionText" rows="6" class="memorix-input"
+                    placeholder="اكتب تأملك هنا..." style="width:100%;resize:vertical"></textarea>
+          <button @click="saveReflection" :disabled="!reflectionText.trim()" class="btn-primary" style="margin-top:12px">
+            💾 احفظ + 3 نجوم
+          </button>
+          <div v-if="reflectionMessage" style="margin-top:12px;color:#fbbf24">{{ reflectionMessage }}</div>
+        </div>
+      </section>
+
       <!-- ===== PROGRESS ===== -->
       <section v-show="currentSection === 'progress'" class="section-body pad">
         <div class="stats-grid">
@@ -503,6 +618,11 @@ const sections = [
   { id:'worksheets',icon:'📋',label:'أوراق العمل' },
   { id:'image',icon:'🎨',label:'توليد صور' },
   { id:'video',icon:'🎬',label:'سكريبت فيديو' },
+  { id:'leaderboard',icon:'🏆',label:'لوحة المتصدرين' },
+  { id:'daily',icon:'🎯',label:'التحدي اليومي' },
+  { id:'pomodoro',icon:'⏱️',label:'بومودورو' },
+  { id:'mood',icon:'😊',label:'مزاجي اليوم' },
+  { id:'reflection',icon:'🌅',label:'التأمل اليومي' },
   { id:'progress',icon:'📊',label:'تقدمي' },
   { id:'settings',icon:'⚙️',label:'الإعدادات' },
 ]
@@ -651,6 +771,116 @@ async function switchSection(id) {
   else if (id==='tests' && !tests.value.length) { testsLoading.value=true; try { tests.value=(await studentAPI.getTests()).data } catch {} finally { testsLoading.value=false } }
   else if (id==='worksheets' && !worksheets.value.length) { wsLoading.value=true; try { worksheets.value=(await studentAPI.getWorksheets()).data } catch {} finally { wsLoading.value=false } }
   else if (id==='games') { try { pastGames.value=(await studentAPI.getGames()).data } catch {} }
+  else if (id==='leaderboard') { try { leaderboard.value=(await studentAPI.getLeaderboard()).data } catch {} }
+  else if (id==='daily') { await loadDailyChallenge() }
+}
+
+// ========== 🏆 Leaderboard ==========
+const leaderboard = ref([])
+
+// ========== 🎯 Daily Challenge ==========
+const dailyState = ref('loading') // loading | ready | answered | result
+const dailyChallenge = ref(null)
+const dailyResult = ref(null)
+const dailyAnswering = ref(false)
+async function loadDailyChallenge() {
+  dailyState.value = 'loading'
+  try {
+    const r = await studentAPI.getDailyChallenge()
+    if (r.data.already_answered) {
+      dailyState.value = 'answered'
+      dailyResult.value = r.data.result
+    } else if (r.data.question) {
+      dailyChallenge.value = r.data
+      dailyState.value = 'ready'
+    } else {
+      dailyState.value = 'empty'
+    }
+  } catch { dailyState.value = 'empty' }
+}
+async function answerDaily(opt, idx) {
+  if (dailyAnswering.value) return
+  dailyAnswering.value = true
+  const q = dailyChallenge.value.question
+  const correctIdx = q.correct ?? q.answer ?? q.correct_index ?? 0
+  const correct = (typeof opt === 'object' && opt.correct) || idx === correctIdx
+  try {
+    const r = await studentAPI.answerDailyChallenge(correct)
+    dailyResult.value = r.data
+    dailyState.value = 'result'
+    await loadProgress()
+  } catch {}
+  dailyAnswering.value = false
+}
+
+// ========== ⏱️ Pomodoro ==========
+const pomoSeconds = ref(25 * 60)
+const pomoRunning = ref(false)
+const pomoMode = ref('work')
+const pomoSessions = ref(0)
+const pomoMessage = ref('')
+let pomoInterval = null
+const pomoDisplay = computed(() => {
+  const m = String(Math.floor(pomoSeconds.value / 60)).padStart(2, '0')
+  const s = String(pomoSeconds.value % 60).padStart(2, '0')
+  return `${m}:${s}`
+})
+function startPomo() {
+  pomoRunning.value = true
+  pomoMessage.value = ''
+  pomoInterval = setInterval(async () => {
+    if (pomoSeconds.value > 0) { pomoSeconds.value-- }
+    else {
+      clearInterval(pomoInterval); pomoRunning.value = false
+      if (pomoMode.value === 'work') {
+        pomoSessions.value++
+        try {
+          const r = await studentAPI.logFocusSession(25, 'pomodoro')
+          pomoMessage.value = r.data.message
+          await loadProgress()
+        } catch {}
+        pomoMode.value = 'break'; pomoSeconds.value = 5 * 60
+      } else {
+        pomoMode.value = 'work'; pomoSeconds.value = 25 * 60
+        pomoMessage.value = '☕ انتهت الاستراحة! ابدأ جلسة جديدة'
+      }
+    }
+  }, 1000)
+}
+function pausePomo() { pomoRunning.value = false; clearInterval(pomoInterval) }
+function resetPomo() {
+  pausePomo(); pomoMode.value = 'work'; pomoSeconds.value = 25 * 60
+  pomoSessions.value = 0; pomoMessage.value = ''
+}
+
+// ========== 😊 Mood ==========
+const moods = [
+  { key:'happy', emoji:'😄', label:'سعيد' },
+  { key:'focused', emoji:'🎯', label:'مركّز' },
+  { key:'tired', emoji:'😴', label:'متعب' },
+  { key:'stressed', emoji:'😰', label:'متوتر' },
+  { key:'bored', emoji:'😐', label:'ممل' },
+  { key:'neutral', emoji:'🙂', label:'عادي' },
+]
+const moodSuggestion = ref('')
+async function logMood(key) {
+  try {
+    const r = await studentAPI.logMood(key)
+    moodSuggestion.value = r.data.suggestion
+  } catch {}
+}
+
+// ========== 🌅 Reflection ==========
+const reflectionText = ref('')
+const reflectionMessage = ref('')
+async function saveReflection() {
+  try {
+    const r = await studentAPI.saveReflection(reflectionText.value)
+    reflectionMessage.value = r.data.message
+    reflectionText.value = ''
+    await loadProgress()
+    setTimeout(() => { reflectionMessage.value = '' }, 4000)
+  } catch {}
 }
 
 // ========== Diagnostic ==========

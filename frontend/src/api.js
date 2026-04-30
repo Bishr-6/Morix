@@ -83,6 +83,28 @@ export const studentAPI = {
 
   // الشكاوى
   submitComplaint: (data) => api.post('/student/complaints', data),
+
+  // 🏆 لوحة المتصدرين
+  getLeaderboard: () => api.get('/student/leaderboard'),
+
+  // 🎯 التحدي اليومي
+  getDailyChallenge: () => api.get('/student/daily-challenge'),
+  answerDailyChallenge: (correct) => api.post('/student/daily-challenge/answer', { correct }),
+
+  // 😊 الحالة المزاجية
+  logMood: (mood, note = '') => api.post('/student/mood', { mood, note }),
+  getMoodHistory: () => api.get('/student/mood/history'),
+
+  // ⏱️ بومودورو
+  logFocusSession: (durationMinutes, technique = 'pomodoro') =>
+    api.post('/student/focus-session', { duration_minutes: durationMinutes, technique }),
+
+  // 🧠 شخصية المعلم الذكي
+  getTutorPersonalities: () => api.get('/student/tutor-personalities'),
+  setTutorPersonality: (personality) => api.post('/student/tutor-personality', { personality }),
+
+  // 🌅 التأمل اليومي
+  saveReflection: (text) => api.post('/student/reflection', { text }),
 }
 
 // ============================================

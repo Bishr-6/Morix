@@ -389,3 +389,225 @@ async def submit_complaint(
         "content": complaint.content,
     }).execute()
     return {"message": "تم إرسال شكواك بنجاح. شكراً لك!"}
+
+
+# ============================================
+# 🏆 لوحة المتصدرين
+# ============================================
+@router.get("/leaderboard")
+async def get_leaderboard(current_user: dict = Depends(_require_student), db=Depends(get_db)):
+    school_id = current_user.get("school_id")
+    query = db.table("users").select(
+        "id, full_name, avatar_url, grade, stars_count, streak_count"
+    ).eq("role", "student").eq("is_active", True)
+    if school_id:
+        query = query.eq("school_id", school_id)
+    result = query.order("stars_count", desc=True).limit(10).execute()
+    leaders = []
+    for i, u in enumerate(result.data or []):
+        leaders.append({
+            "rank": i + 1,
+            "id": u["id"],
+            "full_name": u.get("full_name", ""),
+            "avatar_url": u.get("avatar_url"),
+            "grade": u.get("grade", ""),
+            "stars_count": u.get("stars_count", 0) or 0,
+            "streak_count": u.get("streak_count", 0) or 0,
+            "is_me": u["id"] == current_user["id"],
+        })
+    return leaders
+
+
+# ============================================
+# 🎯 التحدي اليومي
+# ============================================
+@router.get("/daily-challenge")
+async def get_daily_challenge(current_user: dict = Depends(_require_student), db=Depends(get_db)):
+    today = date.today().isoformat()
+    try:
+        existing = db.table("analytics").select("event_data").eq(
+            "student_id", current_user["id"]
+        ).eq("event_type", "daily_challenge").gte("created_at", today).execute()
+        if existing.data:
+            return {"already_answered": True, "result": existing.data[0]["event_data"]}
+    except Exception:
+        pass
+    import random
+    subjects = ["الرياضيات", "العلوم", "اللغة العربية", "الفيزياء", "الكيمياء", "التاريخ", "الجغرافيا", "الأحياء"]
+    subject = random.choice(subjects)
+    try:
+        from app.services.ai_service import generate_game_content
+        content = await generate_game_content("mcq", subject, "")
+        if content and content.get("items"):
+            q = content["items"][0]
+            return {"already_answered": False, "question": q, "subject": subject}
+    except Exception as e:
+        logger.error(f"Daily challenge gen failed: {e}")
+    return {"already_answered": False, "question": None, "subject": subject}
+
+
+@router.post("/daily-challenge/answer")
+async def answer_daily_challenge(
+    body: dict,
+    current_user: dict = Depends(_require_student),
+    db=Depends(get_db),
+):
+    correct = bool(body.get("correct", False))
+    stars_earned = 25 if correct else 5
+    try:
+        streak = db.table("streaks").select("*").eq("user_id", current_user["id"]).execute()
+        if streak.data:
+            current_stars = streak.data[0].get("total_stars", 0) or 0
+            new_total = current_stars + stars_earned
+            db.table("streaks").update({"total_stars": new_total}).eq("user_id", current_user["id"]).execute()
+            db.table("users").update({"stars_count": new_total}).eq("id", current_user["id"]).execute()
+    except Exception:
+        pass
+    try:
+        db.table("analytics").insert({
+            "student_id": current_user["id"],
+            "school_id": current_user.get("school_id"),
+            "event_type": "daily_challenge",
+            "event_data": {"correct": correct, "stars_earned": stars_earned},
+        }).execute()
+    except Exception:
+        pass
+    return {
+        "stars_earned": stars_earned,
+        "message": f"✅ أحسنت! كسبت {stars_earned} نجمة!" if correct else f"💪 كسبت {stars_earned} نجمة على المحاولة، حاول غداً!",
+    }
+
+
+# ============================================
+# 😊 متتبع الحالة المزاجية + نصائح ذكية
+# ============================================
+@router.post("/mood")
+async def log_mood(
+    body: dict,
+    current_user: dict = Depends(_require_student),
+    db=Depends(get_db),
+):
+    mood = body.get("mood", "neutral")
+    note = body.get("note", "")
+    suggestions = {
+        "happy":   "🌟 أنت في قمة طاقتك! استغل هذا الوقت في حل اختبار صعب.",
+        "focused": "🎯 تركيزك ممتاز! ابدأ جلسة بومودورو 25 دقيقة الآن.",
+        "tired":   "😴 خذ استراحة قصيرة، شاهد فيديو تعليمي خفيف بدل القراءة.",
+        "stressed":"🧘 تنفس بعمق. جرب البطاقات التعليمية لمراجعة سريعة بدون ضغط.",
+        "bored":   "🎮 العب لعبة تعليمية تفاعلية لإحياء حماسك!",
+        "neutral": "📚 ابدأ بمراجعة موضوع تحبه قبل الانتقال للصعب.",
+    }
+    try:
+        db.table("analytics").insert({
+            "student_id": current_user["id"],
+            "school_id": current_user.get("school_id"),
+            "event_type": "mood_tracker",
+            "event_data": {"mood": mood, "note": note},
+        }).execute()
+    except Exception:
+        pass
+    return {"suggestion": suggestions.get(mood, suggestions["neutral"]), "mood": mood}
+
+
+@router.get("/mood/history")
+async def mood_history(current_user: dict = Depends(_require_student), db=Depends(get_db)):
+    try:
+        res = db.table("analytics").select("event_data, created_at").eq(
+            "student_id", current_user["id"]
+        ).eq("event_type", "mood_tracker").order("created_at", desc=True).limit(7).execute()
+        return res.data or []
+    except Exception:
+        return []
+
+
+# ============================================
+# ⏱️ تسجيل جلسات بومودورو
+# ============================================
+@router.post("/focus-session")
+async def log_focus_session(
+    body: dict,
+    current_user: dict = Depends(_require_student),
+    db=Depends(get_db),
+):
+    duration = int(body.get("duration_minutes", 25))
+    technique = body.get("technique", "pomodoro")
+    bonus_stars = 2 if duration >= 25 else 1
+    try:
+        db.table("analytics").insert({
+            "student_id": current_user["id"],
+            "school_id": current_user.get("school_id"),
+            "event_type": "focus_session",
+            "event_data": {"duration_minutes": duration, "technique": technique, "stars": bonus_stars},
+        }).execute()
+        streak = db.table("streaks").select("*").eq("user_id", current_user["id"]).execute()
+        if streak.data:
+            cur = streak.data[0].get("total_stars", 0) or 0
+            db.table("streaks").update({"total_stars": cur + bonus_stars}).eq("user_id", current_user["id"]).execute()
+            db.table("users").update({"stars_count": cur + bonus_stars}).eq("id", current_user["id"]).execute()
+    except Exception:
+        pass
+    return {"stars_earned": bonus_stars, "message": f"🎉 رائع! أكملت {duration} دقيقة تركيز وكسبت {bonus_stars} نجمة!"}
+
+
+# ============================================
+# 🧠 شخصية المعلم الذكي
+# ============================================
+TUTOR_PERSONALITIES = {
+    "friend":   {"name": "صديق مرح", "emoji": "😄", "style": "ودود، يستخدم النكات والأمثلة من الحياة اليومية"},
+    "strict":   {"name": "أستاذ صارم", "emoji": "🎓", "style": "رسمي، دقيق، يركز على القواعد والمفاهيم العلمية"},
+    "coach":    {"name": "مدرب تحفيزي", "emoji": "💪", "style": "متحمس، يستخدم لغة رياضية، يحفزك دائماً"},
+    "scientist":{"name": "عالم فضولي", "emoji": "🔬", "style": "يحب الاستكشاف، يطرح أسئلة مفتوحة، يربط بالعلم"},
+}
+
+
+@router.get("/tutor-personalities")
+async def list_tutor_personalities(current_user: dict = Depends(_require_student)):
+    return [{"key": k, **v} for k, v in TUTOR_PERSONALITIES.items()]
+
+
+@router.post("/tutor-personality")
+async def set_tutor_personality(
+    body: dict,
+    current_user: dict = Depends(_require_student),
+    db=Depends(get_db),
+):
+    key = body.get("personality", "friend")
+    if key not in TUTOR_PERSONALITIES:
+        raise HTTPException(400, "شخصية غير معروفة")
+    try:
+        db.table("user_settings").upsert({
+            "user_id": current_user["id"],
+            "tutor_personality": key,
+        }).execute()
+    except Exception:
+        pass
+    return {"message": f"تم اختيار: {TUTOR_PERSONALITIES[key]['name']}", "personality": key}
+
+
+# ============================================
+# 🌅 التأمل اليومي
+# ============================================
+@router.post("/reflection")
+async def save_reflection(
+    body: dict,
+    current_user: dict = Depends(_require_student),
+    db=Depends(get_db),
+):
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(400, "اكتب تأملك")
+    try:
+        db.table("analytics").insert({
+            "student_id": current_user["id"],
+            "school_id": current_user.get("school_id"),
+            "event_type": "reflection",
+            "event_data": {"text": text},
+        }).execute()
+        streak = db.table("streaks").select("*").eq("user_id", current_user["id"]).execute()
+        if streak.data:
+            cur = streak.data[0].get("total_stars", 0) or 0
+            db.table("streaks").update({"total_stars": cur + 3}).eq("user_id", current_user["id"]).execute()
+            db.table("users").update({"stars_count": cur + 3}).eq("id", current_user["id"]).execute()
+    except Exception:
+        pass
+    return {"stars_earned": 3, "message": "🌟 شكراً لمشاركتك تأملك اليومي! +3 نجوم"}
