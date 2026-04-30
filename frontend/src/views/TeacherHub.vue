@@ -511,6 +511,70 @@
         </div>
       </section>
 
+      <!-- ===== 📚 DIGITAL LIBRARY (IFRAME) ===== -->
+      <section v-show="cur==='library'" class="body pad">
+        <div class="card">
+          <h3>📚 المكتبة الرقمية المجانية للمعلمين</h3>
+          <p style="color:var(--t2);margin-bottom:12px">آلاف المراجع والكتب التربوية مجانية</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <button v-for="src in libSources" :key="src.url"
+                    @click="libUrl = src.url"
+                    class="btn-s"
+                    :style="{background: libUrl===src.url?'var(--accent)':'var(--card)',padding:'8px 14px'}">
+              {{ src.icon }} {{ src.label }}
+            </button>
+            <a :href="libUrl" target="_blank" class="btn-s" style="background:#10b981;padding:8px 14px;text-decoration:none;color:#fff">🔗 فتح في تبويب جديد</a>
+          </div>
+          <div style="background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+            <iframe :src="libUrl"
+                    style="width:100%;height:75vh;border:none;background:#fff"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                    referrerpolicy="no-referrer"
+                    loading="lazy">
+            </iframe>
+          </div>
+          <p style="color:var(--t2);font-size:12px;margin-top:8px">💡 لو لم تظهر المكتبة، اضغط "فتح في تبويب جديد"</p>
+        </div>
+      </section>
+
+      <!-- ===== 📓 NOTEBOOKLM (IFRAME) ===== -->
+      <section v-show="cur==='notebook'" class="body pad">
+        <div class="card">
+          <h3>📓 NotebookLM — مساعد الأبحاث من Google</h3>
+          <p style="color:var(--t2);margin-bottom:12px">ارفع المراجع والمناهج، اطلب ملخصات، خرائط، وبودكاست AI تلقائي</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <a href="https://notebooklm.google.com/" target="_blank" class="btn-s" style="background:#4285f4;padding:8px 14px;text-decoration:none;color:#fff">🔗 فتح NotebookLM</a>
+            <a href="https://notebooklm.google.com/notebook/new" target="_blank" class="btn-s" style="background:#10b981;padding:8px 14px;text-decoration:none;color:#fff">➕ دفتر جديد</a>
+            <button @click="nbTab='iframe'" class="btn-s" :style="{background:nbTab==='iframe'?'var(--accent)':'var(--card)',padding:'8px 14px'}">📺 عرض داخلي</button>
+            <button @click="nbTab='guide'" class="btn-s" :style="{background:nbTab==='guide'?'var(--accent)':'var(--card)',padding:'8px 14px'}">📖 الدليل</button>
+          </div>
+          <div v-if="nbTab==='iframe'" style="background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+            <iframe src="https://notebooklm.google.com/"
+                    style="width:100%;height:75vh;border:none;background:#fff"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    allow="clipboard-write"
+                    loading="lazy">
+            </iframe>
+            <div style="padding:8px;background:rgba(251,191,36,.1);border-top:1px solid #fbbf24;color:#fbbf24;font-size:12px;text-align:center">
+              ⚠️ Google قد يمنع تشغيل NotebookLM داخل iframe — استخدم "فتح NotebookLM" أعلاه
+            </div>
+          </div>
+          <div v-else class="card" style="background:var(--card);margin-top:8px">
+            <h4>🎯 استخدامات للمعلم في NotebookLM:</h4>
+            <ol style="line-height:2;color:var(--text)">
+              <li>📤 ارفع كتاب المنهج كـ PDF — اطلب ملخصاً لكل وحدة</li>
+              <li>📝 ولّد أسئلة اختبارات تلقائياً من الكتاب</li>
+              <li>🎙️ Audio Overview — بودكاست لشرح المحتوى لطلابك</li>
+              <li>🗺️ خرائط مفاهيم تلقائية للوحدات الصعبة</li>
+              <li>💬 محادثة مع المرجع — اسأل أي شيء عن الكتاب</li>
+              <li>📚 ادمج عدة مراجع في دفتر واحد للتدريس المتكامل</li>
+            </ol>
+            <p style="margin-top:12px;color:#10b981">✅ مجاني تماماً مع حساب Google — جرّبه!</p>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== SETTINGS ===== -->
       <section v-show="cur==='settings'" class="body pad">
         <div class="settings-grid">
@@ -594,6 +658,8 @@ const sections = [
   {id:'coach',icon:'🧠',label:'مدرب تربوي'},
   {id:'research',icon:'📰',label:'أبحاث تربوية'},
   {id:'prompts',icon:'📚',label:'مكتبة قوالب'},
+  {id:'library',icon:'📚',label:'المكتبة الرقمية'},
+  {id:'notebook',icon:'📓',label:'NotebookLM'},
   {id:'settings',icon:'⚙️',label:'الإعدادات'},
 ]
 
@@ -936,6 +1002,18 @@ function copyPrompt(t) {
   navigator.clipboard?.writeText(t)
   alert('✅ تم نسخ القالب')
 }
+
+// 📚 Digital Library + 📓 NotebookLM
+const libSources = [
+  { label:'مؤسسة هنداوي', icon:'🇪🇬', url:'https://www.hindawi.org/books/' },
+  { label:'مكتبة نور', icon:'📖', url:'https://www.noor-book.com/' },
+  { label:'الشاملة', icon:'📜', url:'https://shamela.ws/' },
+  { label:'Open Library', icon:'🌍', url:'https://openlibrary.org/' },
+  { label:'Internet Archive', icon:'🏛️', url:'https://archive.org/details/texts' },
+  { label:'ERIC تربوي', icon:'🎓', url:'https://eric.ed.gov/' },
+]
+const libUrl = ref(libSources[0].url)
+const nbTab = ref('iframe')
 </script>
 
 <style scoped>

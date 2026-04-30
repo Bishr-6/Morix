@@ -511,6 +511,69 @@
         </div>
       </section>
 
+      <!-- ===== 📚 DIGITAL LIBRARY (IFRAME) ===== -->
+      <section v-show="currentSection === 'library'" class="section-body pad">
+        <div class="card">
+          <h3 style="margin-bottom:8px">📚 المكتبة الرقمية المجانية</h3>
+          <p style="color:var(--text2);margin-bottom:12px">آلاف الكتب العربية والمراجع التعليمية مجانية</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <button v-for="src in libSources" :key="src.url"
+                    @click="libUrl = src.url"
+                    class="btn-primary"
+                    :style="{background: libUrl===src.url?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px'}">
+              {{ src.icon }} {{ src.label }}
+            </button>
+            <a :href="libUrl" target="_blank" class="btn-primary" style="background:#10b981;padding:8px 14px;fontSize:13px;text-decoration:none">🔗 فتح في تبويب جديد</a>
+          </div>
+          <div style="background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+            <iframe :src="libUrl"
+                    style="width:100%;height:75vh;border:none;background:#fff"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                    referrerpolicy="no-referrer"
+                    loading="lazy">
+            </iframe>
+          </div>
+          <p style="color:var(--text2);font-size:12px;margin-top:8px">💡 لو لم تظهر المكتبة، اضغط "فتح في تبويب جديد" — بعض المواقع تمنع الـ iframe لحماية المستخدم</p>
+        </div>
+      </section>
+
+      <!-- ===== 📓 NOTEBOOKLM (IFRAME) ===== -->
+      <section v-show="currentSection === 'notebook'" class="section-body pad">
+        <div class="card">
+          <h3 style="margin-bottom:8px">📓 NotebookLM — مساعد الدراسة من Google</h3>
+          <p style="color:var(--text2);margin-bottom:12px">ارفع كتبك ومذكراتك، واسأل AI أسئلة عنها، واصنع ملخصات وبودكاست تلقائياً</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <a href="https://notebooklm.google.com/" target="_blank" class="btn-primary" style="background:#4285f4;padding:8px 14px;font-size:13px;text-decoration:none">🔗 فتح NotebookLM</a>
+            <a href="https://notebooklm.google.com/notebook/new" target="_blank" class="btn-primary" style="background:#10b981;padding:8px 14px;font-size:13px;text-decoration:none">➕ دفتر جديد</a>
+            <button @click="nbTab = 'iframe'" class="btn-primary" :style="{background: nbTab==='iframe'?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px'}">📺 عرض داخلي</button>
+            <button @click="nbTab = 'guide'" class="btn-primary" :style="{background: nbTab==='guide'?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px'}">📖 الدليل</button>
+          </div>
+          <div v-if="nbTab==='iframe'" style="background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border);position:relative">
+            <iframe src="https://notebooklm.google.com/"
+                    style="width:100%;height:75vh;border:none;background:#fff"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    allow="clipboard-write"
+                    loading="lazy">
+            </iframe>
+            <div style="padding:8px;background:rgba(251,191,36,.1);border-top:1px solid #fbbf24;color:#fbbf24;font-size:12px;text-align:center">
+              ⚠️ Google يمنع تشغيل NotebookLM داخل iframe لأسباب أمنية. اضغط "فتح NotebookLM" أعلاه
+            </div>
+          </div>
+          <div v-else class="card" style="background:var(--card);margin-top:8px">
+            <h4>🚀 كيف تستخدم NotebookLM للدراسة:</h4>
+            <ol style="line-height:2;color:var(--text)">
+              <li>📤 ارفع ملف PDF لكتابك أو مذكراتك (حتى 50 ملف)</li>
+              <li>💬 اسأل AI أسئلة عن المحتوى — يجاوب بناءً على الكتاب فقط</li>
+              <li>📝 اطلب ملخصاً، خريطة ذهنية، أو بطاقات مراجعة</li>
+              <li>🎙️ ولّد بودكاست صوتي لشخصين يناقشان الكتاب (Audio Overview)</li>
+              <li>📋 احفظ الملاحظات والاقتباسات لمراجعتها لاحقاً</li>
+            </ol>
+            <p style="margin-top:12px;color:#10b981">✅ مجاني تماماً بحساب Google</p>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== PROGRESS ===== -->
       <section v-show="currentSection === 'progress'" class="section-body pad">
         <div class="stats-grid">
@@ -623,6 +686,8 @@ const sections = [
   { id:'pomodoro',icon:'⏱️',label:'بومودورو' },
   { id:'mood',icon:'😊',label:'مزاجي اليوم' },
   { id:'reflection',icon:'🌅',label:'التأمل اليومي' },
+  { id:'library',icon:'📚',label:'المكتبة الرقمية' },
+  { id:'notebook',icon:'📓',label:'NotebookLM' },
   { id:'progress',icon:'📊',label:'تقدمي' },
   { id:'settings',icon:'⚙️',label:'الإعدادات' },
 ]
@@ -869,6 +934,20 @@ async function logMood(key) {
     moodSuggestion.value = r.data.suggestion
   } catch {}
 }
+
+// ========== 📚 Digital Library ==========
+const libSources = [
+  { label:'مؤسسة هنداوي', icon:'🇪🇬', url:'https://www.hindawi.org/books/' },
+  { label:'مكتبة نور', icon:'📖', url:'https://www.noor-book.com/' },
+  { label:'الشاملة', icon:'📜', url:'https://shamela.ws/' },
+  { label:'Open Library', icon:'🌍', url:'https://openlibrary.org/' },
+  { label:'Internet Archive', icon:'🏛️', url:'https://archive.org/details/texts' },
+  { label:'Project Gutenberg', icon:'📚', url:'https://www.gutenberg.org/' },
+]
+const libUrl = ref(libSources[0].url)
+
+// ========== 📓 NotebookLM ==========
+const nbTab = ref('iframe')
 
 // ========== 🌅 Reflection ==========
 const reflectionText = ref('')
