@@ -247,3 +247,88 @@ async def add_book(
     }).execute()
 
     return result.data[0] if result.data else {"message": "تم إضافة الكتاب"}
+
+
+# ============================================================
+# 👔 ميزات المدير المتقدمة
+# ============================================================
+
+@router.get("/compare-schools")
+async def compare_schools(current_user: dict = Depends(require_manager), db=Depends(get_db)):
+    """مقارنة أداء عدة مدارس جنباً لجنب"""
+    try:
+        schools = db.table("schools").select("id, name").execute()
+        comparison = []
+        for sc in (schools.data or []):
+            users = db.table("users").select("id, role, last_login").eq("school_id", sc["id"]).eq("is_active", True).execute()
+            students = [u for u in (users.data or []) if u.get("role") == "student"]
+            teachers = [u for u in (users.data or []) if u.get("role") == "teacher"]
+            from datetime import datetime, timedelta, timezone
+            week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+            active = sum(1 for u in (users.data or []) if u.get("last_login", "") >= week_ago)
+            health = min(100, int((active / max(len(users.data or []), 1)) * 100))
+            comparison.append({
+                "school_id": sc["id"],
+                "school_name": sc["name"],
+                "students": len(students),
+                "teachers": len(teachers),
+                "active_week": active,
+                "health_score": health,
+                "ratio": round(len(students) / max(len(teachers), 1), 1),
+            })
+        return sorted(comparison, key=lambda x: -x["health_score"])
+    except Exception as e:
+        logger.error(f"Compare failed: {e}")
+        return []
+
+
+@router.post("/strategic-advisor")
+async def strategic_advisor(
+    body: dict,
+    current_user: dict = Depends(require_manager),
+):
+    """مستشار استراتيجي ذكي"""
+    question = (body.get("question") or "").strip()
+    context = body.get("context", "")
+    if not question:
+        raise HTTPException(400, "اطرح سؤالك الاستراتيجي")
+    from app.services.ai_service import chat_with_gemini
+    prompt = f"""أنت مستشار استراتيجي تعليمي خبير.
+سياق المستخدم: {context or 'مدير مدارس متعددة'}
+السؤال: {question}
+
+قدم استشارة استراتيجية شاملة:
+1. تحليل الموقف
+2. 3 خيارات استراتيجية مع إيجابيات/سلبيات
+3. التوصية النهائية مع خطة تنفيذ مرحلية
+4. مؤشرات نجاح قابلة للقياس (KPIs)"""
+    try:
+        text, _ = await chat_with_gemini(prompt, None, full_name=current_user.get("full_name", ""), role="manager")
+        return {"advice": text}
+    except Exception:
+        return {"advice": "تعذر الاتصال بـ AI"}
+
+
+@router.get("/health-score")
+async def franchise_health(current_user: dict = Depends(require_manager), db=Depends(get_db)):
+    """درجة صحية شاملة لكل المدارس"""
+    try:
+        schools = db.table("schools").select("id, name, setup_completed").execute()
+        scored = []
+        from datetime import datetime, timedelta, timezone
+        week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        for sc in (schools.data or []):
+            users = db.table("users").select("id, last_login").eq("school_id", sc["id"]).execute()
+            total = len(users.data or [])
+            if total == 0:
+                scored.append({"school_id": sc["id"], "name": sc["name"], "score": 20, "status": "🔴 فارغة"})
+                continue
+            active = sum(1 for u in users.data if u.get("last_login", "") >= week)
+            engagement = (active / total) * 100
+            score = int(engagement * 0.6 + (40 if sc.get("setup_completed") else 0))
+            status_label = "🟢 ممتازة" if score >= 75 else "🟡 جيدة" if score >= 50 else "🟠 ضعيفة" if score >= 25 else "🔴 حرجة"
+            scored.append({"school_id": sc["id"], "name": sc["name"], "score": score, "status": status_label, "users": total, "active_week": active})
+        return sorted(scored, key=lambda x: -x["score"])
+    except Exception as e:
+        logger.error(f"Health failed: {e}")
+        return []

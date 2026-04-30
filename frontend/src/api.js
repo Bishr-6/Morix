@@ -48,6 +48,10 @@ export const managerAPI = {
   getBooks: () => api.get('/manager/books'),
   addBook: (data) => api.post('/manager/books', data),
   getSavedPasswords: (schoolId) => api.get(`/manager/passwords/${schoolId}`),
+  // 👔 ميزات المدير المتقدمة
+  compareSchools: () => api.get('/manager/compare-schools'),
+  strategicAdvisor: (question, context = '') => api.post('/manager/strategic-advisor', { question, context }),
+  healthScore: () => api.get('/manager/health-score'),
 }
 
 // ============================================
@@ -188,6 +192,11 @@ export const adminAPI = {
   }),
   getSettings: () => api.get('/admin/settings'),
   updateSettings: (data) => api.put('/admin/settings', data),
+  // 🏫 ميزات إداري متقدمة
+  schoolPulse: () => api.get('/admin/school-pulse'),
+  makeAnnouncement: (data) => api.post('/admin/announcement', data),
+  listAnnouncements: () => api.get('/admin/announcements'),
+  incidentReport: (data) => api.post('/admin/incident-report', data),
 }
 
 // ============================================
@@ -200,6 +209,11 @@ export const ownerAPI = {
   getUsers: () => api.get('/owner/users'),
   toggleUser: (id) => api.put(`/owner/users/${id}/toggle`),
   getSchools: () => api.get('/owner/schools'),
+  // 👑 ميزات المالك المتقدمة
+  platformPulse: () => api.get('/owner/platform-pulse'),
+  aiCost: () => api.get('/owner/ai-cost'),
+  churnRisk: () => api.get('/owner/churn-risk'),
+  broadcast: (data) => api.post('/owner/broadcast', data),
 }
 
 export default api

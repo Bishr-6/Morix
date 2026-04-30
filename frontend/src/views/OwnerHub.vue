@@ -88,6 +88,63 @@
         </div>
       </section>
 
+      <!-- ===== 💓 PULSE ===== -->
+      <section v-show="cur==='pulse'" class="body pad">
+        <div class="card">
+          <h3>💓 نبض المنصة لحظياً</h3>
+          <button class="btn-p" @click="loadPulse" :disabled="pulseLoading">{{ pulseLoading?'⏳':'🔄 تحديث' }}</button>
+          <div v-if="pulse" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px">
+            <div class="card"><b>👥 إجمالي المستخدمين</b><div style="font-size:32px;color:var(--accent)">{{ pulse.total_users }}</div></div>
+            <div class="card"><b>🟢 نشط اليوم</b><div style="font-size:32px;color:#10b981">{{ pulse.active_today }}</div></div>
+            <div class="card"><b>📅 نشط هذا الأسبوع</b><div style="font-size:32px;color:#10b981">{{ pulse.active_this_week }}</div></div>
+            <div class="card"><b>🤖 استدعاءات AI</b><div style="font-size:32px;color:#a855f7">{{ pulse.ai_calls_week }}</div></div>
+            <div class="card"><b>📣 شكاوى مفتوحة</b><div style="font-size:32px;color:#ef4444">{{ pulse.open_complaints }}</div></div>
+            <div class="card"><b>💪 درجة الصحة</b><div style="font-size:32px;color:#fbbf24">{{ pulse.health_score }}/100</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 💰 AI COST ===== -->
+      <section v-show="cur==='aicost'" class="body pad">
+        <div class="card">
+          <h3>💰 تقدير تكلفة AI</h3>
+          <button class="btn-p" @click="loadAiCost" :disabled="aiCostLoading">{{ aiCostLoading?'⏳':'📊 احسب' }}</button>
+          <div v-if="aiCost" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+            <div class="card"><b>📞 الاستدعاءات هذا الأسبوع</b><div style="font-size:28px;color:var(--accent)">{{ aiCost.calls_this_week }}</div></div>
+            <div class="card"><b>💵 التكلفة الأسبوعية</b><div style="font-size:28px;color:#10b981">${{ aiCost.estimated_cost_usd }}</div></div>
+            <div class="card"><b>📅 تقدير شهري</b><div style="font-size:28px;color:#fbbf24">${{ aiCost.estimated_monthly_cost }}</div></div>
+            <div class="card"><b>♻️ توفير من الكاش</b><div style="font-size:18px;color:#10b981">{{ aiCost.savings_from_cache }}</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ⚠️ CHURN ===== -->
+      <section v-show="cur==='churn'" class="body pad">
+        <div class="card">
+          <h3>⚠️ مخاطر إلغاء اشتراك المدارس</h3>
+          <button class="btn-p" @click="loadChurn" :disabled="churnLoading">{{ churnLoading?'⏳':'🔍 تحليل' }}</button>
+          <div v-if="churn" style="margin-top:16px">
+            <div v-if="!churn.at_risk_schools?.length" style="color:#10b981">✅ لا توجد مدارس في خطر الإلغاء حالياً</div>
+            <div v-for="s in (churn.at_risk_schools||[])" :key="s.school_id" class="card" :style="{margin:'8px 0',borderRight:`4px solid ${s.risk_level==='high'?'#ef4444':'#fbbf24'}`}">
+              <h4>{{ s.school_name }}</h4>
+              <p>نسبة عدم النشاط: <b style="color:#ef4444">{{ s.inactive_pct }}%</b></p>
+              <p>مستوى الخطر: <span :style="{color:s.risk_level==='high'?'#ef4444':'#fbbf24'}">{{ s.risk_level==='high'?'🔴 عالي':'🟡 متوسط' }}</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 📢 BROADCAST ===== -->
+      <section v-show="cur==='broadcast'" class="body pad">
+        <div class="card">
+          <h3>📢 بث رسالة لكل المنصة</h3>
+          <input v-model="bcTitle" class="inp" placeholder="عنوان الإعلان" style="width:100%;margin-bottom:8px" />
+          <textarea v-model="bcContent" class="inp" rows="5" placeholder="محتوى الرسالة..." style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn-p" @click="sendBroadcast" :disabled="bcLoading">{{ bcLoading?'⏳':'📡 بث الآن' }}</button>
+          <div v-if="bcMsg" style="margin-top:12px;color:#10b981">{{ bcMsg }}</div>
+        </div>
+      </section>
+
       <!-- ===== USERS ===== -->
       <section v-show="cur==='users'" class="body pad">
         <div class="card">
@@ -129,6 +186,10 @@ const router = useRouter()
 
 const sections = [
   {id:'overview',icon:'📊',label:'نظرة عامة'},
+  {id:'pulse',icon:'💓',label:'نبض المنصة'},
+  {id:'aicost',icon:'💰',label:'تكلفة AI'},
+  {id:'churn',icon:'⚠️',label:'مخاطر الإلغاء'},
+  {id:'broadcast',icon:'📢',label:'بث رسالة'},
   {id:'complaints',icon:'📣',label:'الشكاوى'},
   {id:'users',icon:'👥',label:'كل المستخدمين'},
 ]
@@ -186,6 +247,21 @@ async function toggleUser(id) {
 
 async function doLogout() { await auth.logout(); router.push('/login') }
 function fmtDate(d) { return d?new Date(d).toLocaleDateString('ar-SA'):'' }
+
+// 👑 ميزات المالك المتقدمة
+const pulse = ref(null), pulseLoading = ref(false)
+async function loadPulse() { pulseLoading.value=true; try { pulse.value=(await ownerAPI.platformPulse()).data } catch(e){alert('فشل')} pulseLoading.value=false }
+const aiCost = ref(null), aiCostLoading = ref(false)
+async function loadAiCost() { aiCostLoading.value=true; try { aiCost.value=(await ownerAPI.aiCost()).data } catch(e){alert('فشل')} aiCostLoading.value=false }
+const churn = ref(null), churnLoading = ref(false)
+async function loadChurn() { churnLoading.value=true; try { churn.value=(await ownerAPI.churnRisk()).data } catch(e){alert('فشل')} churnLoading.value=false }
+const bcTitle = ref(''), bcContent = ref(''), bcLoading = ref(false), bcMsg = ref('')
+async function sendBroadcast() {
+  if (!bcContent.value.trim()) return alert('اكتب محتوى الرسالة')
+  bcLoading.value=true; bcMsg.value=''
+  try { const r = await ownerAPI.broadcast({title:bcTitle.value,content:bcContent.value}); bcMsg.value=r.data.message; bcTitle.value=''; bcContent.value='' }
+  catch(e){alert('فشل')} bcLoading.value=false
+}
 </script>
 
 <style scoped>

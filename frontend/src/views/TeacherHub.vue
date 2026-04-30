@@ -170,20 +170,31 @@
               {{ pptLoading?'⏳ جاري التوليد...':'✨ توليد المخطط' }}
             </button>
           </div>
-          <div v-if="pptSlides.length" class="result-box">
+          <div v-if="pptHtml" class="result-box" style="margin-top:16px">
+            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+              <button class="btn-s" @click="downloadPpt">⬇ تحميل HTML</button>
+              <button class="btn-s" @click="openPptNewTab">🔗 فتح في نافذة جديدة</button>
+              <button class="btn-s" @click="copyText(pptResult)">📋 نسخ JSON</button>
+            </div>
+            <iframe :srcdoc="pptHtml"
+                    style="width:100%;height:600px;border:2px solid var(--accent);border-radius:16px;background:#0f172a"
+                    sandbox="allow-scripts allow-same-origin allow-popups">
+            </iframe>
+            <p style="color:var(--t2);font-size:12px;margin-top:8px">💡 استخدم أزرار التنقل أو ← → بلوحة المفاتيح، أو زر ملء الشاشة</p>
+          </div>
+          <div v-if="pptSlides.length" class="result-box" style="margin-top:16px">
+            <h4 style="color:var(--accent);margin-bottom:8px">📋 الشرائح كنص:</h4>
             <div v-for="slide in pptSlides" :key="slide.slide" class="ppt-slide">
-              <div class="ppt-num">شريحة {{ slide.slide }}</div>
+              <div class="ppt-num">شريحة {{ slide.slide || (pptSlides.indexOf(slide)+1) }}</div>
               <div class="ppt-title">{{ slide.title }}</div>
               <ul class="ppt-points">
-                <li v-for="pt in slide.points" :key="pt">{{ pt }}</li>
+                <li v-for="pt in (slide.points || slide.bullets || [])" :key="pt">{{ pt }}</li>
               </ul>
               <div v-if="slide.notes" class="ppt-notes">💡 {{ slide.notes }}</div>
             </div>
-            <button class="btn-s" style="margin-top:10px" @click="copyText(pptResult)">📋 نسخ JSON</button>
           </div>
-          <div v-else-if="pptResult" class="result-box">
+          <div v-else-if="pptResult && !pptHtml" class="result-box">
             <pre class="code-block">{{ pptResult }}</pre>
-            <button class="btn-s" style="margin-top:10px" @click="copyText(pptResult)">📋 نسخ</button>
           </div>
         </div>
       </section>
@@ -714,15 +725,31 @@ function viewWs(ws) { activeWs.value=ws }
 async function viewStudentProgress(id) { try { studentProgress.value=(await teacherAPI.getStudentProgress(id)).data } catch {} }
 
 async function genPPT() {
-  pptLoading.value=true; pptResult.value=''; pptSlides.value=[]
+  pptLoading.value=true; pptResult.value=''; pptSlides.value=[]; pptHtml.value=''
   try {
     const r = await teacherAPI.generatePPT({title:pptTitle.value,subject:pptSubject.value,content:pptContent.value})
-    pptResult.value = r.data.outline
-    // محاولة تحليل JSON لعرض الشرائح بشكل جميل
-    try { pptSlides.value = JSON.parse(r.data.outline) } catch { pptSlides.value = [] }
+    pptResult.value = typeof r.data.outline === 'string' ? r.data.outline : JSON.stringify(r.data.outline, null, 2)
+    pptHtml.value = r.data.html || ''
+    // استخراج الشرائح كنص
+    try {
+      const parsed = typeof r.data.outline === 'string' ? JSON.parse(r.data.outline) : r.data.outline
+      pptSlides.value = parsed.slides || (Array.isArray(parsed) ? parsed : [])
+    } catch { pptSlides.value = [] }
   }
-  catch { pptResult.value='تعذر توليد المخطط. تأكد من صلاحية مفتاح Gemini API.' }
+  catch (e) { pptResult.value='تعذر توليد المخطط. تأكد من صلاحية مفتاح Gemini API.' }
   finally { pptLoading.value=false }
+}
+const pptHtml = ref('')
+function downloadPpt() {
+  const blob = new Blob([pptHtml.value], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `${pptTitle.value || 'morix-presentation'}.html`
+  a.click(); URL.revokeObjectURL(url)
+}
+function openPptNewTab() {
+  const w = window.open('', '_blank')
+  if (w) { w.document.write(pptHtml.value); w.document.close() }
 }
 
 async function onTFileAttach(e) {

@@ -245,3 +245,100 @@ async def update_settings(body: dict, current_user: dict = Depends(_require_admi
         db.table("users").update({"avatar_url": body["avatar_url"]}).eq("id", current_user["id"]).execute()
 
     return {"message": "تم حفظ الإعدادات"}
+
+
+# ============================================================
+# 🏫 ميزات الإداري المتقدمة
+# ============================================================
+
+@router.get("/school-pulse")
+async def school_pulse(current_user: dict = Depends(_require_admin), db=Depends(get_db)):
+    """نبض المدرسة لحظياً"""
+    sid = current_user.get("school_id")
+    if not sid:
+        return {"error": "no_school"}
+    try:
+        from datetime import datetime, timedelta, timezone
+        today = datetime.now(timezone.utc).date().isoformat()
+        week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        users = db.table("users").select("id, role, last_login").eq("school_id", sid).execute()
+        all_u = users.data or []
+        students = [u for u in all_u if u.get("role") == "student"]
+        teachers = [u for u in all_u if u.get("role") == "teacher"]
+        active_today = sum(1 for u in all_u if u.get("last_login", "") >= today)
+        active_week = sum(1 for u in all_u if u.get("last_login", "") >= week)
+        ai_calls = db.table("analytics").select("id", count="exact").eq("school_id", sid).gte("created_at", week).execute()
+        return {
+            "students": len(students),
+            "teachers": len(teachers),
+            "active_today": active_today,
+            "active_week": active_week,
+            "ai_calls_week": ai_calls.count or 0,
+            "engagement_pct": round((active_week / max(len(all_u), 1)) * 100, 1),
+        }
+    except Exception as e:
+        logger.error(f"Pulse failed: {e}")
+        return {}
+
+
+@router.post("/announcement")
+async def make_announcement(
+    body: dict,
+    current_user: dict = Depends(_require_admin),
+    db=Depends(get_db),
+):
+    """إعلان مدرسي"""
+    title = (body.get("title") or "").strip()
+    content = (body.get("content") or "").strip()
+    if not title or not content:
+        raise HTTPException(400, "أدخل العنوان والمحتوى")
+    try:
+        db.table("analytics").insert({
+            "student_id": current_user["id"],
+            "school_id": current_user.get("school_id"),
+            "event_type": "school_announcement",
+            "event_data": {"title": title, "content": content},
+        }).execute()
+    except Exception:
+        pass
+    return {"message": "✅ تم نشر الإعلان"}
+
+
+@router.get("/announcements")
+async def list_announcements(current_user: dict = Depends(_require_admin), db=Depends(get_db)):
+    try:
+        sid = current_user.get("school_id")
+        res = db.table("analytics").select("event_data, created_at").eq(
+            "school_id", sid
+        ).eq("event_type", "school_announcement").order("created_at", desc=True).limit(20).execute()
+        return res.data or []
+    except Exception:
+        return []
+
+
+@router.post("/incident-report")
+async def incident_report(
+    body: dict,
+    current_user: dict = Depends(_require_admin),
+):
+    """مساعد كتابة تقارير حوادث/سلوك بـ AI"""
+    summary = (body.get("summary") or "").strip()
+    incident_type = body.get("type", "سلوكي")
+    if not summary:
+        raise HTTPException(400, "اكتب ملخص الحادثة")
+    from app.services.ai_service import chat_with_gemini
+    prompt = f"""اكتب تقرير {incident_type} مدرسي رسمي ومنظم مبني على المعلومات التالية:
+{summary}
+
+التقرير يجب أن يحتوي:
+- التاريخ والوقت (ضع [اكتب التاريخ])
+- الأطراف المعنية
+- وصف الحادثة بشكل موضوعي
+- الإجراءات المتخذة
+- التوصيات
+بنبرة رسمية محايدة."""
+    try:
+        text, _ = await chat_with_gemini(prompt, None, full_name=current_user.get("full_name", ""), role="admin")
+        return {"report": text}
+    except Exception:
+        return {"report": "تعذر التوليد"}

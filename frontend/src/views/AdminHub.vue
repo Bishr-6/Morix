@@ -121,6 +121,56 @@
         </div>
       </section>
 
+      <!-- ===== 💓 SCHOOL PULSE ===== -->
+      <section v-show="cur==='pulse'" class="body pad">
+        <div class="card">
+          <h3>💓 نبض المدرسة</h3>
+          <button class="btn-p" @click="loadPulse" :disabled="pulseLoading">{{ pulseLoading?'⏳':'🔄 تحديث' }}</button>
+          <div v-if="pulse" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px">
+            <div class="card"><b>👨‍🎓 الطلاب</b><div style="font-size:32px;color:var(--accent)">{{ pulse.students }}</div></div>
+            <div class="card"><b>👨‍🏫 المعلمون</b><div style="font-size:32px;color:#a855f7">{{ pulse.teachers }}</div></div>
+            <div class="card"><b>🟢 نشط اليوم</b><div style="font-size:32px;color:#10b981">{{ pulse.active_today }}</div></div>
+            <div class="card"><b>📅 نشط أسبوعياً</b><div style="font-size:32px;color:#10b981">{{ pulse.active_week }}</div></div>
+            <div class="card"><b>🤖 استدعاءات AI</b><div style="font-size:32px;color:#fbbf24">{{ pulse.ai_calls_week }}</div></div>
+            <div class="card"><b>💪 التفاعل</b><div style="font-size:32px;color:#fbbf24">{{ pulse.engagement_pct }}%</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 📢 ANNOUNCEMENTS ===== -->
+      <section v-show="cur==='announce'" class="body pad">
+        <div class="card">
+          <h3>📢 إعلانات المدرسة</h3>
+          <input v-model="annTitle" class="inp" placeholder="عنوان الإعلان" style="width:100%;margin-bottom:8px" />
+          <textarea v-model="annContent" class="inp" rows="4" placeholder="محتوى الإعلان..." style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn-p" @click="postAnnouncement" :disabled="annLoading">{{ annLoading?'⏳':'📡 نشر' }}</button>
+          <div v-if="annMsg" style="margin-top:12px;color:#10b981">{{ annMsg }}</div>
+          <h4 style="margin-top:24px">📜 السابقة</h4>
+          <button class="btn-s" @click="loadAnnouncements">🔄 تحميل</button>
+          <div v-for="(a,i) in announcements" :key="i" class="card" style="margin:8px 0">
+            <b>{{ a.event_data?.title }}</b>
+            <p style="color:var(--t2);font-size:12px">{{ new Date(a.created_at).toLocaleString('ar') }}</p>
+            <p>{{ a.event_data?.content }}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 📋 INCIDENT REPORT ===== -->
+      <section v-show="cur==='incident'" class="body pad">
+        <div class="card">
+          <h3>📋 مساعد كتابة تقارير الحوادث (AI)</h3>
+          <select v-model="incType" class="inp" style="width:100%;margin-bottom:8px">
+            <option value="سلوكي">تقرير سلوكي</option>
+            <option value="أكاديمي">تقرير أكاديمي</option>
+            <option value="حادثة">حادثة</option>
+            <option value="إصابة">إصابة</option>
+          </select>
+          <textarea v-model="incSummary" class="inp" rows="5" placeholder="ملخص الموقف بكلمات بسيطة..." style="width:100%;margin-bottom:8px"></textarea>
+          <button class="btn-p" @click="genIncident" :disabled="incLoading">{{ incLoading?'⏳':'✍️ ولّد التقرير' }}</button>
+          <div v-if="incReport" class="card" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ incReport }}</div>
+        </div>
+      </section>
+
       <!-- ===== SETTINGS ===== -->
       <section v-show="cur==='settings'" class="body pad">
         <div class="settings-grid">
@@ -197,6 +247,9 @@ const sections = [
   { id:'overview', icon:'🏠', label:'نظرة عامة' },
   { id:'students', icon:'👨‍🎓', label:'الطلاب' },
   { id:'upload',   icon:'📊', label:'رفع Excel' },
+  { id:'pulse',    icon:'💓', label:'نبض المدرسة' },
+  { id:'announce', icon:'📢', label:'الإعلانات' },
+  { id:'incident', icon:'📋', label:'تقرير حادثة AI' },
   { id:'settings', icon:'⚙️', label:'الإعدادات' },
 ]
 
@@ -296,6 +349,33 @@ async function onAdminAvatarUpload(e) {
 }
 
 async function doLogout() { await auth.logout(); router.push('/login') }
+
+// 🏫 ميزات الإداري المتقدمة
+const pulse = ref(null), pulseLoading = ref(false)
+async function loadPulse() { pulseLoading.value=true; try { pulse.value=(await adminAPI.schoolPulse()).data } catch(e){alert('فشل')} pulseLoading.value=false }
+
+const annTitle = ref(''), annContent = ref(''), annLoading = ref(false), annMsg = ref('')
+const announcements = ref([])
+async function postAnnouncement() {
+  if (!annTitle.value.trim() || !annContent.value.trim()) return alert('أدخل العنوان والمحتوى')
+  annLoading.value=true
+  try {
+    const r = await adminAPI.makeAnnouncement({title:annTitle.value, content:annContent.value})
+    annMsg.value=r.data.message; annTitle.value=''; annContent.value=''
+    await loadAnnouncements()
+  } catch(e) { alert('فشل') }
+  annLoading.value=false
+}
+async function loadAnnouncements() { try { announcements.value=(await adminAPI.listAnnouncements()).data } catch {} }
+
+const incType = ref('سلوكي'), incSummary = ref(''), incLoading = ref(false), incReport = ref('')
+async function genIncident() {
+  if (!incSummary.value.trim()) return alert('اكتب الملخص')
+  incLoading.value=true; incReport.value=''
+  try { incReport.value=(await adminAPI.incidentReport({type:incType.value, summary:incSummary.value})).data.report }
+  catch(e) { alert('فشل') }
+  incLoading.value=false
+}
 </script>
 
 <style scoped>

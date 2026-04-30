@@ -239,7 +239,75 @@ async def generate_ppt(body: dict, current_user: dict = Depends(_require_teacher
     if not result:
         raise HTTPException(status_code=500, detail="فشل توليد مخطط العرض")
 
-    return {"outline": result}
+    # توليد HTML قابل للعرض في iframe (مع أنيميشن وتنقل بين الشرائح)
+    html = _build_ppt_html(title, result)
+    return {"outline": result, "html": html}
+
+
+def _build_ppt_html(title: str, outline) -> str:
+    """تحويل مخطط العرض إلى HTML تفاعلي للـ iframe"""
+    import json as _j
+    slides = []
+    if isinstance(outline, dict) and outline.get("slides"):
+        slides = outline["slides"]
+    elif isinstance(outline, list):
+        slides = outline
+    elif isinstance(outline, str):
+        try:
+            parsed = _j.loads(outline)
+            slides = parsed.get("slides", []) if isinstance(parsed, dict) else parsed
+        except Exception:
+            slides = [{"title": title, "bullets": [outline]}]
+    if not slides:
+        slides = [{"title": title, "bullets": ["لا توجد شرائح"]}]
+    safe = lambda s: (s or "").replace("<", "&lt;").replace(">", "&gt;")
+    slides_html = ""
+    for i, sl in enumerate(slides):
+        bullets = sl.get("bullets") or sl.get("points") or []
+        if isinstance(bullets, str):
+            bullets = [bullets]
+        bul = "".join(f"<li>{safe(str(b))}</li>" for b in bullets)
+        slides_html += f"""
+        <div class="slide" data-i="{i}">
+            <div class="slide-num">{i+1} / {len(slides)}</div>
+            <h1>{safe(sl.get('title', f'شريحة {i+1}'))}</h1>
+            <ul>{bul}</ul>
+        </div>"""
+    return f"""<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{safe(title)}</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:'Tajawal',Tahoma,sans-serif;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}}
+.deck{{width:90%;max-width:900px;height:80vh;position:relative}}
+.slide{{position:absolute;inset:0;background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(236,72,153,.05));border:2px solid rgba(99,102,241,.4);border-radius:24px;padding:48px;display:none;flex-direction:column;backdrop-filter:blur(10px);box-shadow:0 20px 60px rgba(0,0,0,.5);animation:fadeIn .5s}}
+.slide.active{{display:flex}}
+.slide h1{{font-size:36px;color:#a5b4fc;margin-bottom:24px;border-bottom:3px solid #6366f1;padding-bottom:12px}}
+.slide ul{{list-style:none;flex:1;overflow-y:auto}}
+.slide li{{font-size:22px;margin:14px 0;padding:14px 20px;background:rgba(255,255,255,.06);border-radius:12px;border-right:4px solid #6366f1;line-height:1.7}}
+.slide-num{{position:absolute;top:20px;left:24px;color:#94a3b8;font-size:14px;background:rgba(0,0,0,.3);padding:6px 14px;border-radius:20px}}
+.controls{{margin-top:20px;display:flex;gap:12px;align-items:center}}
+.btn{{background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;padding:12px 24px;border-radius:12px;font-size:16px;cursor:pointer;font-family:inherit;font-weight:bold;transition:transform .2s}}
+.btn:hover{{transform:scale(1.05)}}
+.btn:disabled{{opacity:.4;cursor:not-allowed;transform:none}}
+.indicator{{color:#a5b4fc;font-size:18px;font-weight:bold;min-width:80px;text-align:center}}
+@keyframes fadeIn{{from{{opacity:0;transform:translateX(40px)}}to{{opacity:1;transform:translateX(0)}}}}
+</style></head><body>
+<div class="deck">{slides_html}</div>
+<div class="controls">
+  <button class="btn" id="prev">⬅ السابق</button>
+  <span class="indicator" id="ind">1 / {len(slides)}</span>
+  <button class="btn" id="next">التالي ➡</button>
+  <button class="btn" id="full">⛶ ملء الشاشة</button>
+</div>
+<script>
+let idx=0;const slides=document.querySelectorAll('.slide');const ind=document.getElementById('ind');
+function show(i){{slides.forEach(s=>s.classList.remove('active'));slides[i].classList.add('active');ind.textContent=(i+1)+' / '+slides.length;document.getElementById('prev').disabled=i===0;document.getElementById('next').disabled=i===slides.length-1}}
+document.getElementById('prev').onclick=()=>{{if(idx>0){{idx--;show(idx)}}}};
+document.getElementById('next').onclick=()=>{{if(idx<slides.length-1){{idx++;show(idx)}}}};
+document.getElementById('full').onclick=()=>{{document.documentElement.requestFullscreen?.()}};
+document.addEventListener('keydown',e=>{{if(e.key==='ArrowLeft'&&idx<slides.length-1){{idx++;show(idx)}}else if(e.key==='ArrowRight'&&idx>0){{idx--;show(idx)}}}});
+show(0);
+</script></body></html>"""
 
 
 @router.post("/generate-video")

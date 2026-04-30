@@ -356,6 +356,65 @@
           </div>
         </div>
 
+        <!-- ============ ⚖️ مقارنة المدارس ============ -->
+        <div v-if="activeTab === 'compare'" class="animate-fade-in">
+          <h2 class="text-2xl font-bold mb-6 gradient-text">⚖️ مقارنة المدارس</h2>
+          <button @click="loadCompare" :disabled="cmpLoading" class="btn-primary px-6 py-3 mb-4" style="border-radius:10px">
+            {{ cmpLoading ? '⏳ تحميل...' : '🔄 تحديث المقارنة' }}
+          </button>
+          <div v-if="comparison.length" class="grid gap-3">
+            <div v-for="s in comparison" :key="s.school_id" class="memorix-card p-4">
+              <div class="flex justify-between items-center flex-wrap gap-2">
+                <div>
+                  <h3 class="font-bold text-lg">{{ s.school_name }}</h3>
+                  <p class="text-sm" style="color:#94a3b8">👨‍🎓 {{ s.students }} طالب • 👨‍🏫 {{ s.teachers }} معلم • نسبة {{ s.ratio }}:1</p>
+                </div>
+                <div class="text-left">
+                  <div :style="{color:s.health_score>=75?'#10b981':s.health_score>=50?'#fbbf24':'#ef4444',fontSize:'28px',fontWeight:'bold'}">{{ s.health_score }}/100</div>
+                  <div class="text-xs" style="color:#94a3b8">🟢 {{ s.active_week }} نشط أسبوعياً</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ 💪 صحة المدارس ============ -->
+        <div v-if="activeTab === 'health'" class="animate-fade-in">
+          <h2 class="text-2xl font-bold mb-6 gradient-text">💪 صحة المدارس</h2>
+          <button @click="loadHealth" :disabled="hlLoading" class="btn-primary px-6 py-3 mb-4" style="border-radius:10px">
+            {{ hlLoading ? '⏳' : '🔄 تحديث' }}
+          </button>
+          <div v-if="health.length" class="grid gap-3">
+            <div v-for="h in health" :key="h.school_id" class="memorix-card p-4 flex justify-between items-center">
+              <div>
+                <h3 class="font-bold">{{ h.name }}</h3>
+                <p class="text-sm" style="color:#94a3b8">{{ h.users }} مستخدم • {{ h.active_week }} نشط</p>
+              </div>
+              <div class="text-left">
+                <div style="font-size:28px;font-weight:bold;color:#fbbf24">{{ h.score }}</div>
+                <div class="text-sm">{{ h.status }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ 🧠 مستشار استراتيجي ============ -->
+        <div v-if="activeTab === 'advisor'" class="animate-fade-in">
+          <h2 class="text-2xl font-bold mb-6 gradient-text">🧠 المستشار الاستراتيجي</h2>
+          <div class="memorix-card p-6">
+            <textarea v-model="adQuestion" rows="3" placeholder="مثال: كيف أحسّن نسبة الاحتفاظ بالطلاب في مدرسة الرياض؟"
+                      class="w-full p-3 rounded-lg mb-3" style="background:#0f172a;color:#fff;border:1px solid #334155"></textarea>
+            <textarea v-model="adContext" rows="2" placeholder="سياق إضافي (اختياري): البيانات/التحديات الحالية..."
+                      class="w-full p-3 rounded-lg mb-3" style="background:#0f172a;color:#fff;border:1px solid #334155"></textarea>
+            <button @click="askAdvisor" :disabled="adLoading" class="btn-primary px-6 py-3" style="border-radius:10px">
+              {{ adLoading ? '⏳ يحلل...' : '🚀 احصل على استشارة' }}
+            </button>
+            <div v-if="adAnswer" class="mt-4 p-4 rounded-lg" style="background:#0f172a;white-space:pre-wrap;line-height:1.8;color:#e2e8f0">
+              {{ adAnswer }}
+            </div>
+          </div>
+        </div>
+
         <!-- ============ تبويب الإعدادات ============ -->
         <div v-if="activeTab === 'settings'" class="animate-fade-in">
           <h2 class="text-2xl font-bold mb-6 gradient-text">⚙️ الإعدادات</h2>
@@ -443,6 +502,9 @@ const tabs = [
   { id: 'accounts', label: 'الحسابات', icon: '👥' },
   { id: 'passwords', label: 'الباسووردات', icon: '🔑' },
   { id: 'books', label: 'الكتب', icon: '📚' },
+  { id: 'compare', label: 'مقارنة المدارس', icon: '⚖️' },
+  { id: 'health', label: 'صحة المدارس', icon: '💪' },
+  { id: 'advisor', label: 'مستشار استراتيجي', icon: '🧠' },
   { id: 'chat', label: 'مساعد AI', icon: '💬' },
   { id: 'settings', label: 'الإعدادات', icon: '⚙️' },
 ]
@@ -678,6 +740,20 @@ async function saveMgrSettings() {
 async function handleLogout() {
   await auth.logout()
   router.push('/login')
+}
+
+// 👔 ميزات المدير المتقدمة
+const comparison = ref([]), cmpLoading = ref(false)
+async function loadCompare() { cmpLoading.value=true; try { comparison.value=(await managerAPI.compareSchools()).data } catch(e){alert('فشل')} cmpLoading.value=false }
+const health = ref([]), hlLoading = ref(false)
+async function loadHealth() { hlLoading.value=true; try { health.value=(await managerAPI.healthScore()).data } catch(e){alert('فشل')} hlLoading.value=false }
+const adQuestion = ref(''), adContext = ref(''), adLoading = ref(false), adAnswer = ref('')
+async function askAdvisor() {
+  if (!adQuestion.value.trim()) return alert('اطرح سؤالك')
+  adLoading.value=true; adAnswer.value=''
+  try { adAnswer.value=(await managerAPI.strategicAdvisor(adQuestion.value, adContext.value)).data.advice }
+  catch(e) { alert('فشل') }
+  adLoading.value=false
 }
 
 onMounted(async () => {
