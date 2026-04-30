@@ -1,8 +1,11 @@
 // طبقة API - Morix Platform
 import axios from 'axios'
 
+// رابط الـ backend — لو في env variable يستخدمها (للنشر)، ولو لا يستخدم proxy المحلي
+const API_BASE = import.meta.env.VITE_API_URL || '/api/v1'
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' }
 })
 

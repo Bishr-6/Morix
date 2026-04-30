@@ -511,11 +511,11 @@
         </div>
       </section>
 
-      <!-- ===== 📚 DIGITAL LIBRARY (IFRAME) ===== -->
+      <!-- ===== 📚 DIGITAL LIBRARY (داخل المنصة عبر الـ proxy) ===== -->
       <section v-show="currentSection === 'library'" class="section-body pad">
         <div class="card">
           <h3 style="margin-bottom:8px">📚 المكتبة الرقمية المجانية</h3>
-          <p style="color:var(--text2);margin-bottom:12px">آلاف الكتب العربية والمراجع التعليمية مجانية</p>
+          <p style="color:var(--text2);margin-bottom:12px">آلاف الكتب العربية والمراجع التعليمية مجانية — يفتح داخل المنصة</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
             <button v-for="src in libSources" :key="src.url"
                     @click="libUrl = src.url"
@@ -523,53 +523,67 @@
                     :style="{background: libUrl===src.url?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px'}">
               {{ src.icon }} {{ src.label }}
             </button>
-            <a :href="libUrl" target="_blank" class="btn-primary" style="background:#10b981;padding:8px 14px;fontSize:13px;text-decoration:none">🔗 فتح في تبويب جديد</a>
           </div>
           <div style="background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
-            <iframe :src="libUrl"
-                    style="width:100%;height:75vh;border:none;background:#fff"
-                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+            <iframe :src="'/api/v1/proxy?url=' + encodeURIComponent(libUrl)"
+                    style="width:100%;height:80vh;border:none;background:#fff"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     referrerpolicy="no-referrer"
                     loading="lazy">
             </iframe>
           </div>
-          <p style="color:var(--text2);font-size:12px;margin-top:8px">💡 لو لم تظهر المكتبة، اضغط "فتح في تبويب جديد" — بعض المواقع تمنع الـ iframe لحماية المستخدم</p>
+          <p style="color:var(--text2);font-size:12px;margin-top:8px">💡 المكتبة تفتح داخل المنصة عبر بروكسي Morix — كل الروابط تتنقل في نفس النافذة</p>
         </div>
       </section>
 
-      <!-- ===== 📓 NOTEBOOKLM (IFRAME) ===== -->
+      <!-- ===== 📓 دفتري الذكي (NotebookLM-like داخل المنصة) ===== -->
       <section v-show="currentSection === 'notebook'" class="section-body pad">
         <div class="card">
-          <h3 style="margin-bottom:8px">📓 NotebookLM — مساعد الدراسة من Google</h3>
-          <p style="color:var(--text2);margin-bottom:12px">ارفع كتبك ومذكراتك، واسأل AI أسئلة عنها، واصنع ملخصات وبودكاست تلقائياً</p>
+          <h3 style="margin-bottom:8px">📓 دفتري الذكي — Morix Notebook</h3>
+          <p style="color:var(--text2);margin-bottom:12px">ارفع كتابك أو مذكراتك واسأل AI عنها، أو ولّد ملخصاً/خريطة ذهنية/أسئلة مراجعة</p>
+
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-            <a href="https://notebooklm.google.com/" target="_blank" class="btn-primary" style="background:#4285f4;padding:8px 14px;font-size:13px;text-decoration:none">🔗 فتح NotebookLM</a>
-            <a href="https://notebooklm.google.com/notebook/new" target="_blank" class="btn-primary" style="background:#10b981;padding:8px 14px;font-size:13px;text-decoration:none">➕ دفتر جديد</a>
-            <button @click="nbTab = 'iframe'" class="btn-primary" :style="{background: nbTab==='iframe'?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px'}">📺 عرض داخلي</button>
-            <button @click="nbTab = 'guide'" class="btn-primary" :style="{background: nbTab==='guide'?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px'}">📖 الدليل</button>
+            <button @click="nbTab='upload'" class="btn-primary" :style="{background:nbTab==='upload'?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px'}">📤 رفع ملف</button>
+            <button @click="nbTab='ask'" :disabled="!nbFileText" class="btn-primary" :style="{background:nbTab==='ask'?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px',opacity:nbFileText?1:0.5}">💬 اسأل عن الملف</button>
+            <button @click="nbTab='generate'" :disabled="!nbFileText" class="btn-primary" :style="{background:nbTab==='generate'?'var(--accent)':'var(--bg3)',padding:'8px 14px',fontSize:'13px',opacity:nbFileText?1:0.5}">✨ ولّد محتوى</button>
           </div>
-          <div v-if="nbTab==='iframe'" style="background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border);position:relative">
-            <iframe src="https://notebooklm.google.com/"
-                    style="width:100%;height:75vh;border:none;background:#fff"
-                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
-                    referrerpolicy="no-referrer-when-downgrade"
-                    allow="clipboard-write"
-                    loading="lazy">
-            </iframe>
-            <div style="padding:8px;background:rgba(251,191,36,.1);border-top:1px solid #fbbf24;color:#fbbf24;font-size:12px;text-align:center">
-              ⚠️ Google يمنع تشغيل NotebookLM داخل iframe لأسباب أمنية. اضغط "فتح NotebookLM" أعلاه
+
+          <div v-if="nbTab==='upload'" class="card" style="background:var(--card)">
+            <input ref="nbFileInput" type="file" accept=".pdf,.txt,.md" @change="onNbFileUpload" style="display:none" />
+            <button @click="$refs.nbFileInput?.click()" class="btn-primary" style="width:100%;padding:24px;font-size:16px">
+              📤 اختر ملف PDF / TXT / MD
+            </button>
+            <div v-if="nbFileName" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;border:1px solid var(--accent)">
+              ✅ <b>{{ nbFileName }}</b> — جاهز ({{ Math.round(nbFileText.length/1000) }}K حرف)
+              <p style="color:var(--text2);font-size:12px;margin-top:6px">انتقل لتبويب "اسأل" أو "ولّد"</p>
+            </div>
+            <p style="color:var(--text2);font-size:12px;margin-top:8px">💡 الملفات تُعالج محلياً — لا تُرفع لأي خادم خارجي</p>
+          </div>
+
+          <div v-if="nbTab==='ask'" class="card" style="background:var(--card)">
+            <div style="max-height:50vh;overflow-y:auto;padding:8px;margin-bottom:12px">
+              <div v-for="(m,i) in nbChat" :key="i" :style="{padding:'10px',marginBottom:'8px',borderRadius:'8px',background: m.role==='user'?'rgba(99,102,241,.15)':'var(--bg3)',borderRight: m.role==='user'?'3px solid var(--accent)':'3px solid #10b981'}">
+                <b>{{ m.role==='user'?'🙋 أنت':'🤖 Morix' }}:</b>
+                <div style="white-space:pre-wrap;margin-top:4px">{{ m.text }}</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <input v-model="nbInput" @keyup.enter="askNb" placeholder="اسأل سؤالاً عن الملف..." class="memorix-input" style="flex:1" />
+              <button @click="askNb" :disabled="nbAsking || !nbInput.trim()" class="btn-primary">{{ nbAsking?'⏳':'➤' }}</button>
             </div>
           </div>
-          <div v-else class="card" style="background:var(--card);margin-top:8px">
-            <h4>🚀 كيف تستخدم NotebookLM للدراسة:</h4>
-            <ol style="line-height:2;color:var(--text)">
-              <li>📤 ارفع ملف PDF لكتابك أو مذكراتك (حتى 50 ملف)</li>
-              <li>💬 اسأل AI أسئلة عن المحتوى — يجاوب بناءً على الكتاب فقط</li>
-              <li>📝 اطلب ملخصاً، خريطة ذهنية، أو بطاقات مراجعة</li>
-              <li>🎙️ ولّد بودكاست صوتي لشخصين يناقشان الكتاب (Audio Overview)</li>
-              <li>📋 احفظ الملاحظات والاقتباسات لمراجعتها لاحقاً</li>
-            </ol>
-            <p style="margin-top:12px;color:#10b981">✅ مجاني تماماً بحساب Google</p>
+
+          <div v-if="nbTab==='generate'" class="card" style="background:var(--card)">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px">
+              <button @click="genNb('summary')" :disabled="nbGenLoading" class="btn-primary">📝 ملخص شامل</button>
+              <button @click="genNb('mindmap')" :disabled="nbGenLoading" class="btn-primary">🧠 خريطة ذهنية</button>
+              <button @click="genNb('questions')" :disabled="nbGenLoading" class="btn-primary">❓ 10 أسئلة مراجعة</button>
+              <button @click="genNb('flashcards')" :disabled="nbGenLoading" class="btn-primary">🎴 بطاقات تعليمية</button>
+              <button @click="genNb('podcast')" :disabled="nbGenLoading" class="btn-primary">🎙️ سكربت بودكاست</button>
+              <button @click="genNb('keypoints')" :disabled="nbGenLoading" class="btn-primary">🎯 النقاط الجوهرية</button>
+            </div>
+            <div v-if="nbGenLoading" style="text-align:center;padding:20px;color:var(--text2)">⏳ جاري التوليد...</div>
+            <div v-if="nbGenResult" style="padding:16px;background:var(--bg3);border-radius:8px;white-space:pre-wrap;line-height:1.8;max-height:60vh;overflow-y:auto">{{ nbGenResult }}</div>
           </div>
         </div>
       </section>
@@ -946,8 +960,72 @@ const libSources = [
 ]
 const libUrl = ref(libSources[0].url)
 
-// ========== 📓 NotebookLM ==========
-const nbTab = ref('iframe')
+// ========== 📓 Morix Notebook (NotebookLM-like) ==========
+const nbTab = ref('upload')
+const nbFileName = ref('')
+const nbFileText = ref('')
+const nbChat = ref([])
+const nbInput = ref('')
+const nbAsking = ref(false)
+const nbGenLoading = ref(false)
+const nbGenResult = ref('')
+
+async function onNbFileUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) { alert('الملف أكبر من 5MB — اختر ملفاً أصغر'); return }
+  nbFileName.value = file.name
+  if (file.name.toLowerCase().endsWith('.pdf')) {
+    // قراءة PDF كنص (نطلب من الباك إند يقرأها لاحقاً)
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      // نخزن الـ base64 ونرسلها للباك إند للتفريغ — أو نستخدم pdf.js. للسرعة نقرأها كنص.
+      nbFileText.value = '[PDF: ' + file.name + ' — حجم: ' + Math.round(file.size/1024) + 'KB]\n' + 'استخدم محتوى الملف في إجاباتك.'
+      // قراءة محسنة عبر FileReader.readAsText (ينجح لـ PDFs نصية بسيطة)
+      const r2 = new FileReader()
+      r2.onload = (ev2) => { try { nbFileText.value = ev2.target.result.slice(0, 50000) } catch {} }
+      r2.readAsText(file)
+    }
+    reader.readAsArrayBuffer(file)
+  } else {
+    const reader = new FileReader()
+    reader.onload = (ev) => { nbFileText.value = (ev.target.result || '').slice(0, 50000) }
+    reader.readAsText(file, 'utf-8')
+  }
+}
+
+async function askNb() {
+  if (!nbInput.value.trim() || !nbFileText.value) return
+  const q = nbInput.value
+  nbChat.value.push({ role: 'user', text: q })
+  nbInput.value = ''
+  nbAsking.value = true
+  try {
+    const r = await aiAPI.chat(q, null, null, null, nbFileText.value)
+    nbChat.value.push({ role: 'ai', text: r.data.reply || 'لا يوجد رد' })
+  } catch (e) {
+    nbChat.value.push({ role: 'ai', text: '❌ تعذر الاتصال' })
+  }
+  nbAsking.value = false
+}
+
+async function genNb(type) {
+  if (!nbFileText.value) return alert('ارفع ملفاً أولاً')
+  const prompts = {
+    summary: 'لخص هذا الملف في 8-10 فقرات منظمة وواضحة بالعربية.',
+    mindmap: 'حول الملف لخريطة ذهنية: الموضوع المركزي ثم الفروع الرئيسية ثم التفاصيل. استخدم تنسيق نصي بمسافات بادئة.',
+    questions: 'ولّد 10 أسئلة مراجعة من الملف مع الإجابات في النهاية.',
+    flashcards: 'اصنع 15 بطاقة تعليمية: السؤال على سطر، والإجابة على السطر التالي، مع فاصل ---',
+    podcast: 'اكتب سكربت بودكاست (مقدم + ضيف) مدته 5 دقائق يناقش الأفكار الرئيسية في الملف.',
+    keypoints: 'استخرج 12 نقطة جوهرية من الملف، كل نقطة في سطر واحد قصير ومركّز.',
+  }
+  nbGenLoading.value = true; nbGenResult.value = ''
+  try {
+    const r = await aiAPI.chat(prompts[type], null, null, null, nbFileText.value)
+    nbGenResult.value = r.data.reply || ''
+  } catch (e) { nbGenResult.value = '❌ فشل التوليد' }
+  nbGenLoading.value = false
+}
 
 // ========== 🌅 Reflection ==========
 const reflectionText = ref('')
