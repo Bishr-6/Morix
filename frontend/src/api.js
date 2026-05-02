@@ -64,6 +64,9 @@ export const managerAPI = {
   // 👔 ميزات المدير المتقدمة
   strategicAdvisor: (question, context = '') => api.post('/manager/strategic-advisor', { question, context }),
   healthScore: () => api.get('/manager/health-score'),
+  // ⚙️ الإعدادات
+  getSettings: () => api.get('/manager/settings'),
+  updateSettings: (data) => api.put('/manager/settings', data),
 }
 
 // ============================================
@@ -226,6 +229,9 @@ export const ownerAPI = {
   aiCost: () => api.get('/owner/ai-cost'),
   churnRisk: () => api.get('/owner/churn-risk'),
   broadcast: (data) => api.post('/owner/broadcast', data),
+  // ⚙️ الإعدادات
+  getSettings: () => api.get('/owner/settings'),
+  updateSettings: (data) => api.put('/owner/settings', data),
 }
 
 export default api

@@ -213,11 +213,14 @@
 
           <!-- اللغة -->
           <div class="card">
-            <h3>🌐 اللغة</h3>
-            <select v-model="settings.language" @change="saveSettings" class="inp">
-              <option value="ar">العربية</option>
-              <option value="en">English</option>
-            </select>
+            <h3>🌐 اللغة / Language</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">
+              <button v-for="(L, code) in languages" :key="code"
+                      @click="changeAdminLang(code)"
+                      :style="{padding:'10px',borderRadius:'10px',border:`2px solid ${settings.language===code?'var(--accent)':'var(--border)'}`,background:settings.language===code?'rgba(99,102,241,.15)':'var(--card)',color:'var(--text)',cursor:'pointer',fontWeight:600}">
+                {{ L.flag }} {{ L.name }}
+              </button>
+            </div>
           </div>
 
           <!-- الإشعارات -->
@@ -242,6 +245,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { useRouter } from 'vue-router'
 import { adminAPI } from '../api.js'
 import { useTheme } from '../composables/useTheme.js'
+import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -289,6 +293,13 @@ const uploadError = ref('')
 // Settings
 const settings = ref({ theme:'dark', brightness:100, language:'ar', notifications_enabled:true, avatar_url:'', email:'', full_name:'' })
 useTheme(settings)
+const { setLang: setALang } = useI18n()
+const languages = LANGUAGES
+function changeAdminLang(code) {
+  settings.value.language = code
+  setALang(code)
+  saveSettings()
+}
 const settingsMsg = ref('')
 const adminAvatarInput = ref(null)
 

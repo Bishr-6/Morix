@@ -661,6 +661,17 @@
           </div>
 
           <div class="card">
+            <h3>🌐 اللغة / Language</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">
+              <button v-for="(L, code) in languages" :key="code"
+                      @click="changeStudentLang(code)"
+                      :style="{padding:'10px',borderRadius:'10px',border:`2px solid ${appSettings.language===code?'var(--accent)':'var(--border)'}`,background:appSettings.language===code?'rgba(99,102,241,.15)':'var(--card)',color:'var(--text)',cursor:'pointer',fontWeight:600}">
+                {{ L.flag }} {{ L.name }}
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
             <h3>🎯 إعادة الاختبار التشخيصي</h3>
             <p style="color:var(--text2);font-size:13px">أسلوبك الحالي: <strong>{{ profile.learning_style||'غير محدد' }}</strong></p>
             <button class="btn-o" @click="retakeDiag">إعادة الاختبار</button>
@@ -688,6 +699,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { useRouter } from 'vue-router'
 import { aiAPI, studentAPI, authAPI, teacherAPI } from '../api.js'
 import { useTheme } from '../composables/useTheme.js'
+import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -811,8 +823,15 @@ const attachedFileText = ref(null)
 const prog = ref({})
 
 // Settings
-const appSettings = ref({ theme:'dark', brightness:100, difficulty:'medium', hobbies:[], notifications_enabled:true, avatar_url:'' })
+const appSettings = ref({ theme:'dark', brightness:100, difficulty:'medium', hobbies:[], notifications_enabled:true, avatar_url:'', language:'ar' })
 useTheme(appSettings)
+const { setLang } = useI18n()
+const languages = LANGUAGES
+function changeStudentLang(code) {
+  appSettings.value.language = code
+  setLang(code)
+  saveSettings()
+}
 const hobbiesInput = ref('')
 const avatarInputEl = ref(null)
 const oldPass = ref('')

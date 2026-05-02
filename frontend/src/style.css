@@ -441,3 +441,52 @@ iframe {
   .hub-side, aside, .mobile-toggle, .mobile-overlay { display: none !important; }
   .hub-main { padding: 0 !important; }
 }
+
+/* ============= 🔧 إصلاحات إضافية للموبايل ============= */
+.hub {
+  display: flex !important;
+  height: 100vh;
+  height: 100dvh; /* dynamic viewport — أفضل على iOS */
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+@media (max-width: 1024px) {
+  .hub {
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+  .sidebar, aside {
+    position: fixed !important;
+    top: 0; right: 0;
+    height: 100vh; height: 100dvh;
+    z-index: 1000;
+  }
+  .main, .main-content {
+    padding-top: 64px !important;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  .top-bar {
+    padding: 10px 16px !important;
+    margin-right: 60px;
+  }
+  .top-bar h2, .section-title {
+    font-size: 16px !important;
+    line-height: 1.4;
+  }
+}
+
+/* iOS keyboard fix — input لا يسبب scroll */
+input, textarea, select {
+  font-size: 16px;
+  max-width: 100%;
+}
+
+/* تحسين الـ touch */
+button, [role="button"] {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}

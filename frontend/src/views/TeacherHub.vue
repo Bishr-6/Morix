@@ -622,10 +622,14 @@
             <input type="range" v-model.number="tSettings.brightness" min="40" max="100" step="5" @change="saveTeacherSettings" style="width:100%;accent-color:var(--accent)" />
           </div>
           <div class="card">
-            <h3>🌐 اللغة</h3>
-            <select v-model="tSettings.language" @change="saveTeacherSettings" class="inp">
-              <option value="ar">العربية</option><option value="en">English</option>
-            </select>
+            <h3>🌐 اللغة / Language</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">
+              <button v-for="(L, code) in languages" :key="code"
+                      @click="changeTeacherLang(code)"
+                      :style="{padding:'10px',borderRadius:'10px',border:`2px solid ${tSettings.language===code?'var(--accent)':'var(--border)'}`,background:tSettings.language===code?'rgba(99,102,241,.15)':'var(--card)',color:'var(--text)',cursor:'pointer',fontWeight:600}">
+                {{ L.flag }} {{ L.name }}
+              </button>
+            </div>
           </div>
         </div>
         <p v-if="settingsMsg" style="color:#4ade80;font-size:13px;margin-top:10px;text-align:center">{{ settingsMsg }}</p>
@@ -641,6 +645,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { useRouter } from 'vue-router'
 import { teacherAPI, aiAPI } from '../api.js'
 import { useTheme } from '../composables/useTheme.js'
+import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -649,6 +654,13 @@ const firstName = ref(auth.user?.full_name?.split(' ')?.[0] || 'معلم')
 // Settings
 const tSettings = ref({ theme:'dark', brightness:100, language:'ar', notifications_enabled:true, avatar_url:'', email:'', full_name:'' })
 useTheme(tSettings)
+const { setLang: setTLang } = useI18n()
+const languages = LANGUAGES
+function changeTeacherLang(code) {
+  tSettings.value.language = code
+  setTLang(code)
+  saveTeacherSettings()
+}
 const settingsMsg = ref('')
 
 const sections = [

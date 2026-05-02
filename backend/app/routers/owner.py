@@ -224,6 +224,52 @@ async def churn_risk(current_user: dict = Depends(_require_owner), db=Depends(ge
     return {"at_risk_schools": sorted(risks, key=lambda x: -x["inactive_pct"])}
 
 
+# ============================================================
+# ⚙️ إعدادات المالك
+# ============================================================
+@router.get("/settings")
+async def get_owner_settings(current_user: dict = Depends(_require_owner), db=Depends(get_db)):
+    result = db.table("user_settings").select("*").eq("user_id", current_user["id"]).execute()
+    base = {
+        "theme": "dark", "brightness": 100, "language": "ar",
+        "notifications_enabled": True,
+        "avatar_url": current_user.get("avatar_url", ""),
+        "email": current_user.get("email", ""),
+        "full_name": current_user.get("full_name", ""),
+    }
+    if not result.data: return base
+    s = result.data[0]
+    return {**base, **{k: v for k, v in s.items() if k not in ("id","user_id","created_at","updated_at")}, "avatar_url": current_user.get("avatar_url", "")}
+
+
+@router.put("/settings")
+async def update_owner_settings(body: dict, current_user: dict = Depends(_require_owner), db=Depends(get_db)):
+    valid_langs = {"ar", "en", "de", "fr", "zh", "es"}
+    valid_themes = {"dark", "light", "library"}
+    theme = body.get("theme", "dark")
+    if theme not in valid_themes: theme = "dark"
+    lang = body.get("language", "ar")
+    if lang not in valid_langs: lang = "ar"
+    try: brightness = max(20, min(100, int(body.get("brightness", 100))))
+    except: brightness = 100
+    data = {
+        "user_id": current_user["id"], "theme": theme, "brightness": brightness,
+        "language": lang, "notifications_enabled": bool(body.get("notifications_enabled", True)),
+    }
+    try:
+        existing = db.table("user_settings").select("id").eq("user_id", current_user["id"]).execute()
+        if existing.data:
+            db.table("user_settings").update(data).eq("user_id", current_user["id"]).execute()
+        else:
+            db.table("user_settings").insert(data).execute()
+    except Exception as e:
+        logger.warning(f"Owner settings save failed: {e}")
+    if body.get("avatar_url") is not None:
+        try: db.table("users").update({"avatar_url": body["avatar_url"]}).eq("id", current_user["id"]).execute()
+        except: pass
+    return {"message": "✅ تم حفظ الإعدادات"}
+
+
 @router.post("/broadcast")
 async def broadcast_message(
     body: dict,

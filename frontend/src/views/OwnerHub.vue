@@ -175,6 +175,66 @@
           </div>
         </div>
       </section>
+
+      <!-- ===== ⚙️ SETTINGS ===== -->
+      <section v-show="cur==='settings'" class="body pad">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+          <div class="card">
+            <h3>👤 {{ t('account_info') }}</h3>
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <div style="position:relative;cursor:pointer" @click="$refs.ownerAvatarInput?.click()">
+                <img v-if="ownerSettings.avatar_url" :src="ownerSettings.avatar_url" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #6366f1" />
+                <div v-else style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:24px">👑</div>
+              </div>
+              <div style="flex:1">
+                <input ref="ownerAvatarInput" type="file" accept="image/*" style="display:none" @change="onOwnerAvatarUpload" />
+                <button class="btn-p" style="width:100%" @click="$refs.ownerAvatarInput?.click()">📷 {{ t('upload_avatar') }}</button>
+              </div>
+            </div>
+            <div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>{{ t('full_name') }}:</b> {{ ownerSettings.full_name }}</div>
+            <div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>{{ t('email') }}:</b> <span style="direction:ltr">{{ ownerSettings.email }}</span></div>
+            <div style="padding:8px 0"><b>الدور:</b> 👑 {{ t('role_owner') }}</div>
+          </div>
+
+          <div class="card">
+            <h3>🎨 {{ t('appearance') }}</h3>
+            <div style="margin-bottom:14px">
+              <label style="display:block;margin-bottom:6px;color:var(--text2);font-size:13px">{{ t('theme') }}</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button v-for="th in [{k:'dark',l:t('theme_dark'),i:'🌑'},{k:'light',l:t('theme_light'),i:'☀️'},{k:'library',l:t('theme_library'),i:'📚'}]"
+                        :key="th.k" @click="ownerSettings.theme=th.k; saveOwnerSettings()"
+                        :style="{padding:'10px 16px',borderRadius:'10px',border:`2px solid ${ownerSettings.theme===th.k?'#6366f1':'var(--border)'}`,background:ownerSettings.theme===th.k?'rgba(99,102,241,.2)':'var(--card)',color:'var(--text)',cursor:'pointer',fontWeight:'600'}">
+                  {{ th.i }} {{ th.l }}
+                </button>
+              </div>
+            </div>
+            <div style="margin-bottom:14px">
+              <label style="display:block;margin-bottom:6px;color:var(--text2);font-size:13px">☀️ {{ t('brightness') }}: {{ ownerSettings.brightness }}%</label>
+              <input type="range" v-model.number="ownerSettings.brightness" @change="saveOwnerSettings" min="20" max="100" style="width:100%" />
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>🌐 {{ t('language') }}</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+              <button v-for="(L, code) in languages" :key="code"
+                      @click="changeLang(code)"
+                      :style="{padding:'10px',borderRadius:'10px',border:`2px solid ${ownerSettings.language===code?'#6366f1':'var(--border)'}`,background:ownerSettings.language===code?'rgba(99,102,241,.2)':'var(--card)',color:'var(--text)',cursor:'pointer',fontWeight:'600'}">
+                {{ L.flag }} {{ L.name }}
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>🔔 {{ t('notifications') }}</h3>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" v-model="ownerSettings.notifications_enabled" @change="saveOwnerSettings" />
+              <span>{{ t('notifications_enabled') }}</span>
+            </label>
+          </div>
+        </div>
+        <p v-if="settingsMsg" style="margin-top:14px;color:#10b981;text-align:center;font-weight:bold">{{ settingsMsg }}</p>
+      </section>
     </main>
   </div>
 </template>
@@ -184,19 +244,58 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useRouter } from 'vue-router'
 import { ownerAPI } from '../api.js'
+import { useTheme } from '../composables/useTheme.js'
+import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t, setLang } = useI18n()
+const languages = LANGUAGES
 
-const sections = [
-  {id:'overview',icon:'📊',label:'نظرة عامة'},
+const ownerSettings = ref({
+  theme: 'dark', brightness: 100, language: 'ar', notifications_enabled: true,
+  avatar_url: '', email: auth.user?.email || '', full_name: auth.user?.full_name || ''
+})
+useTheme(ownerSettings)
+const settingsMsg = ref('')
+
+async function loadOwnerSettings() {
+  try {
+    const r = await ownerAPI.getSettings()
+    ownerSettings.value = { ...ownerSettings.value, ...r.data }
+    if (ownerSettings.value.language) setLang(ownerSettings.value.language)
+  } catch (e) { console.warn('settings load failed', e) }
+}
+async function saveOwnerSettings() {
+  try {
+    const r = await ownerAPI.updateSettings(ownerSettings.value)
+    settingsMsg.value = r.data.message || '✅'
+    setTimeout(() => settingsMsg.value = '', 2500)
+  } catch (e) { settingsMsg.value = '❌ فشل الحفظ' }
+}
+function changeLang(code) {
+  ownerSettings.value.language = code
+  setLang(code)
+  saveOwnerSettings()
+}
+function onOwnerAvatarUpload(e) {
+  const file = e.target.files?.[0]; if (!file) return
+  if (file.size > 500 * 1024) { alert('الصورة أكبر من 500 KB'); return }
+  const r = new FileReader()
+  r.onload = (ev) => { ownerSettings.value.avatar_url = ev.target.result; saveOwnerSettings() }
+  r.readAsDataURL(file)
+}
+
+const sections = computed(() => [
+  {id:'overview',icon:'📊',label:t('overview')},
   {id:'pulse',icon:'💓',label:'نبض المنصة'},
   {id:'aicost',icon:'💰',label:'تكلفة AI'},
   {id:'churn',icon:'⚠️',label:'مخاطر الإلغاء'},
   {id:'broadcast',icon:'📢',label:'بث رسالة'},
-  {id:'complaints',icon:'📣',label:'الشكاوى'},
-  {id:'users',icon:'👥',label:'كل المستخدمين'},
-]
+  {id:'complaints',icon:'📣',label:t('complaints')},
+  {id:'users',icon:'👥',label:t('all_users')},
+  {id:'settings',icon:'⚙️',label:t('settings')},
+])
 const otherSections = [
   {path:'/manager',icon:'🏫',label:'لوحة المدير'},
   {path:'/admin',icon:'🛡️',label:'لوحة المشرف الإداري'},
@@ -224,6 +323,7 @@ const filteredUsers = computed(() => {
 })
 
 onMounted(async () => {
+  await loadOwnerSettings()
   try { stats.value=(await ownerAPI.getStats()).data } catch {}
   complaintsLoading.value=true
   try { complaints.value=(await ownerAPI.getComplaints()).data } catch {}

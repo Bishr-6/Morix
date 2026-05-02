@@ -390,36 +390,69 @@
 
         <!-- ============ تبويب الإعدادات ============ -->
         <div v-if="activeTab === 'settings'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">⚙️ الإعدادات</h2>
+          <h2 class="text-2xl font-bold mb-6 gradient-text">⚙️ {{ t('settings') }}</h2>
           <div class="grid md:grid-cols-2 gap-6">
+
+            <!-- معلومات الحساب + Avatar -->
             <div class="memorix-card p-6">
-              <h3 class="font-bold mb-4" style="color: #00d4ff">👤 معلومات الحساب</h3>
+              <h3 class="font-bold mb-4" style="color: #00d4ff">👤 {{ t('account_info') }}</h3>
               <div class="flex items-center gap-4 mb-4">
-                <img v-if="mgrSettings.avatar_url" :src="mgrSettings.avatar_url"
-                  style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #1a1f3a" />
-                <div v-else style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#4a7eff,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff">
-                  {{ auth.user?.full_name?.[0] || 'م' }}
+                <div style="position:relative;cursor:pointer" @click="$refs.mgrAvatarInput?.click()">
+                  <img v-if="mgrSettings.avatar_url" :src="mgrSettings.avatar_url"
+                    style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #6366f1" />
+                  <div v-else style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#4a7eff,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff">
+                    {{ auth.user?.full_name?.[0] || 'م' }}
+                  </div>
                 </div>
                 <div style="flex:1">
-                  <p class="text-xs mb-1" style="color:#94a3b8">رابط صورة البروفايل</p>
-                  <input v-model="mgrSettings.avatar_url" class="memorix-input" placeholder="https://..." dir="ltr" @blur="saveMgrSettings" />
+                  <input ref="mgrAvatarInput" type="file" accept="image/*" style="display:none" @change="onMgrAvatarUpload" />
+                  <button @click="$refs.mgrAvatarInput?.click()" class="btn-primary text-sm" style="width:100%">📷 {{ t('upload_avatar') }}</button>
                 </div>
               </div>
-              <div class="flex justify-between py-2 text-sm" style="border-bottom:1px solid #1a1f3a;color:#94a3b8"><span>الاسم</span><b style="color:#e2e8f0">{{ auth.user?.full_name }}</b></div>
-              <div class="flex justify-between py-2 text-sm" style="border-bottom:1px solid #1a1f3a;color:#94a3b8"><span>الإيميل</span><b style="color:#e2e8f0;direction:ltr">{{ auth.user?.email }}</b></div>
-              <div class="flex justify-between py-2 text-sm" style="color:#94a3b8"><span>الدور</span><b style="color:#10b981">مدير</b></div>
+              <div class="flex justify-between py-2 text-sm" style="border-bottom:1px solid #1a1f3a;color:#94a3b8"><span>{{ t('full_name') }}</span><b style="color:#e2e8f0">{{ auth.user?.full_name }}</b></div>
+              <div class="flex justify-between py-2 text-sm" style="border-bottom:1px solid #1a1f3a;color:#94a3b8"><span>{{ t('email') }}</span><b style="color:#e2e8f0;direction:ltr">{{ auth.user?.email }}</b></div>
+              <div class="flex justify-between py-2 text-sm" style="color:#94a3b8"><span>الدور</span><b style="color:#10b981">{{ t('role_manager') }}</b></div>
             </div>
+
+            <!-- المظهر -->
             <div class="memorix-card p-6">
-              <h3 class="font-bold mb-4" style="color: #8b5cf6">🌐 اللغة</h3>
-              <select v-model="mgrSettings.language" @change="saveMgrSettings" class="memorix-input mb-6" dir="rtl">
-                <option value="ar">العربية</option>
-                <option value="en">English</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-              </select>
-              <p v-if="settingsMsg" style="color:#4ade80;font-size:13px;text-align:center">{{ settingsMsg }}</p>
+              <h3 class="font-bold mb-4" style="color: #00d4ff">🎨 {{ t('appearance') }}</h3>
+              <p class="text-xs mb-2" style="color:#94a3b8">{{ t('theme') }}</p>
+              <div class="flex gap-2 mb-5 flex-wrap">
+                <button v-for="th in [{k:'dark',l:t('theme_dark'),i:'🌑'},{k:'light',l:t('theme_light'),i:'☀️'},{k:'library',l:t('theme_library'),i:'📚'}]"
+                        :key="th.k" @click="mgrSettings.theme=th.k; saveMgrSettings()"
+                        class="flex-1 py-3 rounded-xl font-medium transition-all"
+                        :style="{border: mgrSettings.theme===th.k?'2px solid #6366f1':'2px solid #1a1f3a', background: mgrSettings.theme===th.k?'rgba(99,102,241,.15)':'#0f172a', color:'#fff'}">
+                  {{ th.i }} {{ th.l }}
+                </button>
+              </div>
+              <p class="text-xs mb-2" style="color:#94a3b8">☀️ {{ t('brightness') }}: {{ mgrSettings.brightness }}%</p>
+              <input type="range" v-model.number="mgrSettings.brightness" @change="saveMgrSettings" min="20" max="100" style="width:100%" />
+            </div>
+
+            <!-- اللغة -->
+            <div class="memorix-card p-6">
+              <h3 class="font-bold mb-4" style="color: #8b5cf6">🌐 {{ t('language') }}</h3>
+              <div class="grid grid-cols-2 gap-2">
+                <button v-for="(L, code) in languages" :key="code"
+                        @click="changeMgrLang(code)"
+                        class="py-3 rounded-xl font-medium transition-all"
+                        :style="{border: mgrSettings.language===code?'2px solid #6366f1':'2px solid #1a1f3a', background: mgrSettings.language===code?'rgba(99,102,241,.15)':'#0f172a', color:'#fff'}">
+                  {{ L.flag }} {{ L.name }}
+                </button>
+              </div>
+            </div>
+
+            <!-- الإشعارات -->
+            <div class="memorix-card p-6">
+              <h3 class="font-bold mb-4" style="color: #f59e0b">🔔 {{ t('notifications') }}</h3>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" v-model="mgrSettings.notifications_enabled" @change="saveMgrSettings" />
+                <span style="color:#e2e8f0">{{ t('notifications_enabled') }}</span>
+              </label>
             </div>
           </div>
+          <p v-if="settingsMsg" class="mt-4 text-center" style="color:#4ade80;font-weight:bold">{{ settingsMsg }}</p>
         </div>
 
       </div>
@@ -464,22 +497,26 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { managerAPI, teacherAPI } from '../api.js'
 import Stars from '../components/Stars.vue'
+import { useTheme } from '../composables/useTheme.js'
+import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 
 const router = useRouter()
 const auth = useAuthStore()
+const { t, setLang } = useI18n()
+const languages = LANGUAGES
 
 const activeTab = ref('stats')
-const tabs = [
-  { id: 'stats', label: 'الإحصائيات', icon: '📊' },
-  { id: 'schools', label: 'المدارس', icon: '🏫' },
-  { id: 'setup', label: 'إعداد + رفع Excel', icon: '📤' },
-  { id: 'accounts', label: 'الحسابات', icon: '👥' },
-  { id: 'books', label: 'الكتب', icon: '📚' },
+const tabs = computed(() => [
+  { id: 'stats', label: t('statistics'), icon: '📊' },
+  { id: 'schools', label: t('schools'), icon: '🏫' },
+  { id: 'setup', label: t('upload_excel'), icon: '📤' },
+  { id: 'accounts', label: t('accounts'), icon: '👥' },
+  { id: 'books', label: t('books'), icon: '📚' },
   { id: 'health', label: 'صحة المدارس', icon: '💪' },
   { id: 'advisor', label: 'مستشار استراتيجي', icon: '🧠' },
-  { id: 'chat', label: 'مساعد AI', icon: '💬' },
-  { id: 'settings', label: 'الإعدادات', icon: '⚙️' },
-]
+  { id: 'chat', label: t('ai_assistant'), icon: '💬' },
+  { id: 'settings', label: t('settings'), icon: '⚙️' },
+])
 
 // الإحصائيات
 const stats = ref(null)
@@ -519,7 +556,23 @@ const chatEl = ref(null)
 const mgrQuickQs = ['كيف أحسن أداء المدرسة؟', 'اقترح خطة تطوير للمعلمين', 'كيف أتابع الطلاب المتأخرين؟', 'أفضل استراتيجيات الإدارة']
 
 // Settings
-const mgrSettings = ref({ avatar_url: '', theme: 'dark', language: 'ar' })
+const mgrSettings = ref({
+  avatar_url: '', theme: 'dark', language: 'ar',
+  brightness: 100, notifications_enabled: true
+})
+useTheme(mgrSettings)
+function changeMgrLang(code) {
+  mgrSettings.value.language = code
+  setLang(code)
+  saveMgrSettings()
+}
+function onMgrAvatarUpload(e) {
+  const file = e.target.files?.[0]; if (!file) return
+  if (file.size > 500 * 1024) { alert('الصورة أكبر من 500 KB'); return }
+  const r = new FileReader()
+  r.onload = (ev) => { mgrSettings.value.avatar_url = ev.target.result; saveMgrSettings() }
+  r.readAsDataURL(file)
+}
 const settingsMsg = ref('')
 
 // إعداد المدرسة
@@ -702,11 +755,22 @@ function fmtChat(t) {
     .replace(/`(.*?)`/g,'<code style="background:rgba(255,255,255,.1);border-radius:4px;padding:1px 5px">$1</code>').replace(/\n/g,'<br>')
 }
 
+async function loadMgrSettings() {
+  try {
+    const r = await managerAPI.getSettings()
+    mgrSettings.value = { ...mgrSettings.value, ...r.data }
+    if (mgrSettings.value.language) setLang(mgrSettings.value.language)
+  } catch (e) { console.warn('mgr settings load failed', e) }
+}
 async function saveMgrSettings() {
   try {
-    settingsMsg.value = '✅ تم الحفظ'
-    setTimeout(() => { settingsMsg.value = '' }, 2000)
-  } catch {}
+    const r = await managerAPI.updateSettings(mgrSettings.value)
+    settingsMsg.value = r.data.message || '✅ تم الحفظ'
+    setTimeout(() => { settingsMsg.value = '' }, 2500)
+  } catch {
+    settingsMsg.value = '❌ فشل الحفظ'
+    setTimeout(() => { settingsMsg.value = '' }, 2500)
+  }
 }
 
 async function handleLogout() {
@@ -814,6 +878,7 @@ async function confirmDeleteAccount(acc) {
 }
 
 onMounted(async () => {
+  await loadMgrSettings()
   await loadStats()
   try {
     const res = await managerAPI.getSchools()
