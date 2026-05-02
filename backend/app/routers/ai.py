@@ -129,13 +129,15 @@ async def generate_image(request: ImageGenerateRequest, current_user: dict = Dep
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="الوصف فارغ")
 
-    image_b64 = await generate_educational_image(request.prompt)
+    result = await generate_educational_image(request.prompt)
 
-    if not image_b64:
+    if not result.get("success"):
         return {
             "success": False,
-            "message": "توليد الصور يتطلب تفعيل Imagen API. تواصل مع المشرف.",
-            "image": None
+            "message": result.get("error") or "تعذر توليد الصورة",
+            "image": None,
+            "details": result.get("details", ""),
         }
+    image_b64 = result["image"]
 
     return {"success": True, "image": image_b64, "prompt": request.prompt}

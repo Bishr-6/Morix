@@ -228,23 +228,45 @@ async def get_settings(current_user: dict = Depends(_require_admin), db=Depends(
 
 @router.put("/settings")
 async def update_settings(body: dict, current_user: dict = Depends(_require_admin), db=Depends(get_db)):
-    existing = db.table("user_settings").select("id").eq("user_id", current_user["id"]).execute()
+    valid_langs = {"ar", "en", "de", "fr", "zh", "es"}
+    valid_themes = {"dark", "light", "library"}
+
+    theme = body.get("theme", "dark")
+    if theme not in valid_themes: theme = "dark"
+    lang = body.get("language", "ar")
+    if lang not in valid_langs: lang = "ar"
+    try:
+        brightness = max(20, min(100, int(body.get("brightness", 100))))
+    except Exception:
+        brightness = 100
+
     data = {
         "user_id": current_user["id"],
-        "theme": body.get("theme", "dark"),
-        "brightness": body.get("brightness", 100),
-        "language": body.get("language", "ar"),
-        "notifications_enabled": body.get("notifications_enabled", True),
+        "theme": theme,
+        "brightness": brightness,
+        "language": lang,
+        "notifications_enabled": bool(body.get("notifications_enabled", True)),
     }
-    if existing.data:
-        db.table("user_settings").update(data).eq("user_id", current_user["id"]).execute()
-    else:
-        db.table("user_settings").insert(data).execute()
+    try:
+        existing = db.table("user_settings").select("id").eq("user_id", current_user["id"]).execute()
+        if existing.data:
+            db.table("user_settings").update(data).eq("user_id", current_user["id"]).execute()
+        else:
+            db.table("user_settings").insert(data).execute()
+    except Exception as e:
+        logger.warning(f"Admin settings save failed: {e}")
+        try:
+            db.table("user_settings").upsert({"user_id": current_user["id"], "theme": theme}).execute()
+        except Exception:
+            pass
 
     if body.get("avatar_url") is not None:
-        db.table("users").update({"avatar_url": body["avatar_url"]}).eq("id", current_user["id"]).execute()
+        try:
+            db.table("users").update({"avatar_url": body["avatar_url"]}).eq("id", current_user["id"]).execute()
+        except Exception as e:
+            logger.warning(f"avatar update failed: {e}")
 
-    return {"message": "تم حفظ الإعدادات"}
+    return {"message": "✅ تم حفظ الإعدادات"}
 
 
 # ============================================================

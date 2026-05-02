@@ -38,3 +38,4 @@ yarn-error.log*
 # Build
 build/
 *.tsbuildinfo
+backend/.env

@@ -174,61 +174,93 @@ async def chat_with_gemini(
         err_str = str(e)
         logger.error(f"Gemini error: {err_str}")
 
-        if "API_KEY_INVALID" in err_str or "API key not valid" in err_str:
-            return f"مفتاح Gemini API غير صالح. تواصل مع المشرف.", False
-        if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
-            return f"تجاوزنا الحد المجاني لـ Gemini مؤقتاً. حاول بعد دقيقة واحدة.", False
+        if "leaked" in err_str.lower() or "reported as leaked" in err_str.lower():
+            return (
+                "🔑 مفتاح Gemini API الحالي تم إلغاؤه (مُسرَّب).\n\n"
+                "**خطوات الحل للمسؤول:**\n"
+                "1. روح https://aistudio.google.com/app/apikey\n"
+                "2. أنشئ مفتاح جديد\n"
+                "3. حدّث `GEMINI_API_KEY` في إعدادات Vercel/Render\n"
+                "4. أعد النشر (Redeploy)\n\n"
+                "بعدها AI شغال 100%."
+            ), False
+        if "API_KEY_INVALID" in err_str or "API key not valid" in err_str or "PERMISSION_DENIED" in err_str:
+            return (
+                "🔑 مفتاح Gemini API غير صالح.\n"
+                "تواصل مع مدير المنصة لتحديث المفتاح من https://aistudio.google.com/app/apikey"
+            ), False
+        if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "quota" in err_str.lower():
+            return (
+                "⏳ وصلنا الحد المسموح من Gemini API لهذه الدقيقة.\n"
+                "حاول مرة أخرى بعد دقيقة، أو أضف Billing على المفتاح لرفع الحد."
+            ), False
+        if "SAFETY" in err_str or "safety" in err_str:
+            return "⚠️ الرد محظور لأسباب أمان. غيّر صياغة سؤالك.", False
 
-        return f"عذراً {first_name}، حدث خطأ مؤقت. حاول مرة أخرى.", False
+        return f"⚠️ تعذر الاتصال بـ AI:\n{err_str[:200]}", False
 
 
-async def generate_educational_image(prompt: str) -> Optional[str]:
-    """توليد صورة تعليمية - يرجع base64 string أو None"""
+async def generate_educational_image(prompt: str) -> dict:
+    """توليد صورة تعليمية — يرجع dict {success, image, error}"""
     if not settings.gemini_api_key or settings.gemini_api_key in ("YOUR_GEMINI_API_KEY", ""):
-        return None
+        return {"success": False, "image": None, "error": "مفتاح Gemini غير مضبوط"}
 
     try:
         from google import genai
         from google.genai import types
 
         client = genai.Client(api_key=settings.gemini_api_key)
+        last_err = None
 
-        # أولاً: جرب Gemini 2.0 Flash توليد الصور التجريبي
-        try:
-            response = client.models.generate_content(
-                model="gemini-2.0-flash-exp-image-generation",
-                contents=f"Generate an educational illustration for students: {prompt}. Make it clean, colorful, clear and professional.",
-                config=types.GenerateContentConfig(
-                    response_modalities=["TEXT", "IMAGE"]
+        # أولاً: Gemini 2.0 Flash توليد الصور
+        for model_name in ("gemini-2.5-flash-image-preview",
+                            "gemini-2.0-flash-exp-image-generation"):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=f"Generate an educational illustration for students: {prompt}. Clean, colorful, clear, professional.",
+                    config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"])
                 )
-            )
-            for part in response.candidates[0].content.parts:
-                if hasattr(part, 'inline_data') and part.inline_data is not None:
-                    img_data = part.inline_data.data
-                    if isinstance(img_data, bytes):
-                        return base64.b64encode(img_data).decode('utf-8')
-                    return img_data
-        except Exception as e1:
-            logger.warning(f"Gemini image gen failed: {e1}")
+                for part in response.candidates[0].content.parts:
+                    if hasattr(part, 'inline_data') and part.inline_data is not None:
+                        img_data = part.inline_data.data
+                        if isinstance(img_data, bytes):
+                            return {"success": True, "image": base64.b64encode(img_data).decode('utf-8'), "error": None}
+                        return {"success": True, "image": img_data, "error": None}
+            except Exception as e1:
+                last_err = str(e1)
+                logger.warning(f"Image model {model_name} failed: {e1}")
 
-        # ثانياً: جرب Imagen
-        try:
-            response = client.models.generate_images(
-                model='imagen-3.0-generate-002',
-                prompt=f"Educational illustration for students: {prompt}. Clean, colorful, clear, professional.",
-                config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="1:1")
-            )
-            if response.generated_images:
-                image_bytes = response.generated_images[0].image.image_bytes
-                return base64.b64encode(image_bytes).decode('utf-8')
-        except Exception as e2:
-            logger.warning(f"Imagen failed: {e2}")
+        # ثانياً: Imagen 3 (يحتاج billing)
+        for imagen_model in ("imagen-3.0-generate-002", "imagen-3.0-generate-001"):
+            try:
+                response = client.models.generate_images(
+                    model=imagen_model,
+                    prompt=f"Educational illustration: {prompt}. Clean, colorful, clear.",
+                    config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="1:1")
+                )
+                if response.generated_images:
+                    image_bytes = response.generated_images[0].image.image_bytes
+                    return {"success": True, "image": base64.b64encode(image_bytes).decode('utf-8'), "error": None}
+            except Exception as e2:
+                last_err = str(e2)
+                logger.warning(f"Imagen {imagen_model} failed: {e2}")
 
-        return None
+        # تشخيص نوع الخطأ
+        err_msg = last_err or "كل النماذج فشلت"
+        friendly = "تعذر توليد الصورة"
+        if last_err and ("leaked" in last_err.lower() or "PERMISSION_DENIED" in last_err):
+            friendly = "🔑 مفتاح Gemini مُسرَّب أو غير صالح — أنشئ مفتاحاً جديداً من aistudio.google.com"
+        elif last_err and ("billing" in last_err.lower() or "quota" in last_err.lower()):
+            friendly = "💳 توليد الصور يحتاج تفعيل Billing على حساب Google AI Studio"
+        elif last_err and "not found" in last_err.lower():
+            friendly = "النموذج غير متاح في منطقتك. جرّب لاحقاً."
+
+        return {"success": False, "image": None, "error": friendly, "details": err_msg[:200]}
 
     except Exception as e:
         logger.error(f"Image generation error: {e}")
-        return None
+        return {"success": False, "image": None, "error": f"خطأ تقني: {str(e)[:150]}"}
 
 
 async def generate_game_content(game_type: str, subject: str, topic: str = "") -> Optional[dict]:

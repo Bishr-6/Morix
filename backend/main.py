@@ -62,9 +62,53 @@ async def health_check():
     return {"status": "ok", "app": "Morix", "version": settings.app_version}
 
 
+@app.get("/api/v1/system-check")
+async def system_check():
+    """فحص شامل لمكونات المنصة — استخدمه للتشخيص"""
+    checks = {"timestamp": None, "checks": {}}
+    from datetime import datetime, timezone
+    checks["timestamp"] = datetime.now(timezone.utc).isoformat()
+
+    # 1) Supabase
+    try:
+        from app.database import get_supabase
+        db = get_supabase()
+        r = db.table("users").select("id", count="exact").limit(1).execute()
+        checks["checks"]["supabase"] = {"ok": True, "users_count": r.count}
+    except Exception as e:
+        checks["checks"]["supabase"] = {"ok": False, "error": str(e)[:200]}
+
+    # 2) Gemini API key validity
+    try:
+        from app.services.ai_service import chat_with_gemini
+        text, _ = await chat_with_gemini("ping", None, full_name="System")
+        if "leaked" in text.lower() or "غير صالح" in text or "تعذر" in text:
+            checks["checks"]["gemini"] = {"ok": False, "message": text[:300]}
+        else:
+            checks["checks"]["gemini"] = {"ok": True, "sample_reply": text[:100]}
+    except Exception as e:
+        checks["checks"]["gemini"] = {"ok": False, "error": str(e)[:200]}
+
+    # 3) Env vars present
+    checks["checks"]["env"] = {
+        "supabase_url": bool(settings.supabase_url),
+        "supabase_key": bool(settings.supabase_service_key or settings.supabase_anon_key),
+        "gemini_key": bool(settings.gemini_api_key),
+        "jwt_secret": bool(settings.jwt_secret_key and settings.jwt_secret_key != "memorix-default-secret"),
+    }
+
+    overall_ok = all([
+        checks["checks"].get("supabase", {}).get("ok"),
+        checks["checks"].get("gemini", {}).get("ok"),
+        all(checks["checks"]["env"].values()),
+    ])
+    checks["overall"] = "✅ كل شيء شغّال" if overall_ok else "⚠️ في مشاكل"
+    return checks
+
+
 @app.get("/")
 async def root():
-    return {"message": "مرحباً بك في Morix API - منصة التعلم الذكي", "docs": "/docs"}
+    return {"message": "مرحباً بك في Morix API - منصة التعلم الذكي", "docs": "/docs", "system_check": "/api/v1/system-check"}
 
 
 # ============================================================

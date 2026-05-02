@@ -155,18 +155,63 @@ async def update_settings(
     # avatar_url يُخزَّن في جدول users وليس user_settings
     avatar_url = all_data.pop("avatar_url", None)
     if avatar_url is not None:
-        db.table("users").update({"avatar_url": avatar_url}).eq("id", current_user["id"]).execute()
+        try:
+            db.table("users").update({"avatar_url": avatar_url}).eq("id", current_user["id"]).execute()
+        except Exception as e:
+            logger.warning(f"avatar update failed: {e}")
 
-    if all_data:
-        all_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    # تطبيع اللغة (نقبل فقط اللي القاعدة تسمح بيهم)
+    if "language" in all_data:
+        valid_langs = {"ar", "en", "de", "fr", "zh", "es"}
+        if all_data["language"] not in valid_langs:
+            all_data["language"] = "ar"
+
+    # تطبيع difficulty
+    if "difficulty" in all_data:
+        if all_data["difficulty"] not in {"easy", "medium", "hard"}:
+            all_data["difficulty"] = "medium"
+
+    # تطبيع theme
+    if "theme" in all_data:
+        if all_data["theme"] not in {"dark", "light", "library"}:
+            all_data["theme"] = "dark"
+
+    # تطبيع brightness
+    if "brightness" in all_data:
+        try:
+            b = int(all_data["brightness"])
+            all_data["brightness"] = max(20, min(100, b))
+        except Exception:
+            all_data.pop("brightness", None)
+
+    if not all_data:
+        return {"message": "تم الحفظ"}
+
+    all_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    # محاولة upsert كاملاً، ولو فشل نحاول حقل-حقل لتجنب توقف الكل بسبب عمود ناقص
+    try:
         existing = db.table("user_settings").select("id").eq("user_id", current_user["id"]).execute()
         if existing.data:
             db.table("user_settings").update(all_data).eq("user_id", current_user["id"]).execute()
         else:
             all_data["user_id"] = current_user["id"]
             db.table("user_settings").insert(all_data).execute()
+    except Exception as e:
+        logger.warning(f"Settings full update failed: {e} — trying field-by-field")
+        # حفظ كل عمود لوحده
+        for key, val in list(all_data.items()):
+            if key in ("user_id", "updated_at"): continue
+            try:
+                exists = db.table("user_settings").select("id").eq("user_id", current_user["id"]).execute()
+                if exists.data:
+                    db.table("user_settings").update({key: val}).eq("user_id", current_user["id"]).execute()
+                else:
+                    db.table("user_settings").insert({"user_id": current_user["id"], key: val}).execute()
+            except Exception as ee:
+                logger.warning(f"Setting {key} skipped: {ee}")
 
-    return {"message": "تم حفظ الإعدادات"}
+    return {"message": "✅ تم حفظ الإعدادات"}
 
 
 # ============================================
