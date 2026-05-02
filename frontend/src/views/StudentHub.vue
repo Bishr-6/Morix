@@ -1,8 +1,14 @@
 <template>
   <div class="hub">
 
+    <!-- Mobile menu button -->
+    <button class="mobile-toggle" @click="mobileOpen = !mobileOpen" aria-label="Menu">
+      {{ mobileOpen ? '✕' : '☰' }}
+    </button>
+    <div :class="['mobile-overlay', { open: mobileOpen }]" @click="mobileOpen = false"></div>
+
     <!-- Sidebar -->
-    <aside :class="['sidebar', { collapsed: sidebarCollapsed }]">
+    <aside :class="['sidebar', { collapsed: sidebarCollapsed, open: mobileOpen }]">
       <div class="sidebar-header" @click="sidebarCollapsed = !sidebarCollapsed">
         <div class="brand">
           <div class="brand-icon">M</div>
@@ -708,6 +714,7 @@ const sections = [
 
 const currentSection = ref('chat')
 const sidebarCollapsed = ref(false)
+const mobileOpen = ref(false)
 const currentSectionLabel = computed(() => sections.find(s=>s.id===currentSection.value)?.label||'')
 
 const profile = ref({ name:'', learning_style:null, grade:'', streak_count:0, total_stars:0 })
@@ -846,6 +853,7 @@ async function loadUserSettings() {
 
 async function switchSection(id) {
   currentSection.value = id
+  mobileOpen.value = false
   if (id==='homework' && !homework.value.length) { hwLoading.value=true; try { homework.value=(await studentAPI.getHomework()).data } catch {} finally { hwLoading.value=false } }
   else if (id==='tests' && !tests.value.length) { testsLoading.value=true; try { tests.value=(await studentAPI.getTests()).data } catch {} finally { testsLoading.value=false } }
   else if (id==='worksheets' && !worksheets.value.length) { wsLoading.value=true; try { worksheets.value=(await studentAPI.getWorksheets()).data } catch {} finally { wsLoading.value=false } }

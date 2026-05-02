@@ -4,32 +4,33 @@
 
     <div class="relative z-10">
       <!-- الهيدر -->
-      <header class="border-b px-6 py-4 flex items-center justify-between"
+      <header class="border-b px-3 md:px-6 py-3 md:py-4 flex items-center justify-between flex-wrap gap-2"
               style="border-color: #1a1f3a; background: rgba(11, 14, 31, 0.8); backdrop-filter: blur(10px)">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center"
+        <div class="flex items-center gap-2 md:gap-3 min-w-0">
+          <div class="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                style="background: linear-gradient(135deg, #4a7eff, #8b5cf6)">
             <span class="text-white font-black text-sm">M</span>
           </div>
-          <span class="font-black text-xl gradient-text">Memorix</span>
-          <span class="text-xs px-2 py-1 rounded-full" style="background: rgba(74,126,255,0.15); color: #4a7eff">
+          <span class="font-black text-base md:text-xl gradient-text">Memorix</span>
+          <span class="hidden sm:inline text-xs px-2 py-1 rounded-full" style="background: rgba(74,126,255,0.15); color: #4a7eff">
             لوحة الإدارة
           </span>
         </div>
-        <div class="flex items-center gap-3">
-          <span class="text-sm" style="color: #94a3b8">{{ auth.user?.full_name }}</span>
-          <button @click="handleLogout" class="text-sm px-4 py-2 rounded-lg transition-colors"
+        <div class="flex items-center gap-2 md:gap-3 min-w-0">
+          <span class="text-xs md:text-sm truncate max-w-[100px] md:max-w-none" style="color: #94a3b8">{{ auth.user?.full_name }}</span>
+          <button @click="handleLogout" class="text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg transition-colors"
                   style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3)">
             خروج
           </button>
         </div>
       </header>
 
-      <div class="max-w-7xl mx-auto p-6">
-        <!-- التبويبات -->
-        <div class="flex gap-2 mb-6 p-1 rounded-xl" style="background: rgba(11,14,31,0.8); border: 1px solid #1a1f3a">
+      <div class="max-w-7xl mx-auto p-3 md:p-6">
+        <!-- التبويبات (تمرير أفقي على الموبايل) -->
+        <div class="flex gap-2 mb-4 md:mb-6 p-1 rounded-xl overflow-x-auto"
+             style="background: rgba(11,14,31,0.8); border: 1px solid #1a1f3a; -webkit-overflow-scrolling: touch">
           <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
-                  class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all"
+                  class="flex-shrink-0 py-2 md:py-2.5 px-3 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap"
                   :style="activeTab === tab.id
                     ? 'background: linear-gradient(135deg, #4a7eff, #8b5cf6); color: white'
                     : 'color: #94a3b8'">

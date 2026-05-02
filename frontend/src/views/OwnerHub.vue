@@ -1,11 +1,15 @@
 <template>
   <div class="hub">
-    <aside :class="['sidebar',{collapsed:sb}]">
+    <!-- Mobile menu -->
+    <button class="mobile-toggle" @click="mobileOpen = !mobileOpen" aria-label="Menu">{{ mobileOpen ? '✕' : '☰' }}</button>
+    <div :class="['mobile-overlay', { open: mobileOpen }]" @click="mobileOpen = false"></div>
+
+    <aside :class="['sidebar',{collapsed:sb, open: mobileOpen}]">
       <div class="sb-header" @click="sb=!sb">
         <div class="brand"><div class="b-icon">M</div><span v-if="!sb" class="b-name">Morix Owner</span></div>
       </div>
       <nav class="sb-nav">
-        <button v-for="s in sections" :key="s.id" :class="['nav-item',{active:cur===s.id}]" @click="cur=s.id">
+        <button v-for="s in sections" :key="s.id" :class="['nav-item',{active:cur===s.id}]" @click="cur=s.id; mobileOpen=false">
           <span>{{ s.icon }}</span><span v-if="!sb">{{ s.label }}</span>
         </button>
         <div style="height:1px;background:rgba(255,255,255,.08);margin:8px 4px"></div>
@@ -202,6 +206,7 @@ const otherSections = [
 
 const cur = ref('overview')
 const sb = ref(false)
+const mobileOpen = ref(false)
 const stats = ref(null)
 const complaints = ref([])
 const complaintsLoading = ref(false)

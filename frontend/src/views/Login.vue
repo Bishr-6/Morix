@@ -88,6 +88,7 @@ function fillDemo(e, p) {
   background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
   font-family: 'Segoe UI', 'Cairo', sans-serif;
   direction: rtl;
+  padding: 16px;
 }
 .login-card {
   background: rgba(255,255,255,0.05);
@@ -98,6 +99,12 @@ function fillDemo(e, p) {
   width: 100%;
   max-width: 420px;
   box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+}
+@media (max-width: 480px) {
+  .login-card { padding: 28px 20px; border-radius: 18px; }
+  .logo-icon { width: 56px !important; height: 56px !important; }
+  .logo-text { font-size: 28px !important; }
+  input { font-size: 16px !important; }
 }
 .logo-section { text-align: center; margin-bottom: 36px; }
 .logo-icon {
