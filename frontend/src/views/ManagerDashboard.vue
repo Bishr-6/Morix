@@ -70,68 +70,112 @@
         </div>
 
         <!-- ============ تبويب إعداد المدرسة ============ -->
-        <div v-if="activeTab === 'setup'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">🏫 إعداد المدرسة</h2>
+        <!-- ============ 🏫 المدارس (إضافة + قائمة) ============ -->
+        <div v-if="activeTab === 'schools'" class="animate-fade-in">
+          <h2 class="text-2xl font-bold mb-6 gradient-text">🏫 إدارة المدارس</h2>
 
-          <!-- اختيار المدرسة + بحث -->
+          <!-- إضافة مدرسة جديدة -->
+          <div class="memorix-card p-6 mb-6">
+            <h3 class="font-bold mb-4" style="color: #4a7eff">➕ إضافة مدرسة جديدة</h3>
+            <div class="grid md:grid-cols-3 gap-4 mb-4">
+              <input v-model="newSchool.name" class="memorix-input" placeholder="اسم المدرسة" dir="rtl" />
+              <input v-model="newSchool.branch" class="memorix-input" placeholder="الفرع (اختياري)" dir="rtl" />
+              <input v-model="newSchool.ministry_code" class="memorix-input" placeholder="كود الوزارة (اختياري)" dir="rtl" />
+            </div>
+            <button @click="createNewSchool" :disabled="newSchoolLoading || !newSchool.name.trim()"
+                    class="btn-primary text-sm flex items-center gap-2">
+              <span v-if="newSchoolLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              💾 إضافة وحفظ في قاعدة البيانات
+            </button>
+            <p v-if="newSchoolMsg" class="mt-3 text-sm" :style="{color: newSchoolMsg.startsWith('✅')?'#10b981':'#ef4444'}">{{ newSchoolMsg }}</p>
+          </div>
+
+          <!-- قائمة المدارس -->
+          <div class="memorix-card overflow-hidden">
+            <div class="p-4" style="border-bottom: 1px solid #1a1f3a">
+              <h3 class="font-bold">📋 المدارس المسجلة ({{ schools.length }})</h3>
+            </div>
+            <div v-if="!schools.length" class="p-8 text-center" style="color: #94a3b8">لا توجد مدارس بعد. أضف مدرستك الأولى أعلاه.</div>
+            <table v-else class="w-full text-sm">
+              <thead>
+                <tr style="background: rgba(26,31,58,0.8)">
+                  <th class="p-3 text-right" style="color: #94a3b8">الاسم</th>
+                  <th class="p-3 text-right" style="color: #94a3b8">الحالة</th>
+                  <th class="p-3 text-right" style="color: #94a3b8">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in schools" :key="s.id" class="border-t" style="border-color: #1a1f3a">
+                  <td class="p-3 font-medium">{{ s.name }}</td>
+                  <td class="p-3">
+                    <span v-if="s.setup_completed" class="text-xs px-2 py-1 rounded-full" style="background: rgba(16,185,129,0.15); color: #10b981">✅ معدّة</span>
+                    <span v-else class="text-xs px-2 py-1 rounded-full" style="background: rgba(251,191,36,0.15); color: #fbbf24">⏳ بانتظار الإعداد</span>
+                  </td>
+                  <td class="p-3 flex gap-2">
+                    <button @click="goToSetup(s.id)" class="text-xs px-3 py-1 rounded" style="background: rgba(74,126,255,0.15); color: #4a7eff">📤 رفع Excel</button>
+                    <button @click="confirmDeleteSchool(s)" class="text-xs px-3 py-1 rounded" style="background: rgba(239,68,68,0.15); color: #ef4444">🗑️ حذف</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ============ 📤 إعداد + رفع Excel ============ -->
+        <div v-if="activeTab === 'setup'" class="animate-fade-in">
+          <h2 class="text-2xl font-bold mb-6 gradient-text">📤 إعداد المدرسة برفع ملف Excel</h2>
+
+          <!-- اختيار المدرسة -->
           <div class="memorix-card p-6 mb-6">
             <label class="block text-sm font-medium mb-2" style="color: #94a3b8">اختر المدرسة</label>
-            <input v-model="schoolSearch" class="memorix-input mb-3" placeholder="🔍 ابحث عن مدرسة..." dir="rtl" />
             <select v-model="selectedSchool" class="memorix-input" style="direction: rtl">
               <option value="">-- اختر مدرسة --</option>
-              <option v-for="s in filteredSchools" :key="s.id" :value="s.id">{{ s.name }}</option>
+              <option v-for="s in schools" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
+            <p v-if="!schools.length" class="text-xs mt-2" style="color: #fbbf24">⚠️ لا توجد مدارس — أضف مدرسة أولاً من تبويب "المدارس"</p>
           </div>
 
-          <div v-if="selectedSchool" class="grid md:grid-cols-2 gap-6">
-            <!-- الطلبة -->
-            <div class="memorix-card p-6">
-              <h3 class="font-bold mb-4" style="color: #4a7eff">👨‍🎓 بيانات الطلبة</h3>
-              <p class="text-xs mb-3" style="color: #94a3b8">
-                أدخل كل طالب في سطر: الاسم، الرقم الوزاري، الصف
-              </p>
-              <textarea
-                v-model="studentsText"
-                class="memorix-input h-40 resize-none"
-                placeholder="محمد أحمد, 12345, الصف الأول&#10;فاطمة علي, 12346, الصف الثاني"
-                dir="rtl"
-              />
-              <p class="text-xs mt-2" style="color: #8b5cf6">
-                عدد الطلبة المُدخَل: {{ parsedStudents.length }}
-              </p>
+          <!-- شرح ملف Excel -->
+          <div v-if="selectedSchool" class="memorix-card p-6 mb-6" style="border:1px solid rgba(74,126,255,.3)">
+            <h3 class="font-bold mb-3" style="color:#4a7eff">📋 صيغة ملف Excel المتوقعة</h3>
+            <p class="text-xs mb-3" style="color:#94a3b8">يجب أن يحتوي الملف على هذه الأعمدة (الترتيب غير مهم):</p>
+            <table class="w-full text-xs" style="background:#0f172a;border-radius:8px">
+              <thead>
+                <tr style="background:rgba(99,102,241,.15)">
+                  <th class="p-2">الاسم</th>
+                  <th class="p-2">الدور</th>
+                  <th class="p-2">الصف</th>
+                  <th class="p-2">المادة</th>
+                  <th class="p-2">الرقم الوزاري</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="p-2">محمد أحمد</td><td class="p-2">طالب</td><td class="p-2">الصف الخامس</td><td class="p-2">-</td><td class="p-2">12345</td></tr>
+                <tr><td class="p-2">سارة علي</td><td class="p-2">معلم</td><td class="p-2">-</td><td class="p-2">رياضيات</td><td class="p-2">T001</td></tr>
+                <tr><td class="p-2">خالد سعد</td><td class="p-2">إداري</td><td class="p-2">-</td><td class="p-2">-</td><td class="p-2">A01</td></tr>
+              </tbody>
+            </table>
+            <p class="text-xs mt-3" style="color:#10b981">✅ يقبل: طالب/معلم/إداري أو student/teacher/admin</p>
+          </div>
+
+          <!-- رفع الملف -->
+          <div v-if="selectedSchool" class="memorix-card p-6">
+            <h3 class="font-bold mb-4" style="color:#a78bfa">📤 ارفع ملف Excel</h3>
+            <input ref="excelInput" type="file" accept=".xlsx,.xls" @change="onExcelChange" class="memorix-input" />
+            <p v-if="excelFileName" class="mt-3 text-sm" style="color:#10b981">📄 الملف المختار: {{ excelFileName }}</p>
+            <button @click="uploadExcel" :disabled="!excelFile || uploadLoading"
+                    class="btn-primary mt-4 flex items-center gap-2">
+              <span v-if="uploadLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ⚡ ارفع وولّد الحسابات
+            </button>
+            <div v-if="uploadResult" class="mt-4 p-4 rounded-lg" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3)">
+              <h4 class="font-bold mb-2" style="color:#10b981">✅ تم بنجاح!</h4>
+              <p style="color:#94a3b8">المدرسة: {{ uploadResult.school_name }}</p>
+              <p style="color:#94a3b8">إجمالي الحسابات المولدة: {{ uploadResult.total }}</p>
+              <p style="color:#94a3b8">طلاب: {{ uploadResult.students_count }} • معلمون: {{ uploadResult.teachers_count }} • إداريون: {{ uploadResult.admins_count }}</p>
+              <p class="mt-2 text-sm" style="color:#fbbf24">📋 الحسابات وكلمات السر متاحة الآن في تبويب "الحسابات"</p>
             </div>
-
-            <!-- المعلمون -->
-            <div class="memorix-card p-6">
-              <h3 class="font-bold mb-4" style="color: #00d4ff">👨‍🏫 بيانات المعلمين</h3>
-              <p class="text-xs mb-3" style="color: #94a3b8">
-                أدخل كل معلم في سطر: الاسم، المادة
-              </p>
-              <textarea
-                v-model="teachersText"
-                class="memorix-input h-40 resize-none"
-                placeholder="أحمد محمد, الرياضيات&#10;سارة خالد, العلوم"
-                dir="rtl"
-              />
-              <p class="text-xs mt-2" style="color: #8b5cf6">
-                عدد المعلمين المُدخَل: {{ parsedTeachers.length }}
-              </p>
-            </div>
           </div>
-
-          <!-- عدد الإداريين -->
-          <div v-if="selectedSchool" class="memorix-card p-6 mt-6">
-            <label class="block text-sm font-medium mb-2" style="color: #94a3b8">عدد الإداريين</label>
-            <input v-model.number="adminsCount" type="number" min="0" max="20" class="memorix-input w-32" />
-          </div>
-
-          <!-- زر التوليد -->
-          <button v-if="selectedSchool" @click="generateAccounts"
-                  class="btn-primary mt-6 flex items-center gap-2"
-                  :disabled="setupLoading">
-            <span v-if="setupLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ⚡ توليد الحسابات تلقائياً
-          </button>
         </div>
 
         <!-- ============ تبويب الحسابات ============ -->
@@ -169,6 +213,8 @@
                     <th class="p-3 text-right" style="color: #94a3b8">الدور</th>
                     <th class="p-3 text-right" style="color: #94a3b8">الصف</th>
                     <th class="p-3 text-right" style="color: #94a3b8">المادة</th>
+                    <th class="p-3 text-right" style="color: #94a3b8">كلمة السر</th>
+                    <th class="p-3 text-right" style="color: #94a3b8">حذف</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -185,6 +231,28 @@
                     </td>
                     <td class="p-3" style="color: #94a3b8">{{ acc.grade || '-' }}</td>
                     <td class="p-3" style="color: #94a3b8">{{ acc.subject || '-' }}</td>
+                    <td class="p-3">
+                      <button v-if="!revealedPasswords[acc.id]"
+                              @click="revealPassword(acc.id)"
+                              :disabled="revealLoading[acc.id]"
+                              class="text-xs px-3 py-1 rounded"
+                              style="background:rgba(139,92,246,0.15);color:#a78bfa">
+                        {{ revealLoading[acc.id] ? '⏳' : '🔑 عرض' }}
+                      </button>
+                      <span v-else class="font-mono px-2 py-1 rounded text-xs cursor-pointer"
+                            @click="copyToClipboard(revealedPasswords[acc.id])"
+                            style="background:rgba(139,92,246,0.15);color:#a78bfa;letter-spacing:1px"
+                            title="انقر للنسخ">
+                        {{ revealedPasswords[acc.id] }}
+                      </span>
+                    </td>
+                    <td class="p-3">
+                      <button @click="confirmDeleteAccount(acc)"
+                              class="text-xs px-3 py-1 rounded"
+                              style="background:rgba(239,68,68,0.15);color:#ef4444">
+                        🗑️ حذف
+                      </button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -195,81 +263,7 @@
           </div>
 
           <div v-else-if="selectedSchoolForAccounts" class="memorix-card p-12 text-center" style="color: #94a3b8">
-            لا توجد حسابات بعد. اذهب لتبويب "إعداد المدرسة" لتوليدها.
-          </div>
-        </div>
-
-        <!-- ============ تبويب الباسووردات ============ -->
-        <div v-if="activeTab === 'passwords'" class="animate-fade-in">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-bold gradient-text">🔑 باسووردات الحسابات</h2>
-            <button v-if="savedPasswords.length"
-                    @click="downloadPasswordsCSV"
-                    class="btn-primary text-sm py-2 flex items-center gap-2">
-              📥 تحميل CSV
-            </button>
-          </div>
-
-          <!-- اختيار المدرسة -->
-          <div class="memorix-card p-4 mb-6 flex items-center gap-4">
-            <label class="text-sm flex-shrink-0" style="color: #94a3b8">المدرسة:</label>
-            <select v-model="selectedSchoolForPasswords" @change="loadSavedPasswords"
-                    class="memorix-input w-64" style="direction: rtl">
-              <option value="">-- اختر مدرسة --</option>
-              <option v-for="s in schools" :key="s.id" :value="s.id">{{ s.name }}</option>
-            </select>
-          </div>
-
-          <!-- تحذير -->
-          <div v-if="savedPasswords.length" class="p-3 rounded-lg mb-4 text-sm"
-               style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #ef4444">
-            ⚠️ هذه الباسووردات سرية - لا تشاركها مع أحد غير أصحابها
-          </div>
-
-          <!-- جدول الباسووردات -->
-          <div v-if="passwordsLoading" class="space-y-2">
-            <div v-for="i in 5" :key="i" class="skeleton h-12 rounded-lg" />
-          </div>
-
-          <div v-else-if="savedPasswords.length" class="memorix-card overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr style="background: rgba(26,31,58,0.8)">
-                    <th class="p-3 text-right" style="color: #94a3b8">الاسم</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">الإيميل</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">الباسوورد</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">الدور</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="acc in savedPasswords" :key="acc.email"
-                      class="border-t hover:bg-white/5 transition-colors"
-                      style="border-color: #1a1f3a">
-                    <td class="p-3 font-medium">{{ acc.full_name }}</td>
-                    <td class="p-3 font-mono text-xs" style="color: #4a7eff; direction: ltr">{{ acc.email }}</td>
-                    <td class="p-3">
-                      <span class="font-mono px-2 py-1 rounded text-sm"
-                            style="background: rgba(139,92,246,0.15); color: #a78bfa; letter-spacing: 1px">
-                        {{ acc.password }}
-                      </span>
-                    </td>
-                    <td class="p-3">
-                      <span class="text-xs px-2 py-1 rounded-full" :style="roleStyle(acc.role)">
-                        {{ roleLabel(acc.role) }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="p-3 text-center text-sm" style="color: #94a3b8; border-top: 1px solid #1a1f3a">
-              إجمالي: {{ savedPasswords.length }} حساب
-            </div>
-          </div>
-
-          <div v-else-if="selectedSchoolForPasswords" class="memorix-card p-12 text-center" style="color: #94a3b8">
-            لا توجد باسووردات محفوظة. أنشئ الحسابات أولاً من تبويب "إعداد المدرسة".
+            لا توجد حسابات بعد. اذهب لتبويب "إعداد + رفع Excel" لتوليدها.
           </div>
         </div>
 
@@ -353,28 +347,6 @@
               @keydown.enter.exact.prevent="sendMgrMsg()" @keydown.enter.shift.exact="chatInput+='\n'"></textarea>
             <button @click="sendMgrMsg()" :disabled="!chatInput.trim()||chatThinking"
               class="btn-primary px-4 py-3" style="border-radius:10px;font-size:18px;flex-shrink:0">➤</button>
-          </div>
-        </div>
-
-        <!-- ============ ⚖️ مقارنة المدارس ============ -->
-        <div v-if="activeTab === 'compare'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">⚖️ مقارنة المدارس</h2>
-          <button @click="loadCompare" :disabled="cmpLoading" class="btn-primary px-6 py-3 mb-4" style="border-radius:10px">
-            {{ cmpLoading ? '⏳ تحميل...' : '🔄 تحديث المقارنة' }}
-          </button>
-          <div v-if="comparison.length" class="grid gap-3">
-            <div v-for="s in comparison" :key="s.school_id" class="memorix-card p-4">
-              <div class="flex justify-between items-center flex-wrap gap-2">
-                <div>
-                  <h3 class="font-bold text-lg">{{ s.school_name }}</h3>
-                  <p class="text-sm" style="color:#94a3b8">👨‍🎓 {{ s.students }} طالب • 👨‍🏫 {{ s.teachers }} معلم • نسبة {{ s.ratio }}:1</p>
-                </div>
-                <div class="text-left">
-                  <div :style="{color:s.health_score>=75?'#10b981':s.health_score>=50?'#fbbf24':'#ef4444',fontSize:'28px',fontWeight:'bold'}">{{ s.health_score }}/100</div>
-                  <div class="text-xs" style="color:#94a3b8">🟢 {{ s.active_week }} نشط أسبوعياً</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -498,11 +470,10 @@ const auth = useAuthStore()
 const activeTab = ref('stats')
 const tabs = [
   { id: 'stats', label: 'الإحصائيات', icon: '📊' },
-  { id: 'setup', label: 'إعداد المدرسة', icon: '🏫' },
+  { id: 'schools', label: 'المدارس', icon: '🏫' },
+  { id: 'setup', label: 'إعداد + رفع Excel', icon: '📤' },
   { id: 'accounts', label: 'الحسابات', icon: '👥' },
-  { id: 'passwords', label: 'الباسووردات', icon: '🔑' },
   { id: 'books', label: 'الكتب', icon: '📚' },
-  { id: 'compare', label: 'مقارنة المدارس', icon: '⚖️' },
   { id: 'health', label: 'صحة المدارس', icon: '💪' },
   { id: 'advisor', label: 'مستشار استراتيجي', icon: '🧠' },
   { id: 'chat', label: 'مساعد AI', icon: '💬' },
@@ -743,8 +714,6 @@ async function handleLogout() {
 }
 
 // 👔 ميزات المدير المتقدمة
-const comparison = ref([]), cmpLoading = ref(false)
-async function loadCompare() { cmpLoading.value=true; try { comparison.value=(await managerAPI.compareSchools()).data } catch(e){alert('فشل')} cmpLoading.value=false }
 const health = ref([]), hlLoading = ref(false)
 async function loadHealth() { hlLoading.value=true; try { health.value=(await managerAPI.healthScore()).data } catch(e){alert('فشل')} hlLoading.value=false }
 const adQuestion = ref(''), adContext = ref(''), adLoading = ref(false), adAnswer = ref('')
@@ -754,6 +723,93 @@ async function askAdvisor() {
   try { adAnswer.value=(await managerAPI.strategicAdvisor(adQuestion.value, adContext.value)).data.advice }
   catch(e) { alert('فشل') }
   adLoading.value=false
+}
+
+// 🏫 إدارة المدارس
+const newSchool = ref({ name:'', branch:'', ministry_code:'' })
+const newSchoolLoading = ref(false)
+const newSchoolMsg = ref('')
+async function createNewSchool() {
+  if (!newSchool.value.name.trim()) return
+  newSchoolLoading.value = true; newSchoolMsg.value = ''
+  try {
+    await managerAPI.createSchool(newSchool.value)
+    newSchoolMsg.value = '✅ تمت الإضافة وتم الحفظ في قاعدة البيانات'
+    newSchool.value = { name:'', branch:'', ministry_code:'' }
+    schools.value = (await managerAPI.getSchools()).data
+  } catch (e) {
+    newSchoolMsg.value = '❌ ' + (e.response?.data?.detail || e.message)
+  }
+  newSchoolLoading.value = false
+}
+async function confirmDeleteSchool(s) {
+  if (!confirm(`⚠️ هل أنت متأكد من حذف مدرسة "${s.name}"؟\nسيتم حذف كل الحسابات المرتبطة بها نهائياً!`)) return
+  try {
+    await managerAPI.deleteSchool(s.id)
+    schools.value = (await managerAPI.getSchools()).data
+    alert('✅ تم حذف المدرسة وكل بياناتها')
+  } catch (e) {
+    alert('❌ فشل: ' + (e.response?.data?.detail || e.message))
+  }
+}
+function goToSetup(schoolId) {
+  selectedSchool.value = schoolId
+  activeTab.value = 'setup'
+}
+
+// 📤 رفع Excel
+const excelFile = ref(null)
+const excelFileName = ref('')
+const uploadLoading = ref(false)
+const uploadResult = ref(null)
+function onExcelChange(e) {
+  const f = e.target.files?.[0]
+  if (!f) return
+  excelFile.value = f
+  excelFileName.value = f.name
+}
+async function uploadExcel() {
+  if (!excelFile.value || !selectedSchool.value) return
+  uploadLoading.value = true; uploadResult.value = null
+  try {
+    const r = await managerAPI.uploadExcel(selectedSchool.value, excelFile.value)
+    uploadResult.value = r.data
+    schools.value = (await managerAPI.getSchools()).data
+  } catch (e) {
+    alert('❌ فشل الرفع: ' + (e.response?.data?.detail || e.message))
+  }
+  uploadLoading.value = false
+}
+
+// 🔑 عرض كلمة السر لكل حساب
+const revealedPasswords = ref({})
+const revealLoading = ref({})
+async function revealPassword(userId) {
+  revealLoading.value[userId] = true
+  try {
+    const r = await managerAPI.getAccountPassword(userId)
+    revealedPasswords.value[userId] = r.data.password
+  } catch (e) {
+    alert('❌ ' + (e.response?.data?.detail || 'تعذر جلب كلمة السر'))
+  }
+  revealLoading.value[userId] = false
+}
+function copyToClipboard(text) {
+  navigator.clipboard?.writeText(text)
+  alert('✅ تم نسخ كلمة السر')
+}
+
+// 🗑️ حذف حساب
+async function confirmDeleteAccount(acc) {
+  if (!confirm(`⚠️ هل أنت متأكد من حذف الحساب "${acc.full_name}" (${acc.email})؟\nسيتم حذف كل بياناته نهائياً من قاعدة البيانات!`)) return
+  try {
+    await managerAPI.deleteAccount(acc.id)
+    accounts.value = accounts.value.filter(a => a.id !== acc.id)
+    delete revealedPasswords.value[acc.id]
+    alert('✅ تم حذف الحساب نهائياً')
+  } catch (e) {
+    alert('❌ فشل: ' + (e.response?.data?.detail || e.message))
+  }
 }
 
 onMounted(async () => {

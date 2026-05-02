@@ -44,15 +44,24 @@ export const authAPI = {
 // ============================================
 export const managerAPI = {
   getSchools: () => api.get('/manager/schools'),
+  createSchool: (data) => api.post('/manager/schools', data),
+  deleteSchool: (id) => api.delete(`/manager/schools/${id}`),
   setupSchool: (data) => api.post('/manager/setup', data),
+  uploadExcel: (schoolId, file) => {
+    const fd = new FormData()
+    fd.append('school_id', schoolId)
+    fd.append('file', file)
+    return api.post('/manager/upload-excel', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
   getAccounts: (schoolId) => api.get(`/manager/accounts/${schoolId}`),
+  getAccountPassword: (userId) => api.get(`/manager/account-password/${userId}`),
+  deleteAccount: (userId) => api.delete(`/manager/accounts/${userId}`),
   getStats: () => api.get('/manager/stats'),
   exportCSV: (schoolId) => api.get(`/manager/export/${schoolId}`, { responseType: 'blob' }),
   getBooks: () => api.get('/manager/books'),
   addBook: (data) => api.post('/manager/books', data),
   getSavedPasswords: (schoolId) => api.get(`/manager/passwords/${schoolId}`),
   // 👔 ميزات المدير المتقدمة
-  compareSchools: () => api.get('/manager/compare-schools'),
   strategicAdvisor: (question, context = '') => api.post('/manager/strategic-advisor', { question, context }),
   healthScore: () => api.get('/manager/health-score'),
 }

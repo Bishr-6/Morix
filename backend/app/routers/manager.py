@@ -1,5 +1,5 @@
 # راوتر لوحة المدير
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from app.models.schemas import SchoolSetupRequest, StatsResponse
 from app.services.account_generator import generate_accounts
@@ -253,33 +253,251 @@ async def add_book(
 # 👔 ميزات المدير المتقدمة
 # ============================================================
 
-@router.get("/compare-schools")
-async def compare_schools(current_user: dict = Depends(require_manager), db=Depends(get_db)):
-    """مقارنة أداء عدة مدارس جنباً لجنب"""
+@router.post("/schools")
+async def create_school(
+    body: dict,
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """إضافة مدرسة جديدة (تنحفظ بشكل دائم في قاعدة البيانات)"""
+    name = (body.get("name") or "").strip()
+    branch = (body.get("branch") or "").strip()
+    ministry_code = (body.get("ministry_code") or "").strip()
+
+    if not name:
+        raise HTTPException(400, "اكتب اسم المدرسة")
+
+    full_name = f"{name} - فرع {branch}" if branch else name
+
+    # تأكد إن المدرسة مش مكررة
+    existing = db.table("schools").select("id").eq("name", full_name).execute()
+    if existing.data:
+        raise HTTPException(400, "مدرسة بنفس الاسم والفرع موجودة بالفعل")
+
+    payload = {"name": full_name, "setup_completed": False}
+    if branch:
+        payload["branch"] = branch
+    if ministry_code:
+        payload["ministry_code"] = ministry_code
+
     try:
-        schools = db.table("schools").select("id, name").execute()
-        comparison = []
-        for sc in (schools.data or []):
-            users = db.table("users").select("id, role, last_login").eq("school_id", sc["id"]).eq("is_active", True).execute()
-            students = [u for u in (users.data or []) if u.get("role") == "student"]
-            teachers = [u for u in (users.data or []) if u.get("role") == "teacher"]
-            from datetime import datetime, timedelta, timezone
-            week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-            active = sum(1 for u in (users.data or []) if u.get("last_login", "") >= week_ago)
-            health = min(100, int((active / max(len(users.data or []), 1)) * 100))
-            comparison.append({
-                "school_id": sc["id"],
-                "school_name": sc["name"],
-                "students": len(students),
-                "teachers": len(teachers),
-                "active_week": active,
-                "health_score": health,
-                "ratio": round(len(students) / max(len(teachers), 1), 1),
-            })
-        return sorted(comparison, key=lambda x: -x["health_score"])
+        result = db.table("schools").insert(payload).execute()
     except Exception as e:
-        logger.error(f"Compare failed: {e}")
-        return []
+        # في حالة عدم وجود عمود branch/ministry_code، نحاول بدونهم
+        logger.warning(f"School insert with extras failed: {e} — retrying basic")
+        result = db.table("schools").insert({"name": full_name, "setup_completed": False}).execute()
+
+    return result.data[0] if result.data else {"message": "تم إضافة المدرسة"}
+
+
+@router.delete("/schools/{school_id}")
+async def delete_school(
+    school_id: str,
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """حذف مدرسة + كل حساباتها نهائياً"""
+    try:
+        db.table("users").delete().eq("school_id", school_id).execute()
+    except Exception:
+        pass
+    try:
+        db.table("school_setup").delete().eq("school_id", school_id).execute()
+    except Exception:
+        pass
+    db.table("schools").delete().eq("id", school_id).execute()
+    return {"message": "✅ تم حذف المدرسة وكل حساباتها"}
+
+
+@router.post("/upload-excel")
+async def upload_excel_setup(
+    school_id: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """
+    رفع ملف Excel لإعداد المدرسة.
+    الأعمدة المتوقعة (مرنة):
+      - الاسم / Name / full_name
+      - الدور / Role / role  (student / teacher / admin / طالب / معلم / إداري)
+      - الصف / Grade / grade  (للطالب)
+      - المادة / Subject / subject  (للمعلم)
+      - الرقم الوزاري / Ministry ID / ministry_id  (اختياري)
+    """
+    from openpyxl import load_workbook
+    from app.services.account_generator import generate_accounts
+
+    school = db.table("schools").select("*").eq("id", school_id).execute()
+    if not school.data:
+        raise HTTPException(404, "المدرسة غير موجودة")
+
+    content = await file.read()
+    try:
+        wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+        ws = wb.active
+    except Exception as e:
+        raise HTTPException(400, f"تعذرت قراءة ملف Excel: {e}")
+
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows or len(rows) < 2:
+        raise HTTPException(400, "الملف فارغ")
+
+    headers = [str(h or "").strip().lower() for h in rows[0]]
+
+    def find_col(*candidates):
+        for c in candidates:
+            for i, h in enumerate(headers):
+                if c in h:
+                    return i
+        return -1
+
+    col_name = find_col("اسم", "name", "full_name")
+    col_role = find_col("دور", "role")
+    col_grade = find_col("صف", "grade", "صفّ")
+    col_subject = find_col("مادة", "subject")
+    col_ministry = find_col("وزاري", "ministry", "id")
+
+    if col_name == -1 or col_role == -1:
+        raise HTTPException(400, "الملف لازم يحتوي على عمودين على الأقل: الاسم والدور")
+
+    students, teachers, admins_count = [], [], 0
+    role_map = {
+        "طالب": "student", "student": "student",
+        "معلم": "teacher", "معلّم": "teacher", "teacher": "teacher",
+        "اداري": "admin", "إداري": "admin", "admin": "admin",
+    }
+
+    for row in rows[1:]:
+        if not row or all(c is None for c in row):
+            continue
+        full_name = str(row[col_name] or "").strip()
+        if not full_name:
+            continue
+        raw_role = str(row[col_role] or "").strip().lower()
+        role = role_map.get(raw_role, "student")
+        grade = str(row[col_grade] or "").strip() if col_grade != -1 else ""
+        subject = str(row[col_subject] or "").strip() if col_subject != -1 else ""
+        ministry_id = str(row[col_ministry] or "").strip() if col_ministry != -1 else ""
+
+        entry = {"full_name": full_name}
+        if ministry_id:
+            entry["ministry_id"] = ministry_id
+
+        if role == "student":
+            entry["grade"] = grade or "غير محدد"
+            students.append(entry)
+        elif role == "teacher":
+            entry["subject"] = subject or "عام"
+            teachers.append(entry)
+        elif role == "admin":
+            admins_count += 1
+
+    accounts = await generate_accounts(
+        school_id=school_id,
+        students=students,
+        teachers=teachers,
+        admins_count=admins_count,
+        db=db,
+    )
+
+    db.table("school_setup").upsert({
+        "school_id": school_id,
+        "students_data": students,
+        "teachers_data": teachers,
+        "admins_count": admins_count,
+        "total_accounts_generated": len(accounts),
+        "passwords_data": accounts,
+    }).execute()
+
+    db.table("schools").update({"setup_completed": True}).eq("id", school_id).execute()
+
+    return {
+        "accounts": accounts,
+        "total": len(accounts),
+        "school_name": school.data[0]["name"],
+        "students_count": len(students),
+        "teachers_count": len(teachers),
+        "admins_count": admins_count,
+    }
+
+
+@router.get("/account-password/{user_id}")
+async def get_account_password(
+    user_id: str,
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """عرض كلمة سر حساب معين (للمدير فقط)"""
+    user = db.table("users").select("school_id, email, full_name").eq("id", user_id).execute()
+    if not user.data:
+        raise HTTPException(404, "الحساب غير موجود")
+
+    school_id = user.data[0]["school_id"]
+    email = user.data[0]["email"]
+
+    setup = db.table("school_setup").select("passwords_data").eq("school_id", school_id).execute()
+    if not setup.data or not setup.data[0].get("passwords_data"):
+        raise HTTPException(404, "كلمات السر غير محفوظة لهذه المدرسة")
+
+    accounts = setup.data[0]["passwords_data"]
+    for acc in accounts:
+        if acc.get("email") == email:
+            return {
+                "email": email,
+                "password": acc.get("password"),
+                "full_name": user.data[0]["full_name"],
+            }
+    raise HTTPException(404, "كلمة السر غير موجودة لهذا الحساب")
+
+
+@router.delete("/accounts/{user_id}")
+async def delete_account(
+    user_id: str,
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """حذف حساب نهائياً من قاعدة البيانات (مع كل بياناته)"""
+    user = db.table("users").select("id, school_id, email, role").eq("id", user_id).execute()
+    if not user.data:
+        raise HTTPException(404, "الحساب غير موجود")
+
+    if user.data[0].get("role") in ("manager", "owner"):
+        raise HTTPException(403, "لا يمكن حذف حسابات المديرين أو الملاك من هنا")
+
+    email = user.data[0]["email"]
+    school_id = user.data[0]["school_id"]
+
+    # حذف كل البيانات المرتبطة بالحساب
+    related_tables = [
+        "ai_conversations", "ai_messages", "messages", "conversations",
+        "homework", "tests", "worksheets", "submissions",
+        "diagnostic_results", "streaks", "achievements",
+        "user_settings", "analytics", "complaints",
+    ]
+    for tbl in related_tables:
+        try:
+            db.table(tbl).delete().eq("user_id", user_id).execute()
+        except Exception:
+            pass
+        try:
+            db.table(tbl).delete().eq("student_id", user_id).execute()
+        except Exception:
+            pass
+
+    # حذف الحساب من users
+    db.table("users").delete().eq("id", user_id).execute()
+
+    # حذف من school_setup.passwords_data
+    try:
+        setup = db.table("school_setup").select("passwords_data").eq("school_id", school_id).execute()
+        if setup.data and setup.data[0].get("passwords_data"):
+            new_pw = [a for a in setup.data[0]["passwords_data"] if a.get("email") != email]
+            db.table("school_setup").update({"passwords_data": new_pw}).eq("school_id", school_id).execute()
+    except Exception:
+        pass
+
+    return {"message": f"✅ تم حذف الحساب {email} نهائياً مع كل بياناته"}
 
 
 @router.post("/strategic-advisor")
