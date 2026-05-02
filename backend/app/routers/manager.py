@@ -260,6 +260,7 @@ async def create_school(
     db=Depends(get_db),
 ):
     """إضافة مدرسة جديدة (تنحفظ بشكل دائم في قاعدة البيانات)"""
+    import uuid as _uuid
     name = (body.get("name") or "").strip()
     branch = (body.get("branch") or "").strip()
     ministry_code = (body.get("ministry_code") or "").strip()
@@ -274,20 +275,28 @@ async def create_school(
     if existing.data:
         raise HTTPException(400, "مدرسة بنفس الاسم والفرع موجودة بالفعل")
 
-    payload = {"name": full_name, "setup_completed": False}
-    if branch:
-        payload["branch"] = branch
-    if ministry_code:
-        payload["ministry_code"] = ministry_code
+    # توليد كود وزاري تلقائي لو فاضي (الـ DB قد تكون بـ UNIQUE NOT NULL)
+    if not ministry_code:
+        ministry_code = f"MX-{_uuid.uuid4().hex[:8].upper()}"
 
-    try:
-        result = db.table("schools").insert(payload).execute()
-    except Exception as e:
-        # في حالة عدم وجود عمود branch/ministry_code، نحاول بدونهم
-        logger.warning(f"School insert with extras failed: {e} — retrying basic")
-        result = db.table("schools").insert({"name": full_name, "setup_completed": False}).execute()
+    # محاولات تدريجية: مع كل الأعمدة، بدون branch، بدون كل الإضافات
+    attempts = [
+        {"name": full_name, "ministry_code": ministry_code, "branch": branch or None, "setup_completed": False},
+        {"name": full_name, "ministry_code": ministry_code, "setup_completed": False},
+        {"name": full_name, "ministry_code": ministry_code},
+    ]
 
-    return result.data[0] if result.data else {"message": "تم إضافة المدرسة"}
+    last_error = None
+    for payload in attempts:
+        try:
+            result = db.table("schools").insert(payload).execute()
+            if result.data:
+                return result.data[0]
+        except Exception as e:
+            last_error = e
+            continue
+
+    raise HTTPException(500, f"تعذرت إضافة المدرسة: {last_error}")
 
 
 @router.delete("/schools/{school_id}")
@@ -530,23 +539,39 @@ async def strategic_advisor(
 @router.get("/health-score")
 async def franchise_health(current_user: dict = Depends(require_manager), db=Depends(get_db)):
     """درجة صحية شاملة لكل المدارس"""
+    from datetime import datetime, timedelta, timezone
+    week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    scored = []
     try:
         schools = db.table("schools").select("id, name, setup_completed").execute()
-        scored = []
-        from datetime import datetime, timedelta, timezone
-        week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         for sc in (schools.data or []):
-            users = db.table("users").select("id, last_login").eq("school_id", sc["id"]).execute()
-            total = len(users.data or [])
+            try:
+                users = db.table("users").select("id").eq("school_id", sc["id"]).execute()
+                total = len(users.data or [])
+            except Exception:
+                total = 0
+
             if total == 0:
-                scored.append({"school_id": sc["id"], "name": sc["name"], "score": 20, "status": "🔴 فارغة"})
+                scored.append({"school_id": sc["id"], "name": sc["name"], "score": 20, "status": "🔴 فارغة", "users": 0, "active_week": 0})
                 continue
-            active = sum(1 for u in users.data if u.get("last_login", "") >= week)
+
+            active = 0
+            try:
+                ull = db.table("users").select("last_login").eq("school_id", sc["id"]).execute()
+                active = sum(1 for u in (ull.data or []) if u.get("last_login") and str(u["last_login"]) >= week)
+            except Exception:
+                pass
+            if active == 0:
+                try:
+                    logs = db.table("analytics").select("student_id").eq("school_id", sc["id"]).eq("event_type", "login").gte("created_at", week).execute()
+                    active = len(set(l.get("student_id") for l in (logs.data or []) if l.get("student_id")))
+                except Exception:
+                    pass
+
             engagement = (active / total) * 100
             score = int(engagement * 0.6 + (40 if sc.get("setup_completed") else 0))
             status_label = "🟢 ممتازة" if score >= 75 else "🟡 جيدة" if score >= 50 else "🟠 ضعيفة" if score >= 25 else "🔴 حرجة"
             scored.append({"school_id": sc["id"], "name": sc["name"], "score": score, "status": status_label, "users": total, "active_week": active})
-        return sorted(scored, key=lambda x: -x["score"])
     except Exception as e:
         logger.error(f"Health failed: {e}")
-        return []
+    return sorted(scored, key=lambda x: -x["score"])

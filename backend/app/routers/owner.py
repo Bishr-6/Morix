@@ -99,24 +99,66 @@ async def platform_pulse(current_user: dict = Depends(_require_owner), db=Depend
     now = datetime.now(timezone.utc)
     today = now.date().isoformat()
     week_ago = (now - timedelta(days=7)).isoformat()
+
+    total_users = active_today = active_week = ai_calls = complaints_open = 0
+    all_users = []
+
+    # 1) عدد المستخدمين (لازم يشتغل دائماً)
     try:
-        users = db.table("users").select("id, role, is_active, last_login").execute()
+        users = db.table("users").select("id, is_active").execute()
         all_users = users.data or []
-        active_today = sum(1 for u in all_users if u.get("last_login", "") >= today)
-        active_week = sum(1 for u in all_users if u.get("last_login", "") >= week_ago)
-        ai_calls = db.table("analytics").select("id", count="exact").gte("created_at", week_ago).execute()
-        complaints_open = db.table("complaints").select("id", count="exact").eq("status", "pending").execute()
-        return {
-            "total_users": len(all_users),
-            "active_today": active_today,
-            "active_this_week": active_week,
-            "ai_calls_week": ai_calls.count or 0,
-            "open_complaints": complaints_open.count or 0,
-            "health_score": min(100, int((active_week / max(len(all_users), 1)) * 100)),
-        }
+        total_users = sum(1 for u in all_users if u.get("is_active") is not False)
     except Exception as e:
-        logger.error(f"Platform pulse failed: {e}")
-        return {"total_users": 0, "active_today": 0, "active_this_week": 0, "ai_calls_week": 0, "open_complaints": 0, "health_score": 0}
+        logger.error(f"Platform pulse: count failed: {e}")
+
+    # 2) النشاط من last_login (لو العمود موجود)
+    try:
+        users_ll = db.table("users").select("id, last_login").execute()
+        for u in (users_ll.data or []):
+            ll = u.get("last_login")
+            if ll:
+                ll_str = str(ll)
+                if ll_str >= today: active_today += 1
+                if ll_str >= week_ago: active_week += 1
+    except Exception:
+        pass  # العمود مش موجود — هنستخدم الـ fallback
+
+    # 3) Fallback: من analytics events لو last_login فاضي
+    if active_week == 0:
+        try:
+            logs = db.table("analytics").select("student_id, created_at").eq("event_type", "login").gte("created_at", week_ago).execute()
+            seen_today, seen_week = set(), set()
+            for l in (logs.data or []):
+                sid = l.get("student_id")
+                if not sid: continue
+                seen_week.add(sid)
+                if str(l.get("created_at", "")) >= today:
+                    seen_today.add(sid)
+            active_today = len(seen_today)
+            active_week = len(seen_week)
+        except Exception:
+            pass
+
+    try:
+        analytics = db.table("analytics").select("id", count="exact").gte("created_at", week_ago).execute()
+        ai_calls = analytics.count or 0
+    except Exception:
+        pass
+
+    try:
+        c = db.table("complaints").select("id", count="exact").eq("status", "pending").execute()
+        complaints_open = c.count or 0
+    except Exception:
+        pass
+
+    return {
+        "total_users": total_users,
+        "active_today": active_today,
+        "active_this_week": active_week,
+        "ai_calls_week": ai_calls,
+        "open_complaints": complaints_open,
+        "health_score": min(100, int((active_week / max(total_users, 1)) * 100)),
+    }
 
 
 @router.get("/ai-cost")
@@ -148,11 +190,27 @@ async def churn_risk(current_user: dict = Depends(_require_owner), db=Depends(ge
     try:
         schools = db.table("schools").select("id, name").execute()
         for sc in (schools.data or []):
-            users = db.table("users").select("id, last_login").eq("school_id", sc["id"]).execute()
-            total = len(users.data or [])
+            try:
+                users = db.table("users").select("id").eq("school_id", sc["id"]).execute()
+                total = len(users.data or [])
+            except Exception:
+                total = 0
             if total == 0:
                 continue
-            inactive = sum(1 for u in users.data if not u.get("last_login") or u.get("last_login") < cutoff)
+
+            inactive = total
+            try:
+                ull = db.table("users").select("last_login").eq("school_id", sc["id"]).execute()
+                inactive = sum(1 for u in (ull.data or []) if not u.get("last_login") or str(u["last_login"]) < cutoff)
+            except Exception:
+                # Fallback من analytics: نشوف مين عمل login آخر 14 يوم
+                try:
+                    logs = db.table("analytics").select("student_id").eq("school_id", sc["id"]).eq("event_type", "login").gte("created_at", cutoff).execute()
+                    active = len(set(l.get("student_id") for l in (logs.data or []) if l.get("student_id")))
+                    inactive = max(0, total - active)
+                except Exception:
+                    pass
+
             inactive_pct = (inactive / total) * 100
             if inactive_pct >= 60:
                 risks.append({

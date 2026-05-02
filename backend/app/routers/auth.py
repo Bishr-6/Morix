@@ -72,7 +72,7 @@ async def login(request: LoginRequest, db=Depends(get_db)):
     if not validate_memorix_email(request.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"الإيميل لازم يكون @{settings.allowed_email_domain} - الحسابات المسموحة من منصة Memorix فقط"
+            detail=f"الإيميل لازم يكون @{settings.allowed_email_domain} — الحسابات المسموحة من منصة Morix فقط"
         )
 
     # البحث عن المستخدم
@@ -100,6 +100,14 @@ async def login(request: LoginRequest, db=Depends(get_db)):
 
     # إنشاء التوكن
     token = create_access_token({"sub": user["id"], "role": user["role"]})
+
+    # تحديث last_login في users (مهم لإحصائيات النشاط)
+    try:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        db.table("users").update({"last_login": now_iso}).eq("id", user["id"]).execute()
+        user["last_login"] = now_iso
+    except Exception as e:
+        logger.warning(f"last_login update failed: {e}")
 
     # تسجيل حدث الدخول في الإحصائيات
     try:

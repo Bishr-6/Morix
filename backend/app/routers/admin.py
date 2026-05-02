@@ -256,29 +256,69 @@ async def school_pulse(current_user: dict = Depends(_require_admin), db=Depends(
     """نبض المدرسة لحظياً"""
     sid = current_user.get("school_id")
     if not sid:
-        return {"error": "no_school"}
-    try:
-        from datetime import datetime, timedelta, timezone
-        today = datetime.now(timezone.utc).date().isoformat()
-        week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-        users = db.table("users").select("id, role, last_login").eq("school_id", sid).execute()
-        all_u = users.data or []
-        students = [u for u in all_u if u.get("role") == "student"]
-        teachers = [u for u in all_u if u.get("role") == "teacher"]
-        active_today = sum(1 for u in all_u if u.get("last_login", "") >= today)
-        active_week = sum(1 for u in all_u if u.get("last_login", "") >= week)
-        ai_calls = db.table("analytics").select("id", count="exact").eq("school_id", sid).gte("created_at", week).execute()
         return {
-            "students": len(students),
-            "teachers": len(teachers),
-            "active_today": active_today,
-            "active_week": active_week,
-            "ai_calls_week": ai_calls.count or 0,
-            "engagement_pct": round((active_week / max(len(all_u), 1)) * 100, 1),
+            "students": 0, "teachers": 0, "active_today": 0, "active_week": 0,
+            "ai_calls_week": 0, "engagement_pct": 0, "error": "no_school"
         }
+
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone.utc).date().isoformat()
+    week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+
+    students_count = teachers_count = active_today = active_week = ai_calls = 0
+    total = 0
+
+    try:
+        users = db.table("users").select("id, role").eq("school_id", sid).execute()
+        all_u = users.data or []
+        total = len(all_u)
+        students_count = sum(1 for u in all_u if u.get("role") == "student")
+        teachers_count = sum(1 for u in all_u if u.get("role") == "teacher")
     except Exception as e:
-        logger.error(f"Pulse failed: {e}")
-        return {}
+        logger.error(f"School pulse users failed: {e}")
+
+    # نشاط من last_login (لو العمود موجود)
+    try:
+        users_ll = db.table("users").select("id, last_login").eq("school_id", sid).execute()
+        for u in (users_ll.data or []):
+            ll = u.get("last_login")
+            if ll:
+                ll_s = str(ll)
+                if ll_s >= today: active_today += 1
+                if ll_s >= week: active_week += 1
+    except Exception:
+        pass
+
+    # Fallback من analytics
+    if active_week == 0:
+        try:
+            logs = db.table("analytics").select("student_id, created_at").eq("school_id", sid).eq("event_type", "login").gte("created_at", week).execute()
+            seen_today, seen_week = set(), set()
+            for l in (logs.data or []):
+                sid_ = l.get("student_id")
+                if not sid_: continue
+                seen_week.add(sid_)
+                if str(l.get("created_at", "")) >= today:
+                    seen_today.add(sid_)
+            active_today = max(active_today, len(seen_today))
+            active_week = max(active_week, len(seen_week))
+        except Exception:
+            pass
+
+    try:
+        a = db.table("analytics").select("id", count="exact").eq("school_id", sid).gte("created_at", week).execute()
+        ai_calls = a.count or 0
+    except Exception:
+        pass
+
+    return {
+        "students": students_count,
+        "teachers": teachers_count,
+        "active_today": active_today,
+        "active_week": active_week,
+        "ai_calls_week": ai_calls,
+        "engagement_pct": round((active_week / max(total, 1)) * 100, 1),
+    }
 
 
 @router.post("/announcement")
