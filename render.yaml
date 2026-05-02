@@ -17,7 +17,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL
-        value: https://morix-srqw.vercel.app
+        value: https://morix.tech
       - key: ALLOWED_EMAIL_DOMAIN
         value: morix.tech
       - key: APP_VERSION
