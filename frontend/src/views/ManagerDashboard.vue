@@ -215,7 +215,7 @@
                     <th class="p-3 text-right" style="color: #94a3b8">الصف</th>
                     <th class="p-3 text-right" style="color: #94a3b8">المادة</th>
                     <th class="p-3 text-right" style="color: #94a3b8">كلمة السر</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">حذف</th>
+                    <th class="p-3 text-right" style="color: #94a3b8">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -247,7 +247,12 @@
                         {{ revealedPasswords[acc.id] }}
                       </span>
                     </td>
-                    <td class="p-3">
+                    <td class="p-3" style="display:flex;gap:6px;flex-wrap:wrap">
+                      <button @click="resetPassword(acc.id)"
+                              class="text-xs px-3 py-1 rounded"
+                              style="background:rgba(251,191,36,0.15);color:#fbbf24">
+                        🔄 إعادة تعيين
+                      </button>
                       <button @click="confirmDeleteAccount(acc)"
                               class="text-xs px-3 py-1 rounded"
                               style="background:rgba(239,68,68,0.15);color:#ef4444">
@@ -853,9 +858,28 @@ async function revealPassword(userId) {
   revealLoading.value[userId] = true
   try {
     const r = await managerAPI.getAccountPassword(userId)
-    revealedPasswords.value[userId] = r.data.password
+    if (r.data.found && r.data.password) {
+      revealedPasswords.value[userId] = r.data.password
+    } else {
+      // كلمة السر غير محفوظة → اقترح إعادة تعيين
+      const ok = confirm(`${r.data.message || 'كلمة السر غير محفوظة'}\n\n${r.data.suggestion || ''}\n\nهل تريد إنشاء كلمة سر جديدة الآن؟`)
+      if (ok) await resetPassword(userId)
+    }
   } catch (e) {
     alert('❌ ' + (e.response?.data?.detail || 'تعذر جلب كلمة السر'))
+  }
+  revealLoading.value[userId] = false
+}
+
+async function resetPassword(userId) {
+  if (!confirm('⚠️ هل أنت متأكد من إعادة تعيين كلمة السر؟ كلمة السر القديمة لن تعمل بعد ذلك.')) return
+  revealLoading.value[userId] = true
+  try {
+    const r = await managerAPI.resetAccountPassword(userId)
+    revealedPasswords.value[userId] = r.data.password
+    alert(`✅ كلمة السر الجديدة:\n${r.data.password}\n\nاحفظها — لن تظهر مرة أخرى!`)
+  } catch (e) {
+    alert('❌ ' + (e.response?.data?.detail || 'فشل إعادة التعيين'))
   }
   revealLoading.value[userId] = false
 }

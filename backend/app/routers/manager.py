@@ -440,24 +440,99 @@ async def get_account_password(
     """عرض كلمة سر حساب معين (للمدير فقط)"""
     user = db.table("users").select("school_id, email, full_name").eq("id", user_id).execute()
     if not user.data:
-        raise HTTPException(404, "الحساب غير موجود")
+        return {
+            "found": False,
+            "message": "❌ الحساب غير موجود",
+            "password": None,
+        }
 
     school_id = user.data[0]["school_id"]
     email = user.data[0]["email"]
+    full_name = user.data[0]["full_name"]
 
-    setup = db.table("school_setup").select("passwords_data").eq("school_id", school_id).execute()
-    if not setup.data or not setup.data[0].get("passwords_data"):
-        raise HTTPException(404, "كلمات السر غير محفوظة لهذه المدرسة")
+    try:
+        setup = db.table("school_setup").select("passwords_data").eq("school_id", school_id).execute()
+        if setup.data and setup.data[0].get("passwords_data"):
+            for acc in setup.data[0]["passwords_data"]:
+                if acc.get("email") == email:
+                    return {
+                        "found": True,
+                        "email": email,
+                        "password": acc.get("password"),
+                        "full_name": full_name,
+                    }
+    except Exception as e:
+        logger.warning(f"password lookup failed: {e}")
 
-    accounts = setup.data[0]["passwords_data"]
-    for acc in accounts:
-        if acc.get("email") == email:
-            return {
-                "email": email,
-                "password": acc.get("password"),
-                "full_name": user.data[0]["full_name"],
-            }
-    raise HTTPException(404, "كلمة السر غير موجودة لهذا الحساب")
+    # كلمة السر غير محفوظة → اقترح إعادة تعيين
+    return {
+        "found": False,
+        "email": email,
+        "full_name": full_name,
+        "password": None,
+        "message": "🔐 كلمة السر غير محفوظة لهذا الحساب (تم إنشاؤه قبل تفعيل ميزة الحفظ التلقائي).",
+        "suggestion": "اضغط على 'إعادة تعيين' في صفحة الحسابات لإنشاء كلمة سر جديدة.",
+    }
+
+
+@router.put("/accounts/{user_id}/reset-password")
+async def manager_reset_password(
+    user_id: str,
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """إعادة تعيين كلمة سر حساب — يولّد جديدة ويحفظها في school_setup"""
+    import secrets, string
+    from app.auth import hash_password
+
+    user = db.table("users").select("school_id, email, full_name, role").eq("id", user_id).execute()
+    if not user.data:
+        raise HTTPException(404, "الحساب غير موجود")
+    if user.data[0].get("role") in ("manager", "owner"):
+        raise HTTPException(403, "لا يمكن إعادة تعيين كلمة سر مدير أو مالك من هنا")
+
+    # توليد كلمة سر قوية
+    alphabet = string.ascii_letters + string.digits
+    new_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+
+    # تحديث الـ hash
+    db.table("users").update({
+        "password_hash": hash_password(new_password),
+        "must_change_password": False,
+    }).eq("id", user_id).execute()
+
+    # حفظها في school_setup
+    school_id = user.data[0]["school_id"]
+    email = user.data[0]["email"]
+    full_name = user.data[0]["full_name"]
+    role = user.data[0]["role"]
+    try:
+        setup = db.table("school_setup").select("passwords_data").eq("school_id", school_id).execute()
+        if setup.data:
+            pw_list = setup.data[0].get("passwords_data") or []
+            updated = False
+            for acc in pw_list:
+                if acc.get("email") == email:
+                    acc["password"] = new_password
+                    updated = True
+                    break
+            if not updated:
+                pw_list.append({"email": email, "password": new_password, "full_name": full_name, "role": role})
+            db.table("school_setup").update({"passwords_data": pw_list}).eq("school_id", school_id).execute()
+        else:
+            db.table("school_setup").insert({
+                "school_id": school_id,
+                "passwords_data": [{"email": email, "password": new_password, "full_name": full_name, "role": role}],
+            }).execute()
+    except Exception as e:
+        logger.warning(f"saving reset password failed: {e}")
+
+    return {
+        "message": f"✅ تم إعادة تعيين كلمة السر للحساب {email}",
+        "email": email,
+        "password": new_password,
+        "full_name": full_name,
+    }
 
 
 @router.delete("/accounts/{user_id}")

@@ -237,7 +237,21 @@ async def generate_ppt(body: dict, current_user: dict = Depends(_require_teacher
 
     result = await generate_ppt_outline(title, subject, content)
     if not result:
-        raise HTTPException(status_code=500, detail="فشل توليد مخطط العرض")
+        # نرجع شرائح أساسية كـ fallback مع رسالة واضحة
+        fallback_slides = [
+            {"slide": 1, "title": title, "points": [f"مقدمة عن {subject}", "أهمية الموضوع"], "notes": ""},
+            {"slide": 2, "title": "المفاهيم الأساسية", "points": ["مفهوم 1", "مفهوم 2", "مفهوم 3"], "notes": ""},
+            {"slide": 3, "title": "أمثلة تطبيقية", "points": ["مثال من الحياة اليومية", "تطبيق عملي"], "notes": ""},
+            {"slide": 4, "title": "الخلاصة", "points": ["النقاط الرئيسية", "ما تعلمناه"], "notes": ""},
+        ]
+        import json as _j
+        fallback = _j.dumps(fallback_slides, ensure_ascii=False)
+        html = _build_ppt_html(title, fallback)
+        return {
+            "outline": fallback,
+            "html": html,
+            "warning": "⚠️ تم استنفاد حصة Gemini API اليوم — هذه شرائح أساسية. حاول مرة أخرى بعد 24 ساعة أو فعّل Billing على المفتاح."
+        }
 
     # توليد HTML قابل للعرض في iframe (مع أنيميشن وتنقل بين الشرائح)
     html = _build_ppt_html(title, result)
@@ -324,7 +338,33 @@ async def generate_video_script(body: dict, current_user: dict = Depends(_requir
 
     result = await generate_video_script(topic, subject, duration)
     if not result:
-        raise HTTPException(status_code=500, detail="فشل توليد السكريبت")
+        # Fallback عند استنفاد الـ quota
+        minutes = duration // 60
+        fallback = f"""# 🎬 سكربت فيديو: {topic}
+المادة: {subject} | المدة: {minutes} دقيقة
+
+## [00:00 - 00:30] المقدمة
+- ترحيب بالمشاهدين
+- طرح سؤال محفّز عن {topic}
+- توضيح ما سيتعلمه المشاهد
+
+## [00:30 - {(duration // 3) // 60:02d}:{(duration // 3) % 60:02d}] الفكرة الأساسية
+- شرح المفهوم الأساسي لـ {topic}
+- مثال بصري بسيط
+- ربط بالحياة اليومية
+
+## [{(duration // 3) // 60:02d}:{(duration // 3) % 60:02d} - {(2*duration // 3) // 60:02d}:{(2*duration // 3) % 60:02d}] التفاصيل والأمثلة
+- 3 أمثلة تطبيقية على {topic}
+- شرح خطوة بخطوة
+- نصائح عملية
+
+## [{(2*duration // 3) // 60:02d}:{(2*duration // 3) % 60:02d} - {duration // 60:02d}:{duration % 60:02d}] الخلاصة والتطبيق
+- أهم 3 نقاط من الفيديو
+- نشاط بسيط للمشاهد
+- دعوة للتفاعل والاشتراك
+
+⚠️ ملاحظة: تم استنفاد حصة Gemini API اليوم. هذا سكربت أساسي — حاول مرة أخرى بعد 24 ساعة للحصول على سكربت مفصل بـ AI."""
+        return {"script": fallback, "warning": "تم استنفاد حصة Gemini API اليوم"}
 
     return {"script": result}
 

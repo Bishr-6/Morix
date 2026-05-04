@@ -55,6 +55,7 @@ export const managerAPI = {
   },
   getAccounts: (schoolId) => api.get(`/manager/accounts/${schoolId}`),
   getAccountPassword: (userId) => api.get(`/manager/account-password/${userId}`),
+  resetAccountPassword: (userId) => api.put(`/manager/accounts/${userId}/reset-password`),
   deleteAccount: (userId) => api.delete(`/manager/accounts/${userId}`),
   getStats: () => api.get('/manager/stats'),
   exportCSV: (schoolId) => api.get(`/manager/export/${schoolId}`, { responseType: 'blob' }),
