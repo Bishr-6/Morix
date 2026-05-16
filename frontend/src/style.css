@@ -24,10 +24,22 @@
 body {
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, #0a0f2c 0%, #05060f 100%);
+  background: var(--bg1, #00000e);
   min-height: 100vh;
-  color: var(--text-primary);
+  color: var(--text, #dff4ff);
   direction: rtl;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* Light theme overrides for body */
+:root[data-theme="light"] body {
+  background: #f0f4f8;
+  color: #0f172a;
+}
+
+:root[data-theme="library"] body {
+  background: #1a1207;
+  color: #f5e6c8;
 }
 
 /* ============================================

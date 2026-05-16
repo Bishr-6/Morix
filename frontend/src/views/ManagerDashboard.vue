@@ -1,6 +1,7 @@
 <template>
-  <div class="min-h-screen relative" style="background: linear-gradient(135deg, #0a0f2c 0%, #05060f 100%)">
+  <div class="min-h-screen relative" style="background: linear-gradient(135deg, #00000e 0%, #030814 100%)">
     <Stars />
+    <MatrixBackground />
 
     <div class="relative z-10">
       <!-- الهيدر -->
@@ -560,6 +561,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { managerAPI, teacherAPI } from '../api.js'
 import Stars from '../components/Stars.vue'
+import MatrixBackground from '../components/MatrixBackground.vue'
 import { useTheme } from '../composables/useTheme.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 

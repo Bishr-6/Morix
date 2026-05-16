@@ -1,5 +1,6 @@
 <template>
   <div class="hub">
+    <MatrixBackground />
     <!-- Mobile menu -->
     <button class="mobile-toggle" @click="mobileOpen = !mobileOpen" aria-label="Menu">{{ mobileOpen ? '✕' : '☰' }}</button>
     <div :class="['mobile-overlay', { open: mobileOpen }]" @click="mobileOpen = false"></div>
@@ -246,6 +247,7 @@ import { useRouter } from 'vue-router'
 import { ownerAPI } from '../api.js'
 import { useTheme } from '../composables/useTheme.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
+import MatrixBackground from '../components/MatrixBackground.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -370,26 +372,26 @@ async function sendBroadcast() {
 </script>
 
 <style scoped>
-.hub{display:flex;height:100vh;overflow:hidden;font-family:'Segoe UI','Cairo',sans-serif;direction:rtl;--bg1:#0f172a;--bg2:#1e293b;--bg3:#334155;--text:#f1f5f9;--t2:#94a3b8;--accent:#a855f7;--border:rgba(255,255,255,.08);--card:rgba(255,255,255,.05);}
-.sidebar{width:220px;min-width:220px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;transition:width .25s,min-width .25s;overflow:hidden;}
+.hub{display:flex;height:100vh;overflow:hidden;font-family:'Segoe UI','Cairo',sans-serif;direction:rtl;background:var(--bg1);}
+.sidebar{width:220px;min-width:220px;background:rgba(4,10,28,0.92);border-left:1px solid var(--border);display:flex;flex-direction:column;transition:width .25s,min-width .25s;overflow:hidden;backdrop-filter:blur(14px);position:relative;z-index:10;}
 .sidebar.collapsed{width:60px;min-width:60px;}
 .sb-header{padding:14px;cursor:pointer;border-bottom:1px solid var(--border);}
 .brand{display:flex;align-items:center;gap:10px;}
-.b-icon{width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.b-icon{width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#a855f7,#00c8ff);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;}
 .b-name{font-size:15px;font-weight:800;color:var(--text);}
 .sb-nav{flex:1;padding:8px;overflow-y:auto;}
 .nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:10px;background:none;border:none;color:var(--t2);cursor:pointer;font-size:13px;transition:all .15s;text-align:right;white-space:nowrap;}
-.nav-item:hover{background:rgba(168,85,247,.1);color:var(--text);}
-.nav-item.active{background:rgba(168,85,247,.2);color:var(--accent);}
+.nav-item:hover{background:rgba(0,255,159,.08);color:var(--text);}
+.nav-item.active{background:rgba(0,255,159,.12);color:var(--accent);box-shadow:inset 0 0 12px rgba(0,255,159,.1);}
 .sb-footer{padding:12px;border-top:1px solid var(--border);}
 .logout-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;border-radius:8px;padding:8px;cursor:pointer;font-size:13px;width:100%;}
-.main{flex:1;display:flex;flex-direction:column;background:var(--bg1);overflow:hidden;}
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--bg2);}
+.main{flex:1;display:flex;flex-direction:column;background:transparent;overflow:hidden;position:relative;z-index:10;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:rgba(4,10,28,0.88);backdrop-filter:blur(12px);}
 .top-bar h2{color:var(--text);margin:0;font-size:17px;}
 .chip{display:flex;align-items:center;gap:10px;color:var(--t2);font-size:14px;}
-.av{width:32px;height:32px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.av{width:32px;height:32px;background:linear-gradient(135deg,#a855f7,#00c8ff);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;}
 .body{flex:1;overflow-y:auto;}.body.pad{padding:24px;}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;}.card h3{color:var(--text);margin:0 0 20px;font-size:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;backdrop-filter:blur(10px);transition:box-shadow .2s;}.card:hover{box-shadow:var(--glow);}.card h3{color:var(--text);margin:0 0 20px;font-size:16px;}
 .mt{margin-top:16px;}
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
 .sc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;}
@@ -428,11 +430,11 @@ async function sendBroadcast() {
 .inp.sm{padding:8px 12px;font-size:13px;}
 .inp:focus{outline:none;border-color:var(--accent);}
 select.inp{cursor:pointer;}textarea.inp{resize:vertical;}
-.btn-p{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 18px;cursor:pointer;font-size:14px;font-weight:600;}
-.btn-p:hover:not(:disabled){opacity:.88;}
-.btn-o{background:transparent;border:1px solid var(--border);color:var(--t2);border-radius:10px;padding:11px 18px;cursor:pointer;font-size:14px;}
+.btn-p{background:linear-gradient(135deg,var(--accent),#00c8ff);color:#000;border:none;border-radius:10px;padding:11px 18px;cursor:pointer;font-size:14px;font-weight:700;box-shadow:0 0 14px rgba(0,255,159,.2);transition:box-shadow .15s,opacity .15s;}
+.btn-p:hover:not(:disabled){opacity:.88;box-shadow:0 0 24px rgba(0,255,159,.35);}
+.btn-o{background:transparent;border:1px solid var(--border);color:var(--t2);border-radius:10px;padding:11px 18px;cursor:pointer;font-size:14px;transition:all .15s;}
 .btn-o:hover{border-color:var(--accent);color:var(--accent);}
-.btn-s{background:var(--bg3);border:1px solid var(--border);color:var(--t2);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;}
+.btn-s{background:var(--bg3);border:1px solid var(--border);color:var(--t2);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;transition:all .15s;}
 .btn-s:hover{border-color:var(--accent);color:var(--accent);}
 @media(max-width:768px){.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}}
 </style>

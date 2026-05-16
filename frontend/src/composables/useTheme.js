@@ -3,15 +3,17 @@ import { watchEffect } from 'vue'
 
 export const THEMES = {
   dark: {
-    '--bg1': '#0f172a',
-    '--bg2': '#1e293b',
-    '--bg3': '#334155',
-    '--text': '#f1f5f9',
-    '--t2':   '#94a3b8',
-    '--text2':'#94a3b8',
-    '--accent':'#6366f1',
-    '--border':'rgba(255,255,255,.08)',
-    '--card':  'rgba(255,255,255,.05)',
+    '--bg1': '#00000e',
+    '--bg2': 'rgba(4, 8, 24, 0.92)',
+    '--bg3': '#081428',
+    '--text': '#dff4ff',
+    '--t2':   '#64b5d4',
+    '--text2':'#64b5d4',
+    '--accent':'#00ff9f',
+    '--border':'rgba(0, 255, 159, 0.18)',
+    '--card':  'rgba(4, 16, 44, 0.72)',
+    '--glow':  '0 0 18px rgba(0,255,159,0.25)',
+    '--glow2': '0 0 30px rgba(0,200,255,0.18)',
   },
   light: {
     '--bg1': '#f8fafc',
@@ -50,6 +52,7 @@ export function useTheme(settings) {
     for (const [key, val] of Object.entries(vars)) {
       root.style.setProperty(key, val)
     }
+    root.setAttribute('data-theme', theme)
 
     const br = settings.value?.brightness ?? 100
     root.style.setProperty('--brightness', br + '%')
