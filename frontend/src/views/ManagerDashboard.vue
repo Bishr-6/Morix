@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen relative" style="background: linear-gradient(135deg, #00000e 0%, #030814 100%)">
+  <div class="hub-manager min-h-screen relative" style="background: linear-gradient(135deg, #00000e 0%, #030814 100%)">
     <Stars />
     <MatrixBackground />
 

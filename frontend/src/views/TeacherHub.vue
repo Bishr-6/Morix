@@ -1,5 +1,5 @@
 <template>
-  <div class="hub">
+  <div class="hub hub-teacher">
     <MatrixBackground />
     <!-- Mobile menu -->
     <button class="mobile-toggle" @click="mobileOpen = !mobileOpen" aria-label="Menu">{{ mobileOpen ? '✕' : '☰' }}</button>
@@ -1126,7 +1126,7 @@ async function genNb(type) {
 
 <style scoped>
 .hub{display:flex;height:100vh;overflow:hidden;font-family:'Segoe UI','Cairo',sans-serif;direction:rtl;background:var(--bg1);}
-.sidebar{width:220px;min-width:220px;background:rgba(4,10,28,0.92);border-left:1px solid var(--border);display:flex;flex-direction:column;transition:width .25s,min-width .25s;overflow:hidden;backdrop-filter:blur(14px);position:relative;z-index:10;}
+.sidebar{width:220px;min-width:220px;background:var(--sidebar-bg);border-left:var(--sidebar-border);display:flex;flex-direction:column;transition:width .25s,min-width .25s;overflow:hidden;backdrop-filter:var(--sidebar-blur);position:relative;z-index:10;}
 .sidebar.collapsed{width:60px;min-width:60px;}
 .sb-header{padding:14px;cursor:pointer;border-bottom:1px solid var(--border);}
 .brand{display:flex;align-items:center;gap:10px;}
@@ -1140,7 +1140,7 @@ async function genNb(type) {
 .sb-footer{padding:12px;border-top:1px solid var(--border);}
 .logout-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;border-radius:8px;padding:8px;cursor:pointer;font-size:13px;width:100%;}
 .main{flex:1;display:flex;flex-direction:column;background:transparent;overflow:hidden;position:relative;z-index:10;}
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:rgba(4,10,28,0.88);backdrop-filter:blur(12px);}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:var(--topbar-border);background:var(--topbar-bg);backdrop-filter:var(--sidebar-blur);}
 .top-bar h2{color:var(--text);margin:0;font-size:17px;}
 .chip{display:flex;align-items:center;gap:10px;color:var(--t2);font-size:14px;}
 .av{width:32px;height:32px;background:linear-gradient(135deg,#00ff9f,#00c8ff);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:14px;}

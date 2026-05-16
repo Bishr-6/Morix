@@ -1,5 +1,5 @@
 <template>
-  <div class="hub">
+  <div class="hub hub-student">
     <MatrixBackground />
 
     <!-- Mobile menu button -->
@@ -1267,7 +1267,7 @@ function fmtDate(d) { return d ? new Date(d).toLocaleDateString('ar-SA') : '' }
 <style scoped>
 .hub { display:flex; height:100vh; overflow:hidden; font-family:'Segoe UI','Cairo',sans-serif; direction:rtl; background:var(--bg1); }
 
-.sidebar { width:240px;min-width:240px;background:rgba(4,10,28,0.92);border-left:1px solid var(--border);display:flex;flex-direction:column;transition:width .25s,min-width .25s;overflow:hidden;backdrop-filter:blur(14px);position:relative;z-index:10; }
+.sidebar { width:240px;min-width:240px;background:var(--sidebar-bg);border-left:var(--sidebar-border);display:flex;flex-direction:column;transition:width .25s,min-width .25s;overflow:hidden;backdrop-filter:var(--sidebar-blur);position:relative;z-index:10; }
 .sidebar.collapsed { width:64px;min-width:64px; }
 .sidebar-header { padding:16px;cursor:pointer;border-bottom:1px solid var(--border); }
 .brand { display:flex;align-items:center;gap:12px; }
@@ -1285,7 +1285,7 @@ function fmtDate(d) { return d ? new Date(d).toLocaleDateString('ar-SA') : '' }
 .logout-btn:hover { background:rgba(239,68,68,.2); }
 
 .main-content { flex:1;display:flex;flex-direction:column;background:transparent;overflow:hidden;position:relative;z-index:10; }
-.top-bar { display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:rgba(4,10,28,0.88);backdrop-filter:blur(12px); }
+.top-bar { display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:var(--topbar-border);background:var(--topbar-bg);backdrop-filter:var(--sidebar-blur); }
 .section-title { font-size:18px;font-weight:700;color:var(--text);margin:0; }
 .user-chip { display:flex;align-items:center;gap:10px;color:var(--text2);font-size:14px; }
 .avatar { width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#00c8ff);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:15px; }
@@ -1308,7 +1308,7 @@ function fmtDate(d) { return d ? new Date(d).toLocaleDateString('ar-SA') : '' }
 
 /* Chat */
 .chat-layout { display:flex;height:100%;overflow:hidden; }
-.conv-panel { width:210px;min-width:210px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:12px;gap:8px; }
+.conv-panel { width:210px;min-width:210px;background:var(--bg2);border-left:var(--sidebar-border);display:flex;flex-direction:column;padding:12px;gap:8px; }
 .new-conv-btn { background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px;cursor:pointer;font-size:13px;font-weight:600; }
 .conv-list { flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px; }
 .conv-item { display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;color:var(--text2);font-size:13px; }

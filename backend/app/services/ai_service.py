@@ -2,11 +2,43 @@
 import logging
 import json
 import base64
+import asyncio
 from typing import Optional
 from app.config import settings
 from app.services.cache_service import get_cached, set_cached, make_cache_key, CHAT_TTL_HOURS
 
 logger = logging.getLogger(__name__)
+
+# ── Retry helper ──────────────────────────────────────────────────────────────
+_RATE_LIMIT_SIGNALS = ("RESOURCE_EXHAUSTED", "429", "quota", "rate limit", "too many requests")
+
+def _is_rate_limit(err: Exception) -> bool:
+    s = str(err).lower()
+    return any(sig.lower() in s for sig in _RATE_LIMIT_SIGNALS)
+
+async def _call_with_retry(fn, *args, max_retries: int = 3, **kwargs):
+    """
+    Calls an async or sync callable with exponential backoff on 429 / rate-limit errors.
+    Delays: 2s → 5s → 12s (roughly 2^n * 1.5)
+    """
+    delays = [2, 5, 12]
+    last_err = None
+    for attempt in range(max_retries + 1):
+        try:
+            result = fn(*args, **kwargs)
+            # support both coroutines and sync callables
+            if asyncio.iscoroutine(result):
+                return await result
+            return result
+        except Exception as e:
+            last_err = e
+            if _is_rate_limit(e) and attempt < max_retries:
+                wait = delays[min(attempt, len(delays) - 1)]
+                logger.warning(f"Rate-limit hit (attempt {attempt+1}/{max_retries}), retrying in {wait}s…")
+                await asyncio.sleep(wait)
+                continue
+            raise
+    raise last_err
 
 LEARNING_STYLE_PROMPTS = {
     "visual": "Visual learner: use bullet points, tables, numbered lists, and clear visual organization.",
@@ -157,7 +189,11 @@ async def chat_with_gemini(
         reply = None
         for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
             try:
-                response = client.models.generate_content(model=model_name, contents=contents, config=config)
+                response = await _call_with_retry(
+                    client.models.generate_content,
+                    model=model_name, contents=contents, config=config,
+                    max_retries=2
+                )
                 reply = response.text
                 break
             except Exception as model_err:
@@ -189,10 +225,14 @@ async def chat_with_gemini(
                 "🔑 مفتاح Gemini API غير صالح.\n"
                 "تواصل مع مدير المنصة لتحديث المفتاح من https://aistudio.google.com/app/apikey"
             ), False
-        if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "quota" in err_str.lower():
+        if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "quota" in err_str.lower() or "rate limit" in err_str.lower():
             return (
-                "⏳ وصلنا الحد المسموح من Gemini API لهذه الدقيقة.\n"
-                "حاول مرة أخرى بعد دقيقة، أو أضف Billing على المفتاح لرفع الحد."
+                "⏳ تم استنفاد الحد المسموح من Gemini API مؤقتاً (حتى بعد إعادة المحاولة).\n\n"
+                "**سيعود AI للعمل خلال دقيقة أو دقيقتين تلقائياً.**\n"
+                "يمكنك:\n"
+                "• الانتظار دقيقة ثم إعادة المحاولة\n"
+                "• تفعيل Billing على حساب Google AI Studio لرفع الحد\n"
+                "• تواصل مع مدير المنصة إذا استمرت المشكلة"
             ), False
         if "SAFETY" in err_str or "safety" in err_str:
             return "⚠️ الرد محظور لأسباب أمان. غيّر صياغة سؤالك.", False
@@ -309,10 +349,10 @@ async def generate_game_content(game_type: str, subject: str, topic: str = "") -
         text = None
         for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
             try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompts[game_type],
-                    config=config
+                response = await _call_with_retry(
+                    client.models.generate_content,
+                    model=model_name, contents=prompts[game_type], config=config,
+                    max_retries=2
                 )
                 text = response.text.strip()
                 break
@@ -392,7 +432,11 @@ async def generate_ppt_outline(title: str, subject: str, content: str = "") -> O
 
         for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
             try:
-                response = client.models.generate_content(model=model_name, contents=prompt, config=config)
+                response = await _call_with_retry(
+                    client.models.generate_content,
+                    model=model_name, contents=prompt, config=config,
+                    max_retries=2
+                )
                 text = response.text.strip()
                 # Extract JSON array
                 if "```" in text:
@@ -463,7 +507,11 @@ async def generate_video_script(topic: str, subject: str, duration_seconds: int 
 
         for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
             try:
-                response = client.models.generate_content(model=model_name, contents=prompt, config=config)
+                response = await _call_with_retry(
+                    client.models.generate_content,
+                    model=model_name, contents=prompt, config=config,
+                    max_retries=2
+                )
                 return response.text
             except Exception as model_err:
                 logger.warning(f"Video script model {model_name} failed: {model_err}")

@@ -3,9 +3,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
-const isDark = computed(() => document.documentElement.getAttribute('data-theme') !== 'light')
+// Observe data-theme attribute changes reactively
+const isDark = ref(document.documentElement.getAttribute('data-theme') !== 'light')
+let _themeObserver = null
 
 const canvas = ref(null)
 let ctx, raf, cols, drops = [], stars = []
@@ -87,11 +89,17 @@ onMounted(() => {
   resize()
   draw()
   window.addEventListener('resize', resize)
+  // Watch data-theme attribute changes
+  _themeObserver = new MutationObserver(() => {
+    isDark.value = document.documentElement.getAttribute('data-theme') !== 'light'
+  })
+  _themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 })
 
 onUnmounted(() => {
   cancelAnimationFrame(raf)
   window.removeEventListener('resize', resize)
+  _themeObserver?.disconnect()
 })
 </script>
 
