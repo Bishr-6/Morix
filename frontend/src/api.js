@@ -182,6 +182,13 @@ export const teacherAPI = {
     file_text: fileText || undefined,
   }),
 
+  // استخراج نص من ملف (للـ Notebook)
+  extractFile: (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/teacher/extract-file', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
+
   // الإعدادات
   getSettings: () => api.get('/teacher/settings'),
   updateSettings: (data) => api.put('/teacher/settings', data),

@@ -546,18 +546,21 @@
           <h3>📓 دفتري الذكي للمعلم — Morix Notebook</h3>
           <p style="color:var(--t2);margin-bottom:12px">ارفع المنهج/المرجع وولّد ملخصات، أسئلة، خرائط، وبودكاست AI داخل المنصة</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-            <button @click="nbTab='upload'" class="btn-s" :style="{background:nbTab==='upload'?'var(--accent)':'var(--card)',padding:'8px 14px'}">📤 رفع ملف</button>
-            <button @click="nbTab='ask'" :disabled="!nbFileText" class="btn-s" :style="{background:nbTab==='ask'?'var(--accent)':'var(--card)',padding:'8px 14px',opacity:nbFileText?1:0.5}">💬 اسأل عن الملف</button>
-            <button @click="nbTab='generate'" :disabled="!nbFileText" class="btn-s" :style="{background:nbTab==='generate'?'var(--accent)':'var(--card)',padding:'8px 14px',opacity:nbFileText?1:0.5}">✨ ولّد محتوى تعليمي</button>
+            <button @click="nbTab='upload'" class="btn-s" :style="{background:nbTab==='upload'?'var(--accent)':'var(--card)',padding:'8px 14px'}">{{ nbExtractLoading ? '⏳' : '📤' }} رفع ملف</button>
+            <button @click="nbTab='ask'" :disabled="!nbFileText||nbExtractLoading" class="btn-s" :style="{background:nbTab==='ask'?'var(--accent)':'var(--card)',padding:'8px 14px',opacity:nbFileText&&!nbExtractLoading?1:0.5}">💬 اسأل عن الملف</button>
+            <button @click="nbTab='generate'" :disabled="!nbFileText||nbExtractLoading" class="btn-s" :style="{background:nbTab==='generate'?'var(--accent)':'var(--card)',padding:'8px 14px',opacity:nbFileText&&!nbExtractLoading?1:0.5}">✨ ولّد محتوى تعليمي</button>
           </div>
 
           <div v-if="nbTab==='upload'" class="card" style="background:var(--card)">
             <input ref="nbFileInput" type="file" accept=".pdf,.txt,.md" @change="onNbFileUpload" style="display:none" />
-            <button @click="$refs.nbFileInput?.click()" class="btn-p" style="width:100%;padding:24px;font-size:16px">
-              📤 اختر ملف PDF / TXT / MD
+            <button @click="$refs.nbFileInput?.click()" class="btn-p" style="width:100%;padding:24px;font-size:16px" :disabled="nbExtractLoading">
+              {{ nbExtractLoading ? '⏳ جاري استخراج النص...' : '📤 اختر ملف PDF / TXT / MD' }}
             </button>
-            <div v-if="nbFileName" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;border:1px solid var(--accent)">
+            <div v-if="nbFileName && nbFileText" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;border:1px solid var(--accent)">
               ✅ <b>{{ nbFileName }}</b> — جاهز ({{ Math.round(nbFileText.length/1000) }}K حرف)
+            </div>
+            <div v-if="nbExtractError" style="margin-top:10px;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#f87171;font-size:13px">
+              ⚠️ {{ nbExtractError }}
             </div>
           </div>
 
@@ -886,7 +889,7 @@ async function genImg() {
   finally { imgLoading.value=false }
 }
 
-function copyText(t) { navigator.clipboard.writeText(t).catch(()=>{}) }
+function copyText(t) { navigator.clipboard?.writeText(t).catch(()=>{}) }
 async function doLogout() { await auth.logout(); router.push('/login') }
 function fmtDate(d) { return d?new Date(d).toLocaleDateString('ar-SA'):'' }
 function fmt(t) {
@@ -1045,6 +1048,8 @@ const libUrl = ref(libSources[0].url)
 const nbTab = ref('upload')
 const nbFileName = ref('')
 const nbFileText = ref('')
+const nbExtractLoading = ref(false)
+const nbExtractError = ref('')
 const nbChat = ref([])
 const nbInput = ref('')
 const nbAsking = ref(false)
@@ -1053,11 +1058,40 @@ const nbGenResult = ref('')
 
 async function onNbFileUpload(e) {
   const file = e.target.files?.[0]; if (!file) return
-  if (file.size > 5 * 1024 * 1024) { alert('الملف أكبر من 5MB'); return }
+  if (file.size > 10 * 1024 * 1024) { alert('الملف أكبر من 10MB'); return }
+  const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
   nbFileName.value = file.name
-  const r = new FileReader()
-  r.onload = (ev) => { nbFileText.value = (ev.target.result || '').slice(0, 50000) }
-  r.readAsText(file, 'utf-8')
+  nbFileText.value = ''
+  nbExtractError.value = ''
+  nbExtractLoading.value = true
+  try {
+    if (ext === '.txt' || ext === '.md') {
+      // قراءة مباشرة — بدون سيرفر
+      await new Promise((resolve) => {
+        const r = new FileReader()
+        r.onload = (ev) => { nbFileText.value = (ev.target.result || '').slice(0, 50000); resolve() }
+        r.onerror = () => { nbExtractError.value = 'فشل قراءة الملف'; resolve() }
+        r.readAsText(file, 'utf-8')
+      })
+    } else if (ext === '.pdf') {
+      // استخراج عبر الباك إند
+      const res = await teacherAPI.extractFile(file)
+      nbFileText.value = res.data.text || ''
+      if (!nbFileText.value.trim()) {
+        nbExtractError.value = 'لم يُستخرج نص من الـ PDF — تأكد أنه يحتوي على نص وليس صور فقط'
+        nbFileName.value = ''
+      }
+    } else {
+      nbExtractError.value = 'صيغة غير مدعومة — استخدم PDF أو TXT أو MD'
+      nbFileName.value = ''
+    }
+  } catch (err) {
+    nbExtractError.value = err.response?.data?.detail || 'فشل استخراج الملف'
+    nbFileName.value = ''
+  } finally {
+    nbExtractLoading.value = false
+  }
+  if(e.target) e.target.value = ''
 }
 async function askNb() {
   if (!nbInput.value.trim() || !nbFileText.value) return

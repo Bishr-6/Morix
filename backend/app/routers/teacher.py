@@ -1,5 +1,5 @@
 # راوتر المعلم - Morix Platform
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from app.auth import get_current_user
 from app.database import get_db
 import logging
@@ -453,6 +453,39 @@ async def update_settings(body: dict, current_user: dict = Depends(_require_teac
             logger.warning(f"avatar update failed: {e}")
 
     return {"message": "✅ تم حفظ الإعدادات"}
+
+
+# ============================================================
+# 📄 استخراج نص من ملف (للـ Notebook)
+# ============================================================
+@router.post("/extract-file")
+async def extract_file_text(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(_require_teacher),
+):
+    """استخراج النص من ملف PDF أو TXT أو MD للمعلم"""
+    filename = (file.filename or "").lower()
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="الملف أكبر من 10MB — اختر ملفاً أصغر")
+    text = ""
+    if filename.endswith((".txt", ".md")):
+        text = content.decode("utf-8", errors="replace")
+    elif filename.endswith(".pdf"):
+        try:
+            from pypdf import PdfReader
+            import io as _io
+            reader = PdfReader(_io.BytesIO(content))
+            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        except Exception as e:
+            logger.warning(f"pypdf failed for teacher notebook: {e}")
+            text = content.decode("utf-8", errors="ignore")
+    else:
+        raise HTTPException(status_code=400, detail="صيغة غير مدعومة — استخدم PDF أو TXT أو MD")
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="لم يُستخرج أي نص من الملف — تأكد أنه يحتوي على نص قابل للقراءة")
+    text = text[:50000]
+    return {"text": text, "chars": len(text), "filename": file.filename}
 
 
 # ============================================================

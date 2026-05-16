@@ -348,7 +348,7 @@ async function uploadFile() {
 function copyAccounts() {
   if (!uploadResult.value) return
   const text = uploadResult.value.accounts.map(a => `${a.full_name} | ${a.email} | ${a.password}`).join('\n')
-  navigator.clipboard.writeText(text)
+  navigator.clipboard?.writeText(text).catch(() => {})
 }
 
 function setTheme(t) { settings.value.theme = t; saveSettings() }
