@@ -143,20 +143,23 @@ async def get_stats(
     current_user: dict = Depends(require_manager),
     db=Depends(get_db)
 ):
-    """لوحة الإحصائيات"""
+    """لوحة الإحصائيات الشاملة"""
+    from datetime import datetime, timedelta, timezone
 
     school_id = current_user.get("school_id")
 
-    # إجمالي المستخدمين
-    users_query = db.table("users").select("role, learning_style", count="exact")
+    # ======= المستخدمون =======
+    users_query = db.table("users").select("id, role, learning_style, created_at", count="exact")
     if school_id:
         users_query = users_query.eq("school_id", school_id)
     users = users_query.execute()
 
     total_users = len(users.data)
-    students = [u for u in users.data if u["role"] == "student"]
-    teachers = [u for u in users.data if u["role"] == "teacher"]
-    admins = [u for u in users.data if u["role"] == "admin"]
+    students     = [u for u in users.data if u["role"] == "student"]
+    teachers     = [u for u in users.data if u["role"] == "teacher"]
+    admins       = [u for u in users.data if u["role"] == "admin"]
+    student_ids  = [u["id"] for u in students]
+    teacher_ids  = [u["id"] for u in teachers]
 
     # أساليب التعلم
     learning_styles = {"visual": 0, "auditory": 0, "kinesthetic": 0, "unknown": 0}
@@ -164,27 +167,206 @@ async def get_stats(
         style = s.get("learning_style") or "unknown"
         learning_styles[style] = learning_styles.get(style, 0) + 1
 
-    # عدد المحادثات
-    convs = db.table("ai_conversations").select("id", count="exact").execute()
-    total_conversations = len(convs.data)
+    # ======= المحادثات =======
+    total_conversations = 0
+    convs_data = []
+    try:
+        convs_q = db.table("ai_conversations").select("id", count="exact")
+        if school_id:
+            # school_id قد لا يكون موجوداً بعد migration_v5 — نستخدم student_id كبديل
+            try:
+                convs_q = convs_q.eq("school_id", school_id)
+                convs_r = convs_q.execute()
+                total_conversations = convs_r.count or len(convs_r.data)
+                convs_data = convs_r.data
+            except Exception:
+                # fallback: filter by student_ids
+                if student_ids:
+                    convs_q2 = db.table("ai_conversations").select("id", count="exact") \
+                        .in_("student_id", student_ids)
+                    convs_r2 = convs_q2.execute()
+                    total_conversations = convs_r2.count or len(convs_r2.data)
+                    convs_data = convs_r2.data
+        else:
+            convs_r = convs_q.execute()
+            total_conversations = convs_r.count or len(convs_r.data)
+            convs_data = convs_r.data
+    except Exception:
+        total_conversations = 0
 
-    # تسجيلات الدخول الأخيرة (7 أيام)
-    from datetime import datetime, timedelta, timezone
-    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-    logins = db.table("analytics") \
-        .select("id") \
-        .eq("event_type", "login") \
-        .gt("created_at", week_ago) \
-        .execute()
+    # ======= الرسائل =======
+    msgs_total = 0
+    try:
+        if convs_data:
+            conv_ids = [c["id"] for c in convs_data]
+            if conv_ids:
+                msgs_q = db.table("ai_messages").select("id", count="exact") \
+                    .in_("conversation_id", conv_ids)
+                msgs_total = msgs_q.execute().count or 0
+    except Exception:
+        msgs_total = 0
+
+    # ======= الواجبات والاختبارات والأوراق =======
+    hw_count, tests_count, ws_count, hw_sub_count, test_res_count = 0, 0, 0, 0, 0
+    try:
+        hw_q = db.table("homework").select("id", count="exact")
+        if teacher_ids:
+            hw_q = hw_q.in_("teacher_id", teacher_ids)
+        elif school_id:
+            pass  # can't filter without teacher_ids when no school boundary
+        hw_count = hw_q.execute().count or 0
+
+        tst_q = db.table("tests").select("id", count="exact")
+        if teacher_ids:
+            tst_q = tst_q.in_("teacher_id", teacher_ids)
+        tests_count = tst_q.execute().count or 0
+
+        ws_q = db.table("worksheets").select("id", count="exact")
+        if teacher_ids:
+            ws_q = ws_q.in_("teacher_id", teacher_ids)
+        ws_count = ws_q.execute().count or 0
+
+        if student_ids:
+            hw_sub_count = db.table("homework_submissions").select("id", count="exact") \
+                .in_("student_id", student_ids).execute().count or 0
+            test_res_count = db.table("test_results").select("id", count="exact") \
+                .in_("student_id", student_ids).execute().count or 0
+    except Exception:
+        pass
+
+    # ======= الكتب =======
+    books_count = 0
+    try:
+        # curriculum_books مشتركة بين كل المدارس (لا يوجد school_id حتى الآن)
+        books_count = db.table("curriculum_books").select("id", count="exact").execute().count or 0
+    except Exception:
+        pass
+
+    # ======= الألعاب والجلسات =======
+    # focus_sessions مخزّنة في analytics بـ event_type='focus_session'
+    games_count, focus_sessions_count = 0, 0
+    try:
+        if student_ids:
+            games_count = db.table("educational_games").select("id", count="exact") \
+                .in_("student_id", student_ids).execute().count or 0
+        # جلسات التركيز من analytics (لا يوجد جدول منفصل)
+        fs_q = db.table("analytics").select("id", count="exact").eq("event_type", "focus_session")
+        if school_id:
+            fs_q = fs_q.eq("school_id", school_id)
+        focus_sessions_count = fs_q.execute().count or 0
+    except Exception:
+        pass
+
+    # ======= الشارات والإنجازات =======
+    # badges جدول يستخدم user_id (لا student_id)
+    badges_earned = 0
+    try:
+        if student_ids:
+            badges_earned = db.table("badges").select("id", count="exact") \
+                .in_("user_id", student_ids).execute().count or 0
+    except Exception:
+        pass
+
+    # ======= تسجيلات الدخول (7 أيام) =======
+    now_utc = datetime.now(timezone.utc)
+    week_ago = (now_utc - timedelta(days=7)).isoformat()
+    month_ago = (now_utc - timedelta(days=30)).isoformat()
+
+    logins_week, logins_month = 0, 0
+    try:
+        logins_week  = db.table("analytics").select("id", count="exact") \
+            .eq("event_type", "login").gt("created_at", week_ago).execute().count or 0
+        logins_month = db.table("analytics").select("id", count="exact") \
+            .eq("event_type", "login").gt("created_at", month_ago).execute().count or 0
+    except Exception:
+        pass
+
+    # ======= المستخدمون النشطون (آخر 7 أيام) =======
+    active_users_week = 0
+    try:
+        # analytics يستخدم student_id (وإن كان المستخدم أي دور)
+        active_q = db.table("analytics").select("student_id").gt("created_at", week_ago)
+        if school_id:
+            active_q = active_q.eq("school_id", school_id)
+        active_evts = active_q.execute()
+        active_users_week = len(set(e["student_id"] for e in active_evts.data if e.get("student_id")))
+    except Exception:
+        pass
+
+    # ======= المستخدمون الجدد (آخر 30 يوم) =======
+    new_users_month = 0
+    try:
+        new_u = db.table("users").select("id", count="exact").gt("created_at", month_ago)
+        if school_id:
+            new_u = new_u.eq("school_id", school_id)
+        new_users_month = new_u.execute().count or 0
+    except Exception:
+        pass
+
+    # ======= متوسط نتيجة الاختبارات =======
+    avg_test_score = None
+    try:
+        if student_ids:
+            scores_r = db.table("test_results").select("score") \
+                .in_("student_id", student_ids).execute()
+            scores = [r["score"] for r in scores_r.data if r.get("score") is not None]
+            avg_test_score = round(sum(scores) / len(scores), 1) if scores else None
+    except Exception:
+        pass
+
+    # ======= توزيع الصفوف/الدرجات =======
+    grades_dist: dict = {}
+    try:
+        if student_ids:
+            g_data = db.table("users").select("grade").in_("id", student_ids).execute()
+            for row in g_data.data:
+                gr = row.get("grade") or "غير محدد"
+                grades_dist[gr] = grades_dist.get(gr, 0) + 1
+    except Exception:
+        pass
+
+    # ======= الشكاوى =======
+    complaints_count = 0
+    try:
+        cmp_q = db.table("complaints").select("id", count="exact")
+        if school_id:
+            cmp_q = cmp_q.eq("school_id", school_id)
+        complaints_count = cmp_q.execute().count or 0
+    except Exception:
+        pass
 
     return {
-        "total_users": total_users,
-        "total_students": len(students),
-        "total_teachers": len(teachers),
-        "total_admins": len(admins),
+        # مستخدمون
+        "total_users":       total_users,
+        "total_students":    len(students),
+        "total_teachers":    len(teachers),
+        "total_admins":      len(admins),
+        "new_users_month":   new_users_month,
+        "active_users_week": active_users_week,
+        # ذكاء اصطناعي
         "total_conversations": total_conversations,
+        "total_ai_messages":   msgs_total,
+        # أكاديمي
+        "total_homework":      hw_count,
+        "total_tests":         tests_count,
+        "total_worksheets":    ws_count,
+        "homework_submissions":hw_sub_count,
+        "test_results":        test_res_count,
+        "avg_test_score":      avg_test_score,
+        "total_books":         books_count,
+        # نشاط
+        "games_played":        games_count,
+        "focus_sessions":      focus_sessions_count,
+        "badges_earned":       badges_earned,
+        "complaints_count":    complaints_count,
+        # تسجيل دخول
+        "logins_week":  logins_week,
+        "logins_month": logins_month,
+        # توزيعات
         "learning_styles": learning_styles,
-        "recent_logins": len(logins.data)
+        "grades_dist":     grades_dist,
+        # توافق مع الإصدار القديم
+        "recent_logins": logins_week,
     }
 
 
@@ -675,7 +857,7 @@ async def get_manager_settings(current_user: dict = Depends(require_manager), db
 @router.put("/settings")
 async def update_manager_settings(body: dict, current_user: dict = Depends(require_manager), db=Depends(get_db)):
     valid_langs = {"ar", "en", "de", "fr", "zh", "es"}
-    valid_themes = {"dark", "light", "library"}
+    valid_themes = {"dark", "light", "library", "neon"}
     theme = body.get("theme", "dark")
     if theme not in valid_themes: theme = "dark"
     lang = body.get("language", "ar")
@@ -706,8 +888,8 @@ async def strategic_advisor(
     current_user: dict = Depends(require_manager),
 ):
     """مستشار استراتيجي ذكي"""
-    question = (body.get("question") or "").strip()
-    context = body.get("context", "")
+    question = (body.get("question") or "").strip()[:2000]
+    context = str(body.get("context", ""))[:500]
     if not question:
         raise HTTPException(400, "اطرح سؤالك الاستراتيجي")
     from app.services.ai_service import chat_with_gemini

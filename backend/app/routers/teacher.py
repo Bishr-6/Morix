@@ -73,6 +73,10 @@ async def delete_homework(homework_id: str, current_user: dict = Depends(_requir
 
 @router.get("/homework/{homework_id}/submissions")
 async def get_submissions(homework_id: str, current_user: dict = Depends(_require_teacher), db=Depends(get_db)):
+    # التحقق أن الواجب يخص هذا المعلم
+    hw_check = db.table("homework").select("id").eq("id", homework_id).eq("teacher_id", current_user["id"]).execute()
+    if not hw_check.data:
+        raise HTTPException(status_code=403, detail="ليس لديك صلاحية لعرض هذا الواجب")
     result = db.table("homework_submissions") \
         .select("*, users!student_id(full_name, grade)") \
         .eq("homework_id", homework_id).execute()
@@ -203,6 +207,10 @@ async def get_student_progress(student_id: str, current_user: dict = Depends(_re
     student = db.table("users").select("*").eq("id", student_id).execute()
     if not student.data:
         raise HTTPException(status_code=404, detail="الطالب غير موجود")
+    # منع الوصول لطلاب مدارس أخرى
+    teacher_school = current_user.get("school_id")
+    if teacher_school and student.data[0].get("school_id") and student.data[0]["school_id"] != teacher_school:
+        raise HTTPException(status_code=403, detail="لا يمكنك الوصول لبيانات هذا الطالب")
 
     streak = db.table("streaks").select("*").eq("user_id", student_id).execute()
     streak_data = streak.data[0] if streak.data else {}
@@ -379,6 +387,7 @@ async def teacher_chat(body: dict, current_user: dict = Depends(_require_teacher
     message = body.get("message", "")
     image_base64 = body.get("image_base64")
     file_text = body.get("file_text")
+    preferred_lang = body.get("language")  # اللغة المفضلة من الفرونت
 
     if not message and not image_base64 and not file_text:
         raise HTTPException(status_code=400, detail="الرسالة فارغة")
@@ -390,6 +399,7 @@ async def teacher_chat(body: dict, current_user: dict = Depends(_require_teacher
         role="teacher",
         image_base64=image_base64,
         file_text=file_text,
+        preferred_lang=preferred_lang,
     )
     return {"reply": reply, "from_cache": from_cache}
 
@@ -415,7 +425,7 @@ async def get_settings(current_user: dict = Depends(_require_teacher), db=Depend
 @router.put("/settings")
 async def update_settings(body: dict, current_user: dict = Depends(_require_teacher), db=Depends(get_db)):
     valid_langs = {"ar", "en", "de", "fr", "zh", "es"}
-    valid_themes = {"dark", "light", "library"}
+    valid_themes = {"dark", "light", "library", "neon"}
 
     theme = body.get("theme", "dark")
     if theme not in valid_themes: theme = "dark"
@@ -463,28 +473,74 @@ async def extract_file_text(
     file: UploadFile = File(...),
     current_user: dict = Depends(_require_teacher),
 ):
-    """استخراج النص من ملف PDF أو TXT أو MD للمعلم"""
+    """استخراج النص من ملف PDF أو TXT أو MD أو PPTX للمعلم"""
     filename = (file.filename or "").lower()
     content = await file.read()
-    if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="الملف أكبر من 10MB — اختر ملفاً أصغر")
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="الملف أكبر من 15MB — اختر ملفاً أصغر")
     text = ""
+
+    # ───── TXT / MD ─────
     if filename.endswith((".txt", ".md")):
-        text = content.decode("utf-8", errors="replace")
+        try:
+            text = content.decode("utf-8", errors="replace")
+        except Exception:
+            text = content.decode("latin-1", errors="replace")
+
+    # ───── PDF ─────
     elif filename.endswith(".pdf"):
         try:
             from pypdf import PdfReader
             import io as _io
             reader = PdfReader(_io.BytesIO(content))
-            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+            pages_text = []
+            for page in reader.pages:
+                t = page.extract_text() or ""
+                pages_text.append(t)
+            text = "\n".join(pages_text)
         except Exception as e:
-            logger.warning(f"pypdf failed for teacher notebook: {e}")
+            logger.warning(f"pypdf failed for teacher: {e}")
             text = content.decode("utf-8", errors="ignore")
+
+    # ───── PPTX ─────
+    elif filename.endswith(".pptx"):
+        try:
+            from pptx import Presentation
+            import io as _io
+            prs = Presentation(_io.BytesIO(content))
+            slides_text = []
+            for slide in prs.slides:
+                slide_parts = []
+                for shape in slide.shapes:
+                    if hasattr(shape, "text") and shape.text.strip():
+                        slide_parts.append(shape.text.strip())
+                if slide_parts:
+                    slides_text.append(" | ".join(slide_parts))
+            text = "\n".join(slides_text)
+        except Exception as e:
+            logger.warning(f"pptx extraction failed: {e}")
+            text = ""
+
+    # ───── DOCX ─────
+    elif filename.endswith(".docx"):
+        try:
+            import zipfile, re as _re, io as _io
+            with zipfile.ZipFile(_io.BytesIO(content)) as zf:
+                with zf.open("word/document.xml") as doc_xml:
+                    xml_content = doc_xml.read().decode("utf-8", errors="replace")
+            text = _re.sub(r"<[^>]+>", " ", xml_content)
+            text = _re.sub(r"\s+", " ", text).strip()
+        except Exception as e:
+            logger.warning(f"docx extraction failed: {e}")
+            text = ""
+
     else:
-        raise HTTPException(status_code=400, detail="صيغة غير مدعومة — استخدم PDF أو TXT أو MD")
+        raise HTTPException(status_code=400, detail="صيغة غير مدعومة — استخدم PDF أو PPTX أو DOCX أو TXT أو MD")
+
     if not text.strip():
         raise HTTPException(status_code=422, detail="لم يُستخرج أي نص من الملف — تأكد أنه يحتوي على نص قابل للقراءة")
-    text = text[:50000]
+
+    text = text[:80000]
     return {"text": text, "chars": len(text), "filename": file.filename}
 
 

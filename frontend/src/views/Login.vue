@@ -15,11 +15,21 @@
         <span class="brand-name">Morix</span>
       </div>
       <div class="nav-links">
-        <a href="#features" class="nav-link">المميزات</a>
-        <a href="#roles" class="nav-link">لمن نحن</a>
-        <a href="#stats" class="nav-link">الأرقام</a>
+        <a href="#features" class="nav-link">{{ t('features_nav') }}</a>
+        <a href="#roles" class="nav-link">{{ t('roles_nav') }}</a>
+        <a href="#stats" class="nav-link">{{ t('stats_nav') }}</a>
       </div>
-      <button class="nav-cta" @click="scrollToLogin">ابدأ الآن</button>
+      <!-- مبدّل اللغات -->
+      <div class="nav-lang-switcher">
+        <button v-for="(L, code) in LANGUAGES" :key="code"
+                @click="setLang(code)"
+                class="lang-pill"
+                :class="{ active: lang === code }"
+                :title="L.name">
+          {{ L.flag }}
+        </button>
+      </div>
+      <button class="nav-cta" @click="scrollToLogin">{{ t('start_now') }}</button>
     </nav>
 
     <!-- ======= HERO ======= -->
@@ -119,18 +129,18 @@
           <div class="card-header">
             <div class="card-logo">M</div>
             <div>
-              <h2 class="card-title">تسجيل الدخول</h2>
-              <p class="card-sub">منصة التعلم الذكي</p>
+              <h2 class="card-title">{{ t('login') }}</h2>
+              <p class="card-sub">{{ t('tagline') }}</p>
             </div>
           </div>
 
           <form @submit.prevent="handleLogin" class="login-form">
             <div class="field">
-              <label>البريد الإلكتروني</label>
+              <label>{{ t('email') }}</label>
               <input v-model="email" type="email" placeholder="you@morix.tech" autocomplete="username" required />
             </div>
             <div class="field">
-              <label>كلمة المرور</label>
+              <label>{{ t('password') }}</label>
               <div class="pass-wrap">
                 <input v-model="password" :type="showPass ? 'text' : 'password'" placeholder="••••••••" autocomplete="current-password" required />
                 <button type="button" class="eye-btn" @click="showPass = !showPass">{{ showPass ? '🙈' : '👁️' }}</button>
@@ -139,22 +149,10 @@
             <div v-if="error" class="error-msg">{{ error }}</div>
             <button type="submit" class="login-btn" :disabled="loading">
               <span v-if="loading" class="spinner"></span>
-              <span v-else>تسجيل الدخول →</span>
+              <span v-else>{{ t('login_button') }}</span>
             </button>
           </form>
 
-          <div class="demo-box">
-            <p class="demo-title">جرّب بيانات تجريبية:</p>
-            <div class="demo-item" @click="fillDemo('manager@morix.tech', 'admin123')">
-              <span class="demo-role">🏫 مدير</span><span class="demo-email">manager@morix.tech</span>
-            </div>
-            <div class="demo-item" @click="fillDemo('teacher1@morix.tech', 'teacher123')">
-              <span class="demo-role">👨‍🏫 معلم</span><span class="demo-email">teacher1@morix.tech</span>
-            </div>
-            <div class="demo-item" @click="fillDemo('student1@morix.tech', 'student123')">
-              <span class="demo-role">👨‍🎓 طالب</span><span class="demo-email">student1@morix.tech</span>
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -165,7 +163,7 @@
         <div class="brand-icon sm">M</div>
         <span>Morix — منصة التعلم الذكي</span>
       </div>
-      <p class="footer-copy">© 2026 Morix. جميع الحقوق محفوظة.</p>
+      <p class="footer-copy">© 2026 Morix. {{ t('all_rights') }}</p>
     </footer>
   </div>
 </template>
@@ -174,9 +172,11 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 
 const router = useRouter()
 const auth = useAuthStore()
+const { t, lang, setLang } = useI18n()
 const email = ref('')
 const password = ref('')
 const showPass = ref(false)
@@ -290,10 +290,6 @@ const features = [
 
 const roles = [
   {
-    icon: '👑', title: 'المالك', color: '#a855f7',
-    items: ['إحصاءات شاملة للمنصة', 'إدارة جميع المستخدمين', 'تكاليف AI والاستخدام', 'بث رسائل لجميع المدارس'],
-  },
-  {
     icon: '🏫', title: 'مدير المدرسة', color: '#3b82f6',
     items: ['إنشاء وإدارة المدارس', 'رفع بيانات الطلاب Excel', 'المستشار الاستراتيجي AI', 'إدارة الكتب والمحتوى'],
   },
@@ -394,6 +390,35 @@ nav, section, footer { position: relative; z-index: 1; }
   cursor: pointer; transition: opacity 0.2s, transform 0.1s;
 }
 .nav-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* ── Language switcher in navbar ── */
+.nav-lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0,255,159,0.06);
+  border: 1px solid rgba(0,255,159,0.15);
+  border-radius: 20px;
+  padding: 4px 8px;
+}
+.lang-pill {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  border-radius: 50%;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  opacity: 0.6;
+}
+.lang-pill:hover { opacity: 1; transform: scale(1.15); }
+.lang-pill.active {
+  opacity: 1;
+  background: rgba(0,255,159,0.2);
+  box-shadow: 0 0 8px rgba(0,255,159,0.4);
+  transform: scale(1.1);
+}
 
 /* ── Hero ── */
 .hero {
@@ -503,16 +528,24 @@ nav, section, footer { position: relative; z-index: 1; }
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
 }
 .feature-card {
-  background: rgba(4, 16, 44, 0.75);
-  border: 1px solid rgba(0,255,159,0.15);
-  border-radius: 18px; padding: 28px;
-  backdrop-filter: blur(10px);
-  transition: all 0.25s;
+  background: rgba(0, 255, 159, 0.03);
+  border: 1px solid rgba(0,255,159,0.12);
+  border-radius: 20px; padding: 28px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.3s;
+  position: relative; overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 20px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0,255,159,0.06) 0%, transparent 70%);
+  pointer-events: none;
 }
 .feature-card:hover {
-  border-color: rgba(0,255,159,0.4);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(0,255,159,0.12);
+  border-color: rgba(0,255,159,0.35);
+  transform: translateY(-6px);
+  box-shadow: 0 0 0 1px rgba(0,255,159,0.2), 0 12px 40px rgba(0,255,159,0.15);
 }
 .feat-icon { font-size: 32px; margin-bottom: 14px; }
 .feat-title { font-size: 16px; font-weight: 700; color: #fff; margin: 0 0 8px; }
@@ -529,16 +562,19 @@ nav, section, footer { position: relative; z-index: 1; }
   gap: 16px; max-width: 1200px; margin: 0 auto;
 }
 .role-card {
-  background: rgba(4, 16, 44, 0.75);
-  border: 1px solid rgba(var(--rc-rgb, 0,255,159), 0.2);
+  background: rgba(0, 5, 30, 0.6);
+  border: 1px solid rgba(255,255,255,0.06);
   border-top: 3px solid var(--rc);
-  border-radius: 16px; padding: 24px;
-  backdrop-filter: blur(10px);
-  transition: all 0.25s;
+  border-radius: 18px; padding: 24px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.3s;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
 .role-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateY(-6px);
+  border-color: var(--rc);
+  box-shadow: 0 0 0 1px var(--rc), 0 12px 40px rgba(0,0,0,0.4), 0 0 30px rgba(0,0,0,0.2);
 }
 .role-icon { font-size: 36px; margin-bottom: 12px; }
 .role-title { font-size: 15px; font-weight: 700; color: #fff; margin: 0 0 14px; }
@@ -565,11 +601,18 @@ nav, section, footer { position: relative; z-index: 1; }
 
 /* Login Card */
 .login-card {
-  background: rgba(4, 16, 44, 0.88);
-  border: 1px solid rgba(0, 255, 159, 0.2);
-  border-radius: 24px; padding: 40px 36px;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 0 60px rgba(0,255,159,0.06), 0 25px 50px rgba(0,0,0,0.5);
+  background: rgba(2, 10, 32, 0.82);
+  border: 1px solid rgba(0, 255, 159, 0.18);
+  border-radius: 26px; padding: 40px 36px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 0 0 1px rgba(0,255,159,0.08), 0 0 60px rgba(0,255,159,0.08), 0 30px 60px rgba(0,0,0,0.6);
+  position: relative; overflow: hidden;
+}
+.login-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,255,159,0.5), transparent);
 }
 .card-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
 .card-logo {

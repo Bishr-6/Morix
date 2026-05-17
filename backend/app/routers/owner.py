@@ -245,7 +245,7 @@ async def get_owner_settings(current_user: dict = Depends(_require_owner), db=De
 @router.put("/settings")
 async def update_owner_settings(body: dict, current_user: dict = Depends(_require_owner), db=Depends(get_db)):
     valid_langs = {"ar", "en", "de", "fr", "zh", "es"}
-    valid_themes = {"dark", "light", "library"}
+    valid_themes = {"dark", "light", "library", "neon"}
     theme = body.get("theme", "dark")
     if theme not in valid_themes: theme = "dark"
     lang = body.get("language", "ar")
@@ -277,8 +277,8 @@ async def broadcast_message(
     db=Depends(get_db),
 ):
     """بث رسالة لكل مستخدمي المنصة"""
-    title = body.get("title", "إعلان من إدارة Morix")
-    content = (body.get("content") or "").strip()
+    title = str(body.get("title", "إعلان من إدارة Morix"))[:200]
+    content = (body.get("content") or "").strip()[:2000]
     if not content:
         raise HTTPException(400, "اكتب محتوى الإعلان")
     try:

@@ -62,6 +62,19 @@ async def reset_password(
     new_password = body.get("new_password", "")
     if len(new_password) < 6:
         raise HTTPException(status_code=400, detail="كلمة المرور لازم تكون 6 أحرف على الأقل")
+    if len(new_password) > 128:
+        raise HTTPException(status_code=400, detail="كلمة المرور طويلة جداً (الحد الأقصى 128 حرف)")
+
+    # التحقق أن الطالب ينتمي لنفس المدرسة (منع IDOR)
+    school_id = current_user.get("school_id")
+    if school_id:
+        student = db.table("users").select("school_id, role").eq("id", student_id).execute()
+        if not student.data:
+            raise HTTPException(status_code=404, detail="الطالب غير موجود")
+        if student.data[0].get("school_id") != school_id:
+            raise HTTPException(status_code=403, detail="لا يمكنك تعديل حسابات خارج مدرستك")
+        if student.data[0].get("role") in ("manager", "owner"):
+            raise HTTPException(status_code=403, detail="لا يمكن إعادة تعيين كلمة سر هذا الحساب")
 
     new_hash = hash_password(new_password)
     db.table("users").update({
@@ -108,9 +121,16 @@ async def toggle_student(
     current_user: dict = Depends(_require_admin),
     db=Depends(get_db)
 ):
-    student = db.table("users").select("is_active").eq("id", student_id).execute()
+    school_id = current_user.get("school_id")
+    query = db.table("users").select("is_active, school_id, role").eq("id", student_id)
+    student = query.execute()
     if not student.data:
         raise HTTPException(status_code=404, detail="الطالب غير موجود")
+    # منع IDOR: الأدمن لا يستطيع تعطيل حسابات خارج مدرسته
+    if school_id and student.data[0].get("school_id") != school_id:
+        raise HTTPException(status_code=403, detail="لا يمكنك تعديل حسابات خارج مدرستك")
+    if student.data[0].get("role") in ("manager", "owner"):
+        raise HTTPException(status_code=403, detail="لا يمكن تعطيل حساب مدير أو مالك")
     new_status = not student.data[0]["is_active"]
     db.table("users").update({"is_active": new_status}).eq("id", student_id).execute()
     return {"message": "تم التحديث", "is_active": new_status}
@@ -229,7 +249,7 @@ async def get_settings(current_user: dict = Depends(_require_admin), db=Depends(
 @router.put("/settings")
 async def update_settings(body: dict, current_user: dict = Depends(_require_admin), db=Depends(get_db)):
     valid_langs = {"ar", "en", "de", "fr", "zh", "es"}
-    valid_themes = {"dark", "light", "library"}
+    valid_themes = {"dark", "light", "library", "neon"}
 
     theme = body.get("theme", "dark")
     if theme not in valid_themes: theme = "dark"
@@ -350,8 +370,8 @@ async def make_announcement(
     db=Depends(get_db),
 ):
     """إعلان مدرسي"""
-    title = (body.get("title") or "").strip()
-    content = (body.get("content") or "").strip()
+    title = (body.get("title") or "").strip()[:200]   # حد العنوان 200 حرف
+    content = (body.get("content") or "").strip()[:2000]  # حد المحتوى 2000 حرف
     if not title or not content:
         raise HTTPException(400, "أدخل العنوان والمحتوى")
     try:
@@ -384,8 +404,8 @@ async def incident_report(
     current_user: dict = Depends(_require_admin),
 ):
     """مساعد كتابة تقارير حوادث/سلوك بـ AI"""
-    summary = (body.get("summary") or "").strip()
-    incident_type = body.get("type", "سلوكي")
+    summary = (body.get("summary") or "").strip()[:3000]
+    incident_type = str(body.get("type", "سلوكي"))[:50]
     if not summary:
         raise HTTPException(400, "اكتب ملخص الحادثة")
     from app.services.ai_service import chat_with_gemini

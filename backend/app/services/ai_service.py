@@ -56,14 +56,44 @@ def _extract_first_name(full_name: str) -> str:
     return parts[0] if parts else full_name
 
 
+LANG_NAMES = {
+    "ar": "Arabic (العربية)",
+    "en": "English",
+    "es": "Spanish (Español)",
+    "fr": "French (Français)",
+    "de": "German (Deutsch)",
+    "zh": "Chinese (中文)",
+}
+
+
 def _build_system_prompt(
     full_name: str,
     learning_style: Optional[str],
     book_summary: Optional[str],
     role: str = "student",
-    difficulty: str = "medium"
+    difficulty: str = "medium",
+    preferred_lang: Optional[str] = None,
 ) -> str:
     first_name = _extract_first_name(full_name)
+
+    # ── بناء تعليمات اللغة ────────────────────────────────────────────────
+    if preferred_lang and preferred_lang != "ar":
+        lang_display = LANG_NAMES.get(preferred_lang, preferred_lang)
+        lang_rule = (
+            f"## ══ MANDATORY LANGUAGE RULE ══\n"
+            f"The user has set their preferred interface language to: **{lang_display}**.\n"
+            f"You MUST respond ENTIRELY in {lang_display} — no exceptions.\n"
+            f"Even if the user writes in Arabic or any other language, your reply must be in {lang_display}.\n"
+            f"Only switch language if the user explicitly asks you to in their message.\n\n"
+        )
+    else:
+        lang_rule = (
+            f"## Language & Dialect Rule:\n"
+            f"Detect the language AND dialect of the user's message and respond in the EXACT same way.\n"
+            f"Gulf Arabic → Gulf Arabic | Egyptian → Egyptian | Levantine → Levantine | "
+            f"Formal Arabic → Formal Arabic | English → English | any language → same language.\n"
+            f"NEVER switch language unless the user switches first.\n\n"
+        )
 
     if role == "teacher":
         return (
@@ -72,24 +102,48 @@ def _build_system_prompt(
             f"## Your Role:\n"
             f"Help the teacher prepare educational materials, explain concepts, design activities, "
             f"create test questions, worksheets, and lesson plans.\n\n"
-            f"## Language & Dialect Rule:\n"
-            f"Respond in the SAME language AND dialect the teacher writes in.\n"
-            f"Gulf Arabic → Gulf Arabic | Egyptian → Egyptian | Levantine → Levantine | "
-            f"Formal Arabic → Formal Arabic | English → English | any language → same language.\n\n"
+            f"## Accuracy & Honesty Rules:\n"
+            f"- Only provide facts you are 100% certain about.\n"
+            f"- If a question is outside your knowledge, say so clearly instead of guessing.\n"
+            f"- For curriculum-specific content, rely on what the teacher provides — don't invent syllabus details.\n"
+            f"- Mark any uncertain information with: '(يُنصح بالتحقق من المصدر الرسمي)'\n\n"
+            f"{lang_rule}"
             f"## Guidelines:\n"
-            f"- Be precise, educational, and professional\n"
-            f"- Suggest appropriate teaching strategies\n"
-            f"- Format output clearly with headings and bullet points"
+            f"- Be precise, educational, and professional.\n"
+            f"- Suggest appropriate teaching strategies.\n"
+            f"- Format output clearly with headings and bullet points.\n"
+            f"- NEVER hallucinate exam questions, dates, or curriculum facts."
         )
 
     style = LEARNING_STYLE_PROMPTS.get(learning_style or "visual", LEARNING_STYLE_PROMPTS["visual"])
-    book_ctx = f"\n\n## Book Context:\n{book_summary}" if book_summary else ""
 
     difficulty_instruction = {
         "easy": "Use very simple language, short sentences, and basic examples.",
         "medium": "Use clear language with moderate detail and good examples.",
         "hard": "Use precise academic language with depth and challenging examples.",
     }.get(difficulty, "Use clear language with moderate detail.")
+
+    # ── سياق الكتاب — المصدر الأساسي الأول ─────────────────────────────
+    if book_summary:
+        book_ctx = (
+            f"\n\n## ══ PRIMARY KNOWLEDGE SOURCE (ALWAYS USE FIRST) ══\n"
+            f"The following is the official curriculum book content for this session.\n"
+            f"ALWAYS base your answers primarily on this content:\n\n"
+            f"{book_summary}\n\n"
+            f"## Knowledge Priority Rules:\n"
+            f"1. FIRST: Check if the answer exists in the book context above.\n"
+            f"2. If found → answer directly from the book, cite it clearly.\n"
+            f"3. If NOT in book → you may supplement ONLY with facts you are 100% certain about.\n"
+            f"4. NEVER invent, guess, or hallucinate facts not in the book.\n"
+            f"5. If uncertain → say: 'هذا غير موجود في الكتاب، لكن من المعرفة العامة...'\n"
+        )
+    else:
+        book_ctx = (
+            "\n\n## Knowledge Rules:\n"
+            "- Answer ONLY with facts you are 100% certain about.\n"
+            "- If unsure → say 'لست متأكداً 100% من هذه المعلومة' clearly.\n"
+            "- NEVER invent or hallucinate facts.\n"
+        )
 
     return (
         f"You are an enthusiastic smart teacher on Morix educational platform.\n"
@@ -98,28 +152,21 @@ def _build_system_prompt(
         f"## Learning Style:\n{style}\n\n"
         f"## Difficulty Level:\n{difficulty_instruction}\n"
         f"{book_ctx}\n\n"
-        f"## CRITICAL LANGUAGE & DIALECT RULE:\n"
-        f"- Detect the language AND dialect of the student's message and respond in the EXACT same way.\n"
-        f"- If the student writes in Gulf Arabic (خليجي) → reply in Gulf Arabic.\n"
-        f"- If the student writes in Egyptian Arabic (مصري) → reply in Egyptian Arabic.\n"
-        f"- If the student writes in Levantine Arabic (شامي) → reply in Levantine Arabic.\n"
-        f"- If the student writes in Modern Standard Arabic (فصحى) → reply in Modern Standard Arabic.\n"
-        f"- If the student writes in English → reply in English.\n"
-        f"- If the student writes in any other language → reply in that same language.\n"
-        f"- NEVER switch the dialect unless the student switches first.\n\n"
+        f"{lang_rule}"
         f"## What You Can Help With:\n"
-        f"- **Explain** any topic in the curriculum\n"
-        f"- **Summarize** (ملخصات) any chapter or subject — just ask!\n"
-        f"- **Review** (مراجعات) — ask the student questions, quiz them, and correct their answers\n"
-        f"- **Homework help** — guide the student step by step\n"
-        f"- **Study plans** — help organize study sessions\n"
-        f"- **Solve problems** — math, science, language exercises\n\n"
+        f"- **Explain** topics — always from the book first, then general knowledge.\n"
+        f"- **Summarize** chapters — based on the book content provided.\n"
+        f"- **Review** — quiz the student on book content, correct based on book.\n"
+        f"- **Homework help** — guide step by step using curriculum content.\n"
+        f"- **Study plans** — organize study sessions around book chapters.\n"
+        f"- **Solve problems** — math, science, language exercises.\n\n"
         f"## Rules:\n"
-        f"- Greet with the student's name only on the FIRST message\n"
-        f"- Be encouraging, positive, and friendly\n"
-        f"- For reviews: ask questions one by one, wait for answer, then correct and explain\n"
-        f"- For summaries: structure clearly with headings and bullet points\n"
-        f"- Adapt explanation style to the learning style above"
+        f"- Greet with the student's name only on the FIRST message.\n"
+        f"- Be encouraging, positive, and friendly.\n"
+        f"- For reviews: ask questions one by one, wait for answer, then correct and explain.\n"
+        f"- For summaries: structure clearly with headings and bullet points.\n"
+        f"- Adapt explanation style to the learning style above.\n"
+        f"- NEVER make up curriculum content — if unsure, say so clearly."
     )
 
 
@@ -133,6 +180,7 @@ async def chat_with_gemini(
     difficulty: str = "medium",
     image_base64: Optional[str] = None,
     file_text: Optional[str] = None,
+    preferred_lang: Optional[str] = None,
 ) -> tuple[str, bool]:
     """إرسال رسالة لـ Gemini - يرجع (رد, من_كاش)"""
 
@@ -181,7 +229,7 @@ async def chat_with_gemini(
         contents.append(types.Content(role="user", parts=user_parts))
 
         config = types.GenerateContentConfig(
-            system_instruction=_build_system_prompt(full_name, learning_style, book_summary, role, difficulty),
+            system_instruction=_build_system_prompt(full_name, learning_style, book_summary, role, difficulty, preferred_lang),
             temperature=0.7,
             max_output_tokens=1200,
         )
@@ -270,21 +318,6 @@ async def generate_educational_image(prompt: str) -> dict:
             except Exception as e1:
                 last_err = str(e1)
                 logger.warning(f"Image model {model_name} failed: {e1}")
-
-        # ثانياً: Imagen 3 (يحتاج billing)
-        for imagen_model in ("imagen-3.0-generate-002", "imagen-3.0-generate-001"):
-            try:
-                response = client.models.generate_images(
-                    model=imagen_model,
-                    prompt=f"Educational illustration: {prompt}. Clean, colorful, clear.",
-                    config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="1:1")
-                )
-                if response.generated_images:
-                    image_bytes = response.generated_images[0].image.image_bytes
-                    return {"success": True, "image": base64.b64encode(image_bytes).decode('utf-8'), "error": None}
-            except Exception as e2:
-                last_err = str(e2)
-                logger.warning(f"Imagen {imagen_model} failed: {e2}")
 
         # تشخيص نوع الخطأ
         err_msg = last_err or "كل النماذج فشلت"

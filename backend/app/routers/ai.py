@@ -1,5 +1,5 @@
 # راوتر الذكاء الاصطناعي - Morix Platform
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from app.models.schemas import ChatMessage, ChatResponse, ImageGenerateRequest
 from app.services.ai_service import chat_with_gemini, generate_educational_image
 from app.auth import get_current_user
@@ -23,6 +23,7 @@ async def chat(
     if not conversation_id:
         conv_data = {
             "student_id": current_user["id"],
+            "school_id": current_user.get("school_id"),
             "title": message.message[:50] + ("..." if len(message.message) > 50 else ""),
         }
         if message.book_id:
@@ -46,17 +47,27 @@ async def chat(
         if book.data and book.data[0].get("summary"):
             book_summary = f"Book: {book.data[0]['title']}\n{book.data[0]['summary']}"
 
-    # جلب إعدادات المستخدم (صعوبة اللغة)
+    # جلب إعدادات المستخدم (الصعوبة + اللغة المفضلة)
     difficulty = "medium"
+    preferred_lang = None
     try:
-        s = db.table("user_settings").select("difficulty").eq("user_id", current_user["id"]).execute()
+        s = db.table("user_settings").select("difficulty, language").eq("user_id", current_user["id"]).execute()
         if s.data:
             difficulty = s.data[0].get("difficulty", "medium")
+            # إذا حدد المستخدم لغة معيّنة نأخذها — وإلا نستخدم لغة الرسالة
+            preferred_lang = s.data[0].get("language") or None
     except Exception:
         pass
 
+    # لغة الرسالة تأخذ أولوية على إعدادات DB (إذا أرسلها الفرونت)
+    if message.language and message.language != "ar":
+        preferred_lang = message.language
+
     learning_style = current_user.get("learning_style") if role == "student" else None
     full_name = current_user.get("full_name", "مستخدم")
+
+    # حفظ رسالة المستخدم أولاً (قبل نداء AI) حتى لا تضيع عند الخطأ
+    db.table("ai_messages").insert({"conversation_id": conversation_id, "role": "user", "content": message.message}).execute()
 
     reply, from_cache = await chat_with_gemini(
         message=message.message,
@@ -68,9 +79,9 @@ async def chat(
         difficulty=difficulty,
         image_base64=message.image_base64,
         file_text=message.file_text,
+        preferred_lang=preferred_lang,
     )
 
-    db.table("ai_messages").insert({"conversation_id": conversation_id, "role": "user", "content": message.message}).execute()
     db.table("ai_messages").insert({"conversation_id": conversation_id, "role": "assistant", "content": reply}).execute()
 
     try:
@@ -141,3 +152,71 @@ async def generate_image(request: ImageGenerateRequest, current_user: dict = Dep
     image_b64 = result["image"]
 
     return {"success": True, "image": image_b64, "prompt": request.prompt}
+
+
+# ============================================================
+# 📄 استخراج نص من ملف — متاح لجميع المستخدمين المسجلين
+# ============================================================
+@router.post("/extract-file")
+async def extract_file_for_chat(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """استخراج النص من ملف PDF أو PPTX أو DOCX أو TXT لاستخدامه في الشات"""
+    filename = (file.filename or "").lower()
+    content = await file.read()
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="الملف أكبر من 15MB — اختر ملفاً أصغر")
+    text = ""
+
+    if filename.endswith((".txt", ".md")):
+        try:
+            text = content.decode("utf-8", errors="replace")
+        except Exception:
+            text = content.decode("latin-1", errors="replace")
+
+    elif filename.endswith(".pdf"):
+        try:
+            from pypdf import PdfReader
+            import io as _io
+            reader = PdfReader(_io.BytesIO(content))
+            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        except Exception as e:
+            logger.warning(f"pypdf failed: {e}")
+            text = content.decode("utf-8", errors="ignore")
+
+    elif filename.endswith(".pptx"):
+        try:
+            from pptx import Presentation
+            import io as _io
+            prs = Presentation(_io.BytesIO(content))
+            slides_text = []
+            for slide in prs.slides:
+                parts = [shape.text.strip() for shape in slide.shapes if hasattr(shape, "text") and shape.text.strip()]
+                if parts:
+                    slides_text.append(" | ".join(parts))
+            text = "\n".join(slides_text)
+        except Exception as e:
+            logger.warning(f"pptx extraction failed: {e}")
+            text = ""
+
+    elif filename.endswith(".docx"):
+        try:
+            import zipfile, re as _re, io as _io
+            with zipfile.ZipFile(_io.BytesIO(content)) as zf:
+                with zf.open("word/document.xml") as doc_xml:
+                    xml_content = doc_xml.read().decode("utf-8", errors="replace")
+            text = _re.sub(r"<[^>]+>", " ", xml_content)
+            text = _re.sub(r"\s+", " ", text).strip()
+        except Exception as e:
+            logger.warning(f"docx extraction failed: {e}")
+            text = ""
+
+    else:
+        raise HTTPException(status_code=400, detail="صيغة غير مدعومة — استخدم PDF أو PPTX أو DOCX أو TXT أو MD")
+
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="لم يُستخرج أي نص من الملف — تأكد أنه يحتوي على نص قابل للقراءة")
+
+    text = text[:80000]
+    return {"text": text, "chars": len(text), "filename": file.filename}

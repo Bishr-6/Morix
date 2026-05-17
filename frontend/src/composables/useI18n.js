@@ -1,149 +1,386 @@
-// نظام الترجمة متعدد اللغات - 6 لغات
+// نظام الترجمة - Morix Platform (Google Translate powered)
 import { ref, computed, watch } from 'vue'
 
 export const LANGUAGES = {
-  ar: { code: 'ar', name: 'العربية', flag: '🇸🇦', dir: 'rtl' },
-  en: { code: 'en', name: 'English', flag: '🇬🇧', dir: 'ltr' },
-  zh: { code: 'zh', name: '中文', flag: '🇨🇳', dir: 'ltr' },
-  de: { code: 'de', name: 'Deutsch', flag: '🇩🇪', dir: 'ltr' },
-  es: { code: 'es', name: 'Español', flag: '🇪🇸', dir: 'ltr' },
+  ar: { code: 'ar', name: 'العربية',  flag: '🇸🇦', dir: 'rtl' },
+  en: { code: 'en', name: 'English',  flag: '🇬🇧', dir: 'ltr' },
+  zh: { code: 'zh', name: '中文',      flag: '🇨🇳', dir: 'ltr' },
+  de: { code: 'de', name: 'Deutsch',  flag: '🇩🇪', dir: 'ltr' },
+  es: { code: 'es', name: 'Español',  flag: '🇪🇸', dir: 'ltr' },
   fr: { code: 'fr', name: 'Français', flag: '🇫🇷', dir: 'ltr' },
 }
 
-const TRANSLATIONS = {
-  // ============================================================
-  // عام
-  // ============================================================
-  app_name: { ar:'موريكس', en:'Morix', zh:'莫瑞克斯', de:'Morix', es:'Morix', fr:'Morix' },
-  tagline: { ar:'منصة التعلم الذكي', en:'Smart Learning Platform', zh:'智能学习平台', de:'Intelligente Lernplattform', es:'Plataforma de Aprendizaje Inteligente', fr:'Plateforme d\'Apprentissage Intelligent' },
+// ════════════════════════════════════════
+//  Static translation dictionary
+// ════════════════════════════════════════
+const STATIC = {
+  // ── App ──────────────────────────────
+  app_name:    { ar:'موريكس',          en:'Morix',                     zh:'莫瑞克斯',        de:'Morix',                      es:'Morix',                    fr:'Morix' },
+  tagline:     { ar:'منصة التعلم الذكي', en:'Smart Learning Platform',   zh:'智能学习平台',    de:'Intelligente Lernplattform', es:'Plataforma de Aprendizaje Inteligente', fr:"Plateforme d'Apprentissage Intelligent" },
 
-  // أدوار
-  role_owner: { ar:'مالك', en:'Owner', zh:'所有者', de:'Besitzer', es:'Propietario', fr:'Propriétaire' },
-  role_manager: { ar:'مدير', en:'Manager', zh:'经理', de:'Manager', es:'Gerente', fr:'Gérant' },
-  role_admin: { ar:'إداري', en:'Admin', zh:'管理员', de:'Verwalter', es:'Administrador', fr:'Administrateur' },
-  role_teacher: { ar:'معلم', en:'Teacher', zh:'教师', de:'Lehrer', es:'Profesor', fr:'Enseignant' },
-  role_student: { ar:'طالب', en:'Student', zh:'学生', de:'Schüler', es:'Estudiante', fr:'Étudiant' },
+  // ── Roles ────────────────────────────
+  role_owner:   { ar:'مالك',     en:'Owner',   zh:'所有者', de:'Besitzer',   es:'Propietario',    fr:'Propriétaire' },
+  role_manager: { ar:'مدير',     en:'Manager', zh:'经理',   de:'Manager',    es:'Gerente',        fr:'Gérant' },
+  role_admin:   { ar:'إداري',    en:'Admin',   zh:'管理员', de:'Verwalter',  es:'Administrador',  fr:'Administrateur' },
+  role_teacher: { ar:'معلم',     en:'Teacher', zh:'教师',   de:'Lehrer',     es:'Profesor',       fr:'Enseignant' },
+  role_student: { ar:'طالب',     en:'Student', zh:'学生',   de:'Schüler',    es:'Estudiante',     fr:'Étudiant' },
 
-  // أزرار شائعة
-  save: { ar:'حفظ', en:'Save', zh:'保存', de:'Speichern', es:'Guardar', fr:'Enregistrer' },
-  cancel: { ar:'إلغاء', en:'Cancel', zh:'取消', de:'Abbrechen', es:'Cancelar', fr:'Annuler' },
-  delete: { ar:'حذف', en:'Delete', zh:'删除', de:'Löschen', es:'Eliminar', fr:'Supprimer' },
-  edit: { ar:'تعديل', en:'Edit', zh:'编辑', de:'Bearbeiten', es:'Editar', fr:'Modifier' },
-  add: { ar:'إضافة', en:'Add', zh:'添加', de:'Hinzufügen', es:'Añadir', fr:'Ajouter' },
-  search: { ar:'بحث', en:'Search', zh:'搜索', de:'Suchen', es:'Buscar', fr:'Rechercher' },
-  loading: { ar:'جاري التحميل...', en:'Loading...', zh:'加载中...', de:'Wird geladen...', es:'Cargando...', fr:'Chargement...' },
-  send: { ar:'إرسال', en:'Send', zh:'发送', de:'Senden', es:'Enviar', fr:'Envoyer' },
-  logout: { ar:'تسجيل خروج', en:'Logout', zh:'退出', de:'Abmelden', es:'Cerrar sesión', fr:'Déconnexion' },
-  login: { ar:'تسجيل الدخول', en:'Login', zh:'登录', de:'Anmelden', es:'Iniciar sesión', fr:'Connexion' },
-  back: { ar:'رجوع', en:'Back', zh:'返回', de:'Zurück', es:'Volver', fr:'Retour' },
-  confirm: { ar:'تأكيد', en:'Confirm', zh:'确认', de:'Bestätigen', es:'Confirmar', fr:'Confirmer' },
+  // ── Common buttons ───────────────────
+  save:         { ar:'حفظ',          en:'Save',        zh:'保存',   de:'Speichern',       es:'Guardar',    fr:'Enregistrer' },
+  cancel:       { ar:'إلغاء',        en:'Cancel',      zh:'取消',   de:'Abbrechen',       es:'Cancelar',   fr:'Annuler' },
+  delete_btn:   { ar:'حذف',          en:'Delete',      zh:'删除',   de:'Löschen',         es:'Eliminar',   fr:'Supprimer' },
+  edit:         { ar:'تعديل',        en:'Edit',        zh:'编辑',   de:'Bearbeiten',      es:'Editar',     fr:'Modifier' },
+  add_btn:      { ar:'إضافة',        en:'Add',         zh:'添加',   de:'Hinzufügen',      es:'Añadir',     fr:'Ajouter' },
+  search:       { ar:'بحث',          en:'Search',      zh:'搜索',   de:'Suchen',          es:'Buscar',     fr:'Rechercher' },
+  search_ph:    { ar:'بحث...',        en:'Search...',   zh:'搜索...', de:'Suchen...',       es:'Buscar...',  fr:'Rechercher...' },
+  loading:      { ar:'جاري التحميل...', en:'Loading...', zh:'加载中...', de:'Wird geladen...', es:'Cargando...', fr:'Chargement...' },
+  send:         { ar:'إرسال',        en:'Send',        zh:'发送',   de:'Senden',          es:'Enviar',     fr:'Envoyer' },
+  logout:       { ar:'تسجيل خروج',   en:'Logout',      zh:'退出',   de:'Abmelden',        es:'Cerrar sesión', fr:'Déconnexion' },
+  logout_btn:   { ar:'خروج',         en:'Logout',      zh:'退出',   de:'Abmelden',        es:'Salir',      fr:'Sortir' },
+  login:        { ar:'تسجيل الدخول', en:'Login',       zh:'登录',   de:'Anmelden',        es:'Iniciar sesión', fr:'Connexion' },
+  back:         { ar:'رجوع',         en:'Back',        zh:'返回',   de:'Zurück',          es:'Volver',     fr:'Retour' },
+  confirm:      { ar:'تأكيد',        en:'Confirm',     zh:'确认',   de:'Bestätigen',      es:'Confirmar',  fr:'Confirmer' },
+  upload_btn:   { ar:'رفع',          en:'Upload',      zh:'上传',   de:'Hochladen',       es:'Subir',      fr:'Télécharger' },
+  download_btn: { ar:'تحميل',        en:'Download',    zh:'下载',   de:'Herunterladen',   es:'Descargar',  fr:'Télécharger' },
+  copy_btn:     { ar:'نسخ',          en:'Copy',        zh:'复制',   de:'Kopieren',        es:'Copiar',     fr:'Copier' },
+  refresh_btn:  { ar:'تحديث',        en:'Refresh',     zh:'刷新',   de:'Aktualisieren',   es:'Actualizar', fr:'Actualiser' },
+  start_btn:    { ar:'ابدأ',         en:'Start',       zh:'开始',   de:'Starten',         es:'Iniciar',    fr:'Commencer' },
+  generate_btn: { ar:'توليد',        en:'Generate',    zh:'生成',   de:'Generieren',      es:'Generar',    fr:'Générer' },
+  analyze_btn:  { ar:'تحليل',        en:'Analyze',     zh:'分析',   de:'Analysieren',     es:'Analizar',   fr:'Analyser' },
+  post_btn:     { ar:'نشر',          en:'Post',        zh:'发布',   de:'Posten',          es:'Publicar',   fr:'Publier' },
+  close_btn:    { ar:'إغلاق',        en:'Close',       zh:'关闭',   de:'Schließen',       es:'Cerrar',     fr:'Fermer' },
+  create_ai:    { ar:'إنشاء بالـ AI', en:'Create with AI', zh:'用AI创建', de:'Mit KI erstellen', es:'Crear con IA', fr:'Créer avec IA' },
+  generating:   { ar:'جاري التوليد...', en:'Generating...', zh:'生成中...', de:'Wird generiert...', es:'Generando...', fr:'Génération...' },
+  uploading:    { ar:'جاري الرفع...', en:'Uploading...', zh:'上传中...', de:'Hochladen...', es:'Subiendo...', fr:'Chargement...' },
+  retry_btn:    { ar:'إعادة',        en:'Retry',       zh:'重试',   de:'Wiederholen',     es:'Reintentar', fr:'Réessayer' },
+  submit_btn:   { ar:'تسليم',        en:'Submit',      zh:'提交',   de:'Einreichen',      es:'Enviar',     fr:'Soumettre' },
+  view_btn:     { ar:'عرض',          en:'View',        zh:'查看',   de:'Ansehen',         es:'Ver',        fr:'Voir' },
+  reset_btn:    { ar:'تصفير',        en:'Reset',       zh:'重置',   de:'Zurücksetzen',    es:'Reiniciar',  fr:'Réinitialiser' },
+  pause_btn:    { ar:'إيقاف',        en:'Pause',       zh:'暂停',   de:'Pausieren',       es:'Pausar',     fr:'Pause' },
+  broadcast_now:{ ar:'بث الآن',      en:'Broadcast Now', zh:'立即广播', de:'Jetzt senden', es:'Transmitir ahora', fr:'Diffuser maintenant' },
+  get_consultation: { ar:'احصل على استشارة', en:'Get Consultation', zh:'获取咨询', de:'Beratung erhalten', es:'Obtener consulta', fr:'Obtenir une consultation' },
+  calculate_btn:{ ar:'احسب',         en:'Calculate',   zh:'计算',   de:'Berechnen',       es:'Calcular',   fr:'Calculer' },
+  download_csv: { ar:'تحميل CSV',    en:'Download CSV', zh:'下载CSV', de:'CSV herunterladen', es:'Descargar CSV', fr:'Télécharger CSV' },
+  generate_plan:{ ar:'ولّد الخطة',   en:'Generate Plan', zh:'生成计划', de:'Plan generieren', es:'Generar plan', fr:'Générer le plan' },
+  convert_btn:  { ar:'حوّل',         en:'Convert',     zh:'转换',   de:'Konvertieren',    es:'Convertir',  fr:'Convertir' },
+  compose_msg:  { ar:'اكتب الرسالة', en:'Compose Message', zh:'撰写消息', de:'Nachricht verfassen', es:'Redactar mensaje', fr:'Rédiger le message' },
+  generate_report: { ar:'ولّد التقرير', en:'Generate Report', zh:'生成报告', de:'Bericht generieren', es:'Generar informe', fr:'Générer le rapport' },
+  get_advice:   { ar:'احصل على نصيحة', en:'Get Advice', zh:'获取建议', de:'Ratschlag holen', es:'Obtener consejo', fr:'Obtenir un conseil' },
+  simplify_btn: { ar:'بسّط',         en:'Simplify',    zh:'简化',   de:'Vereinfachen',    es:'Simplificar',fr:'Simplifier' },
+  suggest_methods: { ar:'اقترح طرقاً', en:'Suggest Methods', zh:'建议方法', de:'Methoden vorschlagen', es:'Sugerir métodos', fr:'Suggérer des méthodes' },
 
-  // ============================================================
-  // تسجيل الدخول
-  // ============================================================
-  email: { ar:'البريد الإلكتروني', en:'Email', zh:'电子邮件', de:'E-Mail', es:'Correo electrónico', fr:'E-mail' },
-  password: { ar:'كلمة المرور', en:'Password', zh:'密码', de:'Passwort', es:'Contraseña', fr:'Mot de passe' },
-  login_error: { ar:'الإيميل أو كلمة المرور غلط', en:'Invalid email or password', zh:'邮箱或密码错误', de:'Ungültige E-Mail oder Passwort', es:'Email o contraseña inválidos', fr:'Email ou mot de passe invalide' },
-  demo_accounts: { ar:'بيانات تجريبية', en:'Demo Accounts', zh:'演示账户', de:'Demo-Konten', es:'Cuentas demo', fr:'Comptes démo' },
-
-  // ============================================================
-  // الإعدادات
-  // ============================================================
-  settings: { ar:'الإعدادات', en:'Settings', zh:'设置', de:'Einstellungen', es:'Configuración', fr:'Paramètres' },
-  profile: { ar:'الملف الشخصي', en:'Profile', zh:'个人资料', de:'Profil', es:'Perfil', fr:'Profil' },
-  appearance: { ar:'المظهر', en:'Appearance', zh:'外观', de:'Aussehen', es:'Apariencia', fr:'Apparence' },
-  theme: { ar:'الثيم', en:'Theme', zh:'主题', de:'Thema', es:'Tema', fr:'Thème' },
-  theme_dark: { ar:'داكن', en:'Dark', zh:'深色', de:'Dunkel', es:'Oscuro', fr:'Sombre' },
-  theme_light: { ar:'فاتح', en:'Light', zh:'浅色', de:'Hell', es:'Claro', fr:'Clair' },
-  theme_library: { ar:'المكتبة', en:'Library', zh:'图书馆', de:'Bibliothek', es:'Biblioteca', fr:'Bibliothèque' },
-  brightness: { ar:'السطوع', en:'Brightness', zh:'亮度', de:'Helligkeit', es:'Brillo', fr:'Luminosité' },
-  language: { ar:'اللغة', en:'Language', zh:'语言', de:'Sprache', es:'Idioma', fr:'Langue' },
-  notifications: { ar:'الإشعارات', en:'Notifications', zh:'通知', de:'Benachrichtigungen', es:'Notificaciones', fr:'Notifications' },
+  // ── Settings ─────────────────────────
+  settings:      { ar:'الإعدادات',   en:'Settings',    zh:'设置',   de:'Einstellungen',  es:'Configuración', fr:'Paramètres' },
+  profile:       { ar:'الملف الشخصي',en:'Profile',     zh:'个人资料',de:'Profil',         es:'Perfil',     fr:'Profil' },
+  appearance:    { ar:'المظهر',       en:'Appearance',  zh:'外观',   de:'Aussehen',       es:'Apariencia', fr:'Apparence' },
+  theme:         { ar:'الثيم',        en:'Theme',       zh:'主题',   de:'Thema',          es:'Tema',       fr:'Thème' },
+  theme_dark:    { ar:'داكن',         en:'Dark',        zh:'深色',   de:'Dunkel',         es:'Oscuro',     fr:'Sombre' },
+  theme_light:   { ar:'فاتح',         en:'Light',       zh:'浅色',   de:'Hell',           es:'Claro',      fr:'Clair' },
+  theme_library: { ar:'مكتبة',        en:'Library',     zh:'图书馆', de:'Bibliothek',     es:'Biblioteca', fr:'Bibliothèque' },
+  brightness:    { ar:'السطوع',       en:'Brightness',  zh:'亮度',   de:'Helligkeit',     es:'Brillo',     fr:'Luminosité' },
+  language:      { ar:'اللغة',        en:'Language',    zh:'语言',   de:'Sprache',        es:'Idioma',     fr:'Langue' },
+  notifications: { ar:'الإشعارات',   en:'Notifications',zh:'通知',  de:'Benachrichtigungen', es:'Notificaciones', fr:'Notifications' },
   notifications_enabled: { ar:'تفعيل الإشعارات', en:'Enable notifications', zh:'启用通知', de:'Benachrichtigungen aktivieren', es:'Activar notificaciones', fr:'Activer les notifications' },
-  difficulty: { ar:'الصعوبة', en:'Difficulty', zh:'难度', de:'Schwierigkeit', es:'Dificultad', fr:'Difficulté' },
-  difficulty_easy: { ar:'سهل', en:'Easy', zh:'简单', de:'Leicht', es:'Fácil', fr:'Facile' },
-  difficulty_medium: { ar:'متوسط', en:'Medium', zh:'中等', de:'Mittel', es:'Medio', fr:'Moyen' },
-  difficulty_hard: { ar:'صعب', en:'Hard', zh:'困难', de:'Schwer', es:'Difícil', fr:'Difficile' },
+  account_info:  { ar:'معلومات الحساب', en:'Account Info', zh:'账户信息', de:'Kontoinformationen', es:'Información de cuenta', fr:'Informations du compte' },
+  full_name:     { ar:'الاسم',        en:'Name',        zh:'姓名',   de:'Name',           es:'Nombre',     fr:'Nom' },
+  email:         { ar:'البريد الإلكتروني', en:'Email', zh:'电子邮件', de:'E-Mail',        es:'Correo electrónico', fr:'E-mail' },
+  password:      { ar:'كلمة المرور', en:'Password',    zh:'密码',   de:'Passwort',       es:'Contraseña', fr:'Mot de passe' },
   upload_avatar: { ar:'رفع صورة من الجهاز', en:'Upload avatar', zh:'上传头像', de:'Avatar hochladen', es:'Subir avatar', fr:'Télécharger un avatar' },
-  account_info: { ar:'معلومات الحساب', en:'Account Info', zh:'账户信息', de:'Kontoinformationen', es:'Información de cuenta', fr:'Informations du compte' },
-  full_name: { ar:'الاسم', en:'Name', zh:'姓名', de:'Name', es:'Nombre', fr:'Nom' },
-  saved: { ar:'✅ تم الحفظ', en:'✅ Saved', zh:'✅ 已保存', de:'✅ Gespeichert', es:'✅ Guardado', fr:'✅ Enregistré' },
+  saved:         { ar:'✅ تم الحفظ', en:'✅ Saved',    zh:'✅ 已保存', de:'✅ Gespeichert', es:'✅ Guardado', fr:'✅ Enregistré' },
   change_password: { ar:'تغيير كلمة المرور', en:'Change password', zh:'更改密码', de:'Passwort ändern', es:'Cambiar contraseña', fr:'Changer le mot de passe' },
+  difficulty:    { ar:'الصعوبة',     en:'Difficulty',  zh:'难度',   de:'Schwierigkeit',  es:'Dificultad', fr:'Difficulté' },
+  difficulty_easy:   { ar:'سهل',    en:'Easy',         zh:'简单',   de:'Leicht',         es:'Fácil',      fr:'Facile' },
+  difficulty_medium: { ar:'متوسط',  en:'Medium',       zh:'中等',   de:'Mittel',         es:'Medio',      fr:'Moyen' },
+  difficulty_hard:   { ar:'صعب',    en:'Hard',         zh:'困难',   de:'Schwer',         es:'Difícil',    fr:'Difficile' },
+  hobbies_label: { ar:'الهوايات والاهتمامات', en:'Hobbies & Interests', zh:'爱好与兴趣', de:'Hobbys und Interessen', es:'Aficiones e intereses', fr:"Loisirs et intérêts" },
+  grade_label:   { ar:'الصف',        en:'Grade',       zh:'年级',   de:'Klasse',         es:'Grado',      fr:'Classe' },
+  subject_label: { ar:'المادة',      en:'Subject',     zh:'科目',   de:'Fach',           es:'Materia',    fr:'Matière' },
+  topic_label:   { ar:'الموضوع',     en:'Topic',       zh:'主题',   de:'Thema',          es:'Tema',       fr:'Thème' },
 
-  // ============================================================
-  // الطالب
-  // ============================================================
-  student_chat: { ar:'المحادثة', en:'Chat', zh:'聊天', de:'Chat', es:'Chat', fr:'Discussion' },
-  books: { ar:'ملخص الكتاب', en:'Books', zh:'书籍', de:'Bücher', es:'Libros', fr:'Livres' },
-  games: { ar:'الألعاب', en:'Games', zh:'游戏', de:'Spiele', es:'Juegos', fr:'Jeux' },
-  homework: { ar:'الواجبات', en:'Homework', zh:'作业', de:'Hausaufgaben', es:'Tarea', fr:'Devoirs' },
-  tests: { ar:'الاختبارات', en:'Tests', zh:'考试', de:'Tests', es:'Exámenes', fr:'Tests' },
-  worksheets: { ar:'أوراق العمل', en:'Worksheets', zh:'练习册', de:'Arbeitsblätter', es:'Hojas de trabajo', fr:'Feuilles' },
-  image_gen: { ar:'توليد صور', en:'Image Generation', zh:'生成图片', de:'Bild generieren', es:'Generar imagen', fr:'Générer image' },
-  video_script: { ar:'سكريبت فيديو', en:'Video Script', zh:'视频脚本', de:'Videoskript', es:'Guion de video', fr:'Script vidéo' },
-  leaderboard: { ar:'لوحة المتصدرين', en:'Leaderboard', zh:'排行榜', de:'Bestenliste', es:'Clasificación', fr:'Classement' },
+  // ── Status ───────────────────────────
+  active_label:    { ar:'نشط',       en:'Active',      zh:'活跃',   de:'Aktiv',          es:'Activo',     fr:'Actif' },
+  inactive_label:  { ar:'معطل',      en:'Inactive',    zh:'停用',   de:'Inaktiv',        es:'Inactivo',   fr:'Inactif' },
+  pending_label:   { ar:'معلق',      en:'Pending',     zh:'待处理', de:'Ausstehend',     es:'Pendiente',  fr:'En attente' },
+  enable_btn:      { ar:'تفعيل',     en:'Enable',      zh:'启用',   de:'Aktivieren',     es:'Activar',    fr:'Activer' },
+  disable_btn:     { ar:'تعطيل',     en:'Disable',     zh:'停用',   de:'Deaktivieren',   es:'Desactivar', fr:'Désactiver' },
+  configured:      { ar:'معدّة',     en:'Configured',  zh:'已配置', de:'Konfiguriert',   es:'Configurado',fr:'Configuré' },
+  awaiting_setup:  { ar:'بانتظار الإعداد', en:'Awaiting Setup', zh:'待设置', de:'Warten auf Einrichtung', es:'En espera de configuración', fr:"En attente de configuration" },
+  under_review:    { ar:'قيد المراجعة', en:'Under Review', zh:'审核中', de:'In Bearbeitung', es:'En revisión', fr:"En cours d'examen" },
+  resolved_label:  { ar:'محلول',     en:'Resolved',    zh:'已解决', de:'Gelöst',         es:'Resuelto',   fr:'Résolu' },
+  not_specified:   { ar:'غير محدد',  en:'Not specified',zh:'未指定', de:'Nicht angegeben',es:'No especificado', fr:'Non spécifié' },
+
+  // ── Navigation ────────────────────────
+  student_chat:    { ar:'المحادثة',  en:'Chat',        zh:'聊天',   de:'Chat',           es:'Chat',       fr:'Discussion' },
+  books:           { ar:'ملخص الكتاب', en:'Books',     zh:'书籍',   de:'Bücher',         es:'Libros',     fr:'Livres' },
+  games:           { ar:'الألعاب',   en:'Games',       zh:'游戏',   de:'Spiele',         es:'Juegos',     fr:'Jeux' },
+  homework:        { ar:'الواجبات',  en:'Homework',    zh:'作业',   de:'Hausaufgaben',   es:'Tarea',      fr:'Devoirs' },
+  tests:           { ar:'الاختبارات',en:'Tests',       zh:'考试',   de:'Tests',          es:'Exámenes',   fr:'Tests' },
+  worksheets:      { ar:'أوراق العمل',en:'Worksheets', zh:'练习册', de:'Arbeitsblätter', es:'Hojas de trabajo', fr:'Feuilles de travail' },
+  image_gen:       { ar:'توليد صور', en:'Image Generation', zh:'生成图片', de:'Bild generieren', es:'Generar imagen', fr:'Générer image' },
+  video_script:    { ar:'سكريبت فيديو', en:'Video Script', zh:'视频脚本', de:'Videoskript', es:'Guion de video', fr:'Script vidéo' },
+  leaderboard:     { ar:'لوحة المتصدرين', en:'Leaderboard', zh:'排行榜', de:'Bestenliste', es:'Clasificación', fr:'Classement' },
   daily_challenge: { ar:'التحدي اليومي', en:'Daily Challenge', zh:'每日挑战', de:'Tägliche Herausforderung', es:'Desafío diario', fr:'Défi quotidien' },
-  pomodoro: { ar:'بومودورو', en:'Pomodoro', zh:'番茄钟', de:'Pomodoro', es:'Pomodoro', fr:'Pomodoro' },
-  mood: { ar:'مزاجي اليوم', en:'My Mood', zh:'我的心情', de:'Meine Stimmung', es:'Mi ánimo', fr:'Mon humeur' },
-  reflection: { ar:'التأمل اليومي', en:'Daily Reflection', zh:'每日反思', de:'Tägliche Reflexion', es:'Reflexión diaria', fr:'Réflexion quotidienne' },
+  pomodoro:        { ar:'بومودورو',  en:'Pomodoro',    zh:'番茄钟', de:'Pomodoro',       es:'Pomodoro',   fr:'Pomodoro' },
+  mood:            { ar:'مزاجي اليوم', en:'My Mood',   zh:'我的心情', de:'Meine Stimmung', es:'Mi ánimo',  fr:'Mon humeur' },
+  reflection:      { ar:'التأمل اليومي', en:'Daily Reflection', zh:'每日反思', de:'Tägliche Reflexion', es:'Reflexión diaria', fr:'Réflexion quotidienne' },
   digital_library: { ar:'المكتبة الرقمية', en:'Digital Library', zh:'数字图书馆', de:'Digitale Bibliothek', es:'Biblioteca digital', fr:'Bibliothèque numérique' },
-  notebook: { ar:'دفتري الذكي', en:'Smart Notebook', zh:'智能笔记本', de:'Intelligentes Notizbuch', es:'Cuaderno inteligente', fr:'Carnet intelligent' },
-  progress: { ar:'تقدمي', en:'My Progress', zh:'我的进度', de:'Mein Fortschritt', es:'Mi progreso', fr:'Mes progrès' },
+  notebook:        { ar:'دفتري الذكي', en:'Smart Notebook', zh:'智能笔记本', de:'Intelligentes Notizbuch', es:'Cuaderno inteligente', fr:'Carnet intelligent' },
+  progress:        { ar:'تقدمي',     en:'My Progress', zh:'我的进度', de:'Mein Fortschritt', es:'Mi progreso', fr:'Mes progrès' },
+  overview:        { ar:'نظرة عامة', en:'Overview',    zh:'概览',   de:'Übersicht',      es:'Resumen',    fr:'Aperçu' },
+  students:        { ar:'الطلاب',    en:'Students',    zh:'学生们', de:'Schüler',        es:'Estudiantes',fr:'Étudiants' },
+  ppt_generator:   { ar:'توليد PPT', en:'PPT Generator',zh:'PPT生成器', de:'PPT Generator', es:'Generador PPT', fr:'Générateur PPT' },
+  ai_assistant:    { ar:'مساعد AI',  en:'AI Assistant',zh:'AI助手', de:'KI-Assistent',   es:'Asistente IA',fr:'Assistant IA' },
+  lesson_plan:     { ar:'خطة درس',   en:'Lesson Plan', zh:'课程计划',de:'Unterrichtsplan',es:'Plan de lección', fr:'Plan de cours' },
+  multimedia:      { ar:'محول الوسائط', en:'Multimedia',zh:'多媒体',  de:'Multimedia',     es:'Multimedia', fr:'Multimédia' },
+  activity:        { ar:'تصميم أنشطة', en:'Activity Design', zh:'活动设计', de:'Aktivitätsdesign', es:'Diseño de actividades', fr:"Conception d'activités" },
+  compose:         { ar:'صياغة رسائل', en:'Compose Messages', zh:'撰写消息', de:'Nachrichten verfassen', es:'Redactar mensajes', fr:'Rédiger des messages' },
+  smart_feedback:  { ar:'تقارير ذكية', en:'Smart Reports', zh:'智能报告', de:'Intelligente Berichte', es:'Informes inteligentes', fr:'Rapports intelligents' },
+  insights:        { ar:'تحليل الأداء', en:'Performance Analysis', zh:'绩效分析', de:'Leistungsanalyse', es:'Análisis de rendimiento', fr:'Analyse de performance' },
+  simplify:        { ar:'تبسيط المحتوى', en:'Simplify Content', zh:'简化内容', de:'Inhalt vereinfachen', es:'Simplificar contenido', fr:'Simplifier le contenu' },
+  differentiate:   { ar:'تعلم متمايز', en:'Differentiated Learning', zh:'差异化学习', de:'Differenziertes Lernen', es:'Aprendizaje diferenciado', fr:'Apprentissage différencié' },
+  coach:           { ar:'مدرب تربوي', en:'Educational Coach', zh:'教育教练', de:'Bildungscoach', es:'Coach educativo', fr:'Coach éducatif' },
+  research:        { ar:'أبحاث تربوية', en:'Educational Research', zh:'教育研究', de:'Bildungsforschung', es:'Investigación educativa', fr:'Recherche éducative' },
+  prompt_library:  { ar:'مكتبة قوالب', en:'Prompt Library', zh:'提示词库', de:'Prompt-Bibliothek', es:'Biblioteca de prompts', fr:'Bibliothèque de prompts' },
+  school_pulse:    { ar:'نبض المدرسة', en:'School Pulse', zh:'学校脉搏', de:'Schulpuls', es:'Pulso escolar', fr:"Pouls de l'école" },
+  announcements:   { ar:'الإعلانات', en:'Announcements', zh:'公告',   de:'Ankündigungen',  es:'Anuncios',   fr:'Annonces' },
+  incident_report: { ar:'تقرير حادثة AI', en:'AI Incident Report', zh:'AI事故报告', de:'KI-Vorfallbericht', es:'Informe de incidente IA', fr:"Rapport d'incident IA" },
+  platform_pulse:  { ar:'نبض المنصة', en:'Platform Pulse', zh:'平台脉搏', de:'Plattform-Puls', es:'Pulso de plataforma', fr:"Pouls de la plateforme" },
+  ai_cost:         { ar:'تكلفة AI',  en:'AI Cost',     zh:'AI成本', de:'KI-Kosten',      es:'Costo IA',   fr:'Coût IA' },
+  churn_risk:      { ar:'مخاطر الإلغاء', en:'Churn Risk', zh:'流失风险', de:'Abwanderungsrisiko', es:'Riesgo de abandono', fr:'Risque de désabonnement' },
+  broadcast:       { ar:'بث رسالة', en:'Broadcast',    zh:'广播消息', de:'Nachricht senden', es:'Difusión',  fr:'Diffusion' },
+  manager_hub:     { ar:'لوحة المدير', en:'Manager Hub', zh:'经理中心', de:'Manager-Hub', es:'Panel del gerente', fr:'Hub gestionnaire' },
+  admin_hub:       { ar:'لوحة المشرف', en:'Admin Hub', zh:'管理员中心', de:'Admin-Hub', es:'Panel del admin', fr:'Hub admin' },
+  teacher_hub:     { ar:'لوحة المعلم', en:'Teacher Hub', zh:'教师中心', de:'Lehrer-Hub', es:'Panel del profesor', fr:'Hub enseignant' },
+  student_hub:     { ar:'لوحة الطالب', en:'Student Hub', zh:'学生中心', de:'Schüler-Hub', es:'Panel del estudiante', fr:'Hub étudiant' },
 
-  // ============================================================
-  // المعلم
-  // ============================================================
-  overview: { ar:'نظرة عامة', en:'Overview', zh:'概览', de:'Übersicht', es:'Resumen', fr:'Aperçu' },
-  students: { ar:'الطلاب', en:'Students', zh:'学生们', de:'Schüler', es:'Estudiantes', fr:'Étudiants' },
-  ppt_generator: { ar:'توليد PPT', en:'PPT Generator', zh:'PPT生成器', de:'PPT Generator', es:'Generador PPT', fr:'Générateur PPT' },
-  ai_assistant: { ar:'مساعد AI', en:'AI Assistant', zh:'AI助手', de:'KI-Assistent', es:'Asistente IA', fr:'Assistant IA' },
-  lesson_plan: { ar:'خطة درس', en:'Lesson Plan', zh:'课程计划', de:'Unterrichtsplan', es:'Plan de lección', fr:'Plan de cours' },
+  // ── Manager ───────────────────────────
+  schools:          { ar:'المدارس',     en:'Schools',      zh:'学校',   de:'Schulen',        es:'Escuelas',   fr:'Écoles' },
+  accounts:         { ar:'الحسابات',   en:'Accounts',     zh:'账户',   de:'Konten',         es:'Cuentas',    fr:'Comptes' },
+  statistics:       { ar:'الإحصائيات', en:'Statistics',   zh:'统计',   de:'Statistiken',    es:'Estadísticas',fr:'Statistiques' },
+  upload_excel:     { ar:'رفع Excel',  en:'Upload Excel', zh:'上传Excel',de:'Excel hochladen',es:'Subir Excel', fr:'Importer Excel' },
+  add_school:       { ar:'إضافة مدرسة', en:'Add School',  zh:'添加学校',de:'Schule hinzufügen',es:'Añadir escuela',fr:'Ajouter école' },
+  school_name:      { ar:'اسم المدرسة', en:'School Name', zh:'学校名称',de:'Schulname',      es:'Nombre de escuela',fr:"Nom d'école" },
+  branch:           { ar:'الفرع',      en:'Branch',       zh:'分校',   de:'Filiale',        es:'Sucursal',   fr:'Filiale' },
+  ministry_code:    { ar:'كود الوزارة', en:'Ministry Code',zh:'部委代码',de:'Ministeriumscode',es:'Código ministerio',fr:'Code ministère' },
+  complaints:       { ar:'الشكاوى',    en:'Complaints',   zh:'投诉',   de:'Beschwerden',    es:'Quejas',     fr:'Plaintes' },
+  all_users:        { ar:'كل المستخدمين',en:'All Users',  zh:'所有用户',de:'Alle Benutzer',  es:'Todos los usuarios',fr:'Tous les utilisateurs' },
+  school_management:{ ar:'إدارة المدارس',en:'School Management',zh:'学校管理',de:'Schulverwaltung',es:'Gestión de escuelas',fr:'Gestion des écoles' },
+  add_new_school:   { ar:'إضافة مدرسة جديدة',en:'Add New School',zh:'添加新学校',de:'Neue Schule hinzufügen',es:'Añadir nueva escuela',fr:'Ajouter une école' },
+  registered_schools:{ar:'المدارس المسجلة',en:'Registered Schools',zh:'注册学校',de:'Registrierte Schulen',es:'Escuelas registradas',fr:'Écoles enregistrées' },
+  no_schools_yet:   { ar:'لا توجد مدارس بعد.',en:'No schools yet.',zh:'暂无学校。',de:'Noch keine Schulen.',es:'Aún no hay escuelas.',fr:"Pas encore d'écoles." },
+  actions_label:    { ar:'إجراءات',    en:'Actions',      zh:'操作',   de:'Aktionen',       es:'Acciones',   fr:'Actions' },
+  generated_accounts:{ar:'الحسابات المُولَّدة',en:'Generated Accounts',zh:'生成的账户',de:'Generierte Konten',es:'Cuentas generadas',fr:'Comptes générés' },
+  curriculum_books: { ar:'كتب المنهج', en:'Curriculum Books',zh:'课程书籍',de:'Lehrpläne',  es:'Libros de currículum',fr:'Livres de programme' },
+  add_new_book:     { ar:'إضافة كتاب جديد',en:'Add New Book',zh:'添加新书',de:'Neues Buch hinzufügen',es:'Añadir nuevo libro',fr:'Ajouter un nouveau livre' },
+  add_book:         { ar:'إضافة الكتاب',en:'Add Book',    zh:'添加书籍',de:'Buch hinzufügen',es:'Añadir libro',fr:'Ajouter le livre' },
+  no_books_yet:     { ar:'لا توجد كتب بعد.',en:'No books yet.',zh:'暂无书籍。',de:'Noch keine Bücher.',es:'Aún no hay libros.',fr:"Pas encore de livres." },
+  school_health:    { ar:'صحة المدارس', en:'School Health',zh:'学校健康',de:'Schulgesundheit',es:'Salud escolar',fr:'Santé des écoles' },
+  strategic_advisor:{ ar:'المستشار الاستراتيجي',en:'Strategic Advisor',zh:'战略顾问',de:'Strategischer Berater',es:'Asesor estratégico',fr:'Conseiller stratégique' },
+  smart_asst:       { ar:'مساعد المدير الذكي',en:'Smart Assistant',zh:'智能助手',de:'Intelligenter Assistent',es:'Asistente inteligente',fr:'Assistant intelligent' },
+  no_accounts_yet:  { ar:'لا توجد حسابات بعد.',en:'No accounts yet.',zh:'暂无账户。',de:'Noch keine Konten.',es:'Aún no hay cuentas.',fr:"Pas encore de comptes." },
 
-  // ============================================================
-  // المدير / المالك
-  // ============================================================
-  schools: { ar:'المدارس', en:'Schools', zh:'学校', de:'Schulen', es:'Escuelas', fr:'Écoles' },
-  accounts: { ar:'الحسابات', en:'Accounts', zh:'账户', de:'Konten', es:'Cuentas', fr:'Comptes' },
-  statistics: { ar:'الإحصائيات', en:'Statistics', zh:'统计', de:'Statistiken', es:'Estadísticas', fr:'Statistiques' },
-  upload_excel: { ar:'رفع Excel', en:'Upload Excel', zh:'上传Excel', de:'Excel hochladen', es:'Subir Excel', fr:'Importer Excel' },
-  add_school: { ar:'إضافة مدرسة', en:'Add School', zh:'添加学校', de:'Schule hinzufügen', es:'Añadir escuela', fr:'Ajouter école' },
-  school_name: { ar:'اسم المدرسة', en:'School Name', zh:'学校名称', de:'Schulname', es:'Nombre de escuela', fr:'Nom d\'école' },
-  branch: { ar:'الفرع', en:'Branch', zh:'分校', de:'Filiale', es:'Sucursal', fr:'Filiale' },
-  ministry_code: { ar:'كود الوزارة', en:'Ministry Code', zh:'部委代码', de:'Ministeriumscode', es:'Código ministerio', fr:'Code ministère' },
-  complaints: { ar:'الشكاوى', en:'Complaints', zh:'投诉', de:'Beschwerden', es:'Quejas', fr:'Plaintes' },
-  all_users: { ar:'كل المستخدمين', en:'All Users', zh:'所有用户', de:'Alle Benutzer', es:'Todos los usuarios', fr:'Tous les utilisateurs' },
+  // ── Student hub ───────────────────────
+  new_chat:         { ar:'+محادثة جديدة', en:'+ New Chat', zh:'+ 新对话', de:'+ Neues Gespräch', es:'+ Nueva conversación', fr:'+ Nouvelle discussion' },
+  no_conversations: { ar:'لا توجد محادثات', en:'No conversations', zh:'无对话', de:'Keine Gespräche', es:'Sin conversaciones', fr:'Aucune discussion' },
+  no_book:          { ar:'بدون',          en:'None',        zh:'无',     de:'Kein',           es:'Ninguno',    fr:'Aucun' },
+  how_can_i_help:   { ar:'كيف يمكنني مساعدتك اليوم؟', en:'How can I help you today?', zh:'今天我能帮你什么？', de:'Wie kann ich dir heute helfen?', es:'¿Cómo puedo ayudarte hoy?', fr:"Comment puis-je vous aider aujourd'hui?" },
+  type_question:    { ar:'اكتب سؤالك...', en:'Type your question...', zh:'输入您的问题...', de:'Ihre Frage eingeben...', es:'Escribe tu pregunta...', fr:'Tapez votre question...' },
+  book_label:       { ar:'📖 كتاب:',     en:'📖 Book:',    zh:'📖 书籍：',de:'📖 Buch:',       es:'📖 Libro:',  fr:'📖 Livre:' },
+  select_book:      { ar:'اختر كتاباً...',en:'Select a book...',zh:'选择一本书...', de:'Buch auswählen...', es:'Seleccionar libro...', fr:'Choisir un livre...' },
+  summarize_book:   { ar:'لخص الكتاب',   en:'Summarize Book',zh:'总结书籍', de:'Buch zusammenfassen', es:'Resumir libro', fr:'Résumer le livre' },
+  listen_btn:       { ar:'استمع',        en:'Listen',      zh:'收听',   de:'Anhören',        es:'Escuchar',   fr:'Écouter' },
+  stop_audio:       { ar:'إيقاف',        en:'Stop',        zh:'停止',   de:'Stopp',          es:'Detener',    fr:'Arrêter' },
+  ask_about_book:   { ar:'اسأل عن الكتاب',en:'Ask about the book',zh:'询问书籍内容',de:'Über das Buch fragen',es:'Preguntar sobre el libro',fr:'Poser une question sur le livre' },
+  educational_games:{ ar:'الألعاب التعليمية',en:'Educational Games',zh:'教育游戏',de:'Lernspiele',es:'Juegos educativos',fr:'Jeux éducatifs' },
+  multiple_choice:  { ar:'اختيار من متعدد',en:'Multiple Choice',zh:'多选题',de:'Multiple Choice',es:'Opción múltiple',fr:'Choix multiple' },
+  matching:         { ar:'مطابقة المصطلحات',en:'Term Matching',zh:'术语匹配',de:'Begriffe zuordnen',es:'Emparejar términos',fr:'Associer les termes' },
+  flashcards_label: { ar:'بطاقات تعليمية',en:'Flashcards',zh:'闪卡',de:'Lernkarten',es:'Tarjetas de aprendizaje',fr:"Cartes d'apprentissage" },
+  start_game:       { ar:'ابدأ اللعبة', en:'Start Game',  zh:'开始游戏',de:'Spiel starten', es:'Iniciar juego',fr:'Démarrer le jeu' },
+  past_games:       { ar:'ألعابي السابقة',en:'My Past Games',zh:'我的历史游戏',de:'Meine früheren Spiele',es:'Mis juegos anteriores',fr:'Mes jeux précédents' },
+  next_btn:         { ar:'التالي ▶',    en:'Next ▶',      zh:'下一个 ▶',de:'Weiter ▶',      es:'Siguiente ▶',fr:'Suivant ▶' },
+  finish_btn:       { ar:'إنهاء 🏁',    en:'Finish 🏁',   zh:'完成 🏁', de:'Beenden 🏁',    es:'Finalizar 🏁',fr:'Terminer 🏁' },
+  excellent:        { ar:'ممتاز!',      en:'Excellent!',  zh:'优秀！', de:'Ausgezeichnet!', es:'¡Excelente!', fr:'Excellent!' },
+  good_keep_going:  { ar:'جيد! استمر!', en:'Good! Keep going!', zh:'不错！继续！', de:'Gut! Weiter so!', es:'¡Bien! ¡Continúa!', fr:'Bien ! Continue !' },
+  try_again:        { ar:'حاول مرة أخرى!',en:'Try again!',zh:'再试一次！',de:'Nochmal versuchen!',es:'¡Inténtalo de nuevo!',fr:'Réessaie !' },
+  no_homework:      { ar:'لا توجد واجبات حالياً',en:'No homework currently',zh:'目前没有作业',de:'Derzeit keine Hausaufgaben',es:'Sin tareas actualmente',fr:'Aucun devoir pour le moment' },
+  no_tests:         { ar:'لا توجد اختبارات',en:'No tests',zh:'没有测试',de:'Keine Tests',es:'Sin exámenes',fr:'Aucun test' },
+  no_worksheets:    { ar:'لا توجد أوراق عمل',en:'No worksheets',zh:'没有练习册',de:'Keine Arbeitsblätter',es:'Sin hojas de trabajo',fr:'Aucune feuille de travail' },
+  your_answer:      { ar:'إجابتك هنا...',en:'Your answer here...',zh:'在此输入答案...',de:'Deine Antwort hier...',es:'Tu respuesta aquí...',fr:'Votre réponse ici...' },
+  generate_image:   { ar:'توليد الصورة',en:'Generate Image',zh:'生成图片',de:'Bild generieren',es:'Generar imagen',fr:"Générer l'image" },
+  video_topic:      { ar:'موضوع الفيديو',en:'Video Topic',zh:'视频主题',de:'Videothema',es:'Tema del video',fr:'Sujet de la vidéo' },
+  generate_script:  { ar:'توليد السكريبت',en:'Generate Script',zh:'生成脚本',de:'Skript generieren',es:'Generar guion',fr:'Générer le script' },
+  school_heroes:    { ar:'أبطال مدرستك — أفضل 10 طلاب',en:'School Heroes — Top 10 Students',zh:'学校英雄 — 前10名',de:'Schulhelden — Top 10',es:'Héroes de la escuela — Top 10',fr:"Héros de l'école — Top 10" },
+  you_label:        { ar:'(أنت)',       en:'(You)',        zh:'(你)',   de:'(Du)',           es:'(Tú)',       fr:'(Vous)' },
+  answered_challenge:{ ar:'أجبت على تحدي اليوم!',en:"You answered today's challenge!",zh:'你已完成今日挑战！',de:'Du hast die heutige Herausforderung beantwortet!',es:'¡Respondiste el desafío de hoy!',fr:"Vous avez répondu au défi du jour!" },
+  come_back_tomorrow:{ ar:'عد غداً لتحدي جديد 🌅',en:'Come back tomorrow 🌅',zh:'明天再来 🌅',de:'Komm morgen wieder 🌅',es:'Vuelve mañana 🌅',fr:'Revenez demain 🌅' },
+  focus_time:       { ar:'وقت التركيز',en:'Focus Time',   zh:'专注时间',de:'Fokuszeit',     es:'Tiempo de enfoque',fr:'Temps de concentration' },
+  break_time:       { ar:'استراحة',    en:'Break',        zh:'休息',   de:'Pause',          es:'Descanso',   fr:'Pause' },
+  how_feeling:      { ar:'كيف تشعر اليوم؟',en:'How are you feeling today?',zh:'今天感觉如何？',de:'Wie fühlst du dich heute?',es:'¿Cómo te sientes hoy?',fr:"Comment vous sentez-vous aujourd'hui?" },
+  write_reflection: { ar:'اكتب تأملك هنا...',en:'Write your reflection here...',zh:'在此写下您的反思...',de:'Schreibe deine Reflexion hier...',es:'Escribe tu reflexión aquí...',fr:'Écrivez votre réflexion ici...' },
+  save_stars:       { ar:'احفظ + 3 نجوم',en:'Save + 3 Stars',zh:'保存 + 3颗星',de:'Speichern + 3 Sterne',es:'Guardar + 3 Estrellas',fr:'Enregistrer + 3 Étoiles' },
+  free_library:     { ar:'المكتبة الرقمية المجانية',en:'Free Digital Library',zh:'免费数字图书馆',de:'Kostenlose digitale Bibliothek',es:'Biblioteca digital gratuita',fr:'Bibliothèque numérique gratuite' },
+  total_stars:      { ar:'إجمالي النجوم',en:'Total Stars',zh:'总星数',de:'Gesamtsterne',es:'Estrellas totales',fr:'Étoiles totales' },
+  ai_conversations: { ar:'محادثات AI', en:'AI Conversations',zh:'AI对话',de:'KI-Gespräche',es:'Conversaciones IA',fr:'Discussions IA' },
+  completed_games:  { ar:'ألعاب مكتملة',en:'Completed Games',zh:'完成的游戏',de:'Abgeschlossene Spiele',es:'Juegos completados',fr:'Jeux complétés' },
+  consecutive_days: { ar:'أيام متتالية',en:'Consecutive Days',zh:'连续天数',de:'Aufeinanderfolgende Tage',es:'Días consecutivos',fr:'Jours consécutifs' },
+  learning_style:   { ar:'أسلوب التعلم',en:'Learning Style',zh:'学习风格',de:'Lernstil',es:'Estilo de aprendizaje',fr:"Style d'apprentissage" },
+  visual:           { ar:'بصري',      en:'Visual',       zh:'视觉型', de:'Visuell',        es:'Visual',     fr:'Visuel' },
+  auditory:         { ar:'سمعي',      en:'Auditory',     zh:'听觉型', de:'Auditiv',        es:'Auditivo',   fr:'Auditif' },
+  kinesthetic:      { ar:'حركي',      en:'Kinesthetic',  zh:'动觉型', de:'Kinästhetisch',  es:'Kinestésico',fr:'Kinesthésique' },
+  complaint_suggestion: { ar:'شكوى / اقتراح',en:'Complaint / Suggestion',zh:'投诉 / 建议',de:'Beschwerde / Vorschlag',es:'Queja / Sugerencia',fr:'Plainte / Suggestion' },
+  upload_file:      { ar:'رفع ملف',   en:'Upload File',  zh:'上传文件',de:'Datei hochladen',es:'Subir archivo',fr:'Télécharger un fichier' },
+  ask_about_file:   { ar:'اسأل عن الملف',en:'Ask about the file',zh:'询问文件内容',de:'Über die Datei fragen',es:'Preguntar sobre el archivo',fr:'Poser une question sur le fichier' },
+  generate_content: { ar:'ولّد محتوى',en:'Generate Content',zh:'生成内容',de:'Inhalt generieren',es:'Generar contenido',fr:'Générer du contenu' },
+  extracting_text:  { ar:'جاري استخراج النص...',en:'Extracting text...',zh:'提取文字中...',de:'Text wird extrahiert...',es:'Extrayendo texto...',fr:'Extraction du texte...' },
+  comprehensive_summary: { ar:'ملخص شامل',en:'Comprehensive Summary',zh:'全面摘要',de:'Umfassende Zusammenfassung',es:'Resumen completo',fr:'Résumé complet' },
+  mind_map:         { ar:'خريطة ذهنية',en:'Mind Map',zh:'思维导图',de:'Mindmap',es:'Mapa mental',fr:'Carte mentale' },
+  review_questions: { ar:'أسئلة مراجعة',en:'Review Questions',zh:'复习题',de:'Übungsfragen',es:'Preguntas de repaso',fr:'Questions de révision' },
+  key_points:       { ar:'النقاط الجوهرية',en:'Key Points',zh:'关键要点',de:'Schlüsselpunkte',es:'Puntos clave',fr:'Points clés' },
+  podcast_script:   { ar:'سكربت بودكاست',en:'Podcast Script',zh:'播客脚本',de:'Podcast-Skript',es:'Guion de podcast',fr:'Script de podcast' },
+  view_submissions: { ar:'عرض التسليمات',en:'View Submissions',zh:'查看提交',de:'Einreichungen ansehen',es:'Ver entregas',fr:'Voir les soumissions' },
+  no_students:      { ar:'لا يوجد طلاب',en:'No students',zh:'没有学生',de:'Keine Schüler',es:'Sin estudiantes',fr:'Aucun étudiant' },
+  no_data:          { ar:'لا توجد بيانات',en:'No data',zh:'无数据',de:'Keine Daten',es:'Sin datos',fr:'Aucune donnée' },
+  reset_password:   { ar:'إعادة تعيين كلمة مرور',en:'Reset Password',zh:'重置密码',de:'Passwort zurücksetzen',es:'Restablecer contraseña',fr:'Réinitialiser le mot de passe' },
+  active_today:     { ar:'نشط اليوم', en:'Active Today', zh:'今日活跃',de:'Heute aktiv',  es:'Activo hoy', fr:"Actif aujourd'hui" },
+  active_weekly:    { ar:'نشط أسبوعياً',en:'Active Weekly',zh:'每周活跃',de:'Wöchentlich aktiv',es:'Activo semanalmente',fr:'Actif hebdomadaire' },
+  no_complaints:    { ar:'لا توجد شكاوى',en:'No complaints',zh:'没有投诉',de:'Keine Beschwerden',es:'Sin quejas',fr:'Aucune plainte' },
+  no_schools_at_risk:{ ar:'لا توجد مدارس في خطر الإلغاء حالياً',en:'No schools at churn risk',zh:'目前没有流失风险的学校',de:'Keine Schulen mit Abwanderungsrisiko',es:'Sin escuelas en riesgo',fr:"Aucune école à risque" },
+  broadcast_message:{ ar:'بث رسالة لكل المنصة',en:'Broadcast to All Platform',zh:'向全平台广播',de:'An alle senden',es:'Transmitir a toda la plataforma',fr:'Diffuser à toute la plateforme' },
+
+  // ── Login ─────────────────────────────
+  try_demo:         { ar:'جرّب بيانات تجريبية:', en:'Try demo credentials:', zh:'试用演示账号：', de:'Demo-Zugangsdaten:', es:'Prueba las credenciales demo:', fr:'Essayez les identifiants démo :' },
+  all_rights:       { ar:'جميع الحقوق محفوظة.', en:'All rights reserved.', zh:'版权所有。', de:'Alle Rechte vorbehalten.', es:'Todos los derechos reservados.', fr:'Tous droits réservés.' },
+  login_button:     { ar:'تسجيل الدخول →', en:'Login →', zh:'登录 →', de:'Anmelden →', es:'Iniciar sesión →', fr:'Connexion →' },
+  login_error:      { ar:'الإيميل أو كلمة المرور غلط', en:'Invalid email or password', zh:'邮箱或密码错误', de:'Ungültige E-Mail oder Passwort', es:'Email o contraseña inválidos', fr:'Email ou mot de passe invalide' },
+
+  // ── Login page navbar ─────────────────
+  features_nav:     { ar:'المميزات',    en:'Features',    zh:'功能特色', de:'Funktionen',     es:'Características', fr:'Fonctionnalités' },
+  roles_nav:        { ar:'لمن نحن',    en:'Who We Are',  zh:'用户角色', de:'Für wen',         es:'¿Para quién?',    fr:'Pour qui' },
+  stats_nav:        { ar:'الأرقام',    en:'Stats',       zh:'数据统计', de:'Statistiken',     es:'Estadísticas',    fr:'Statistiques' },
+  start_now:        { ar:'ابدأ الآن', en:'Start Now',   zh:'立即开始', de:'Jetzt starten',   es:'Empieza ahora',   fr:'Commencer' },
+  hero_title_1:     { ar:'تعلّم بذكاء', en:'Learn Smarter', zh:'智能学习', de:'Intelligent lernen', es:'Aprende con inteligencia', fr:'Apprenez intelligemment' },
+  hero_title_2:     { ar:'مع الذكاء الاصطناعي', en:'with AI', zh:'借助人工智能', de:'mit KI', es:'con IA', fr:"avec l'IA" },
+  hero_sub:         { ar:'موريكس — منصة تعليمية متكاملة تجمع بين الذكاء الاصطناعي والتعليم الشخصي.', en:'Morix — A comprehensive educational platform combining AI and personalized learning.', zh:'Morix — 结合AI与个性化教育的综合学习平台。', de:'Morix — Eine umfassende Lernplattform, die KI und personalisiertes Lernen verbindet.', es:'Morix — Plataforma educativa integral que combina IA y aprendizaje personalizado.', fr:"Morix — Plateforme éducative complète alliant l'IA et l'apprentissage personnalisé." },
+  start_journey:    { ar:'ابدأ رحلتك التعليمية', en:'Start Your Learning Journey', zh:'开始您的学习之旅', de:'Starte deine Lernreise', es:'Comienza tu viaje educativo', fr:'Commencez votre parcours éducatif' },
+  join_thousands:   { ar:'سجّل دخولك وانضم إلى آلاف الطلاب والمعلمين', en:'Login and join thousands of students and teachers', zh:'登录并加入数以千计的学生和教师', de:'Melde dich an und werde Teil einer wachsenden Gemeinschaft', es:'Inicia sesión y únete a miles de estudiantes y profesores', fr:"Connectez-vous et rejoignez des milliers d'étudiants et d'enseignants" },
+  footer_tagline:   { ar:'منصة التعلم الذكي', en:'Smart Learning Platform', zh:'智能学习平台', de:'Intelligente Lernplattform', es:'Plataforma de Aprendizaje Inteligente', fr:"Plateforme d'Apprentissage Intelligent" },
 }
 
-// الحالة العامة المشتركة
+// ════════════════════════════════════════
+//  Google Translate cache (localStorage)
+// ════════════════════════════════════════
+let _gtCache = null
+function getGTCache() {
+  if (!_gtCache) {
+    try { _gtCache = JSON.parse(localStorage.getItem('morix_gt_cache') || '{}') }
+    catch { _gtCache = {} }
+  }
+  return _gtCache
+}
+function saveGTCache() {
+  try { localStorage.setItem('morix_gt_cache', JSON.stringify(_gtCache)) } catch {}
+}
+
+/**
+ * Translate any Arabic string using Google Translate (free API)
+ * Results are cached in localStorage — called only when key is missing from STATIC
+ */
+export async function googleTranslate(text, targetLang) {
+  if (!text || targetLang === 'ar') return text
+  const cache = getGTCache()
+  const cacheKey = `${targetLang}||${text}`
+  if (cache[cacheKey]) return cache[cacheKey]
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`
+    const res = await fetch(url)
+    const data = await res.json()
+    const result = (data[0] || []).flatMap(x => x?.[0] || '').join('').trim()
+    if (result) {
+      cache[cacheKey] = result
+      saveGTCache()
+    }
+    return result || text
+  } catch { return text }
+}
+
+// ════════════════════════════════════════
+//  Reactive state
+// ════════════════════════════════════════
 const currentLang = ref(localStorage.getItem('morix_lang') || 'ar')
 
-// تطبيق الـ direction على الـ html
 function applyDir(lang) {
   const meta = LANGUAGES[lang] || LANGUAGES.ar
   document.documentElement.setAttribute('lang', meta.code)
   document.documentElement.setAttribute('dir', meta.dir)
 }
-
 applyDir(currentLang.value)
 
 watch(currentLang, (val) => {
   localStorage.setItem('morix_lang', val)
   applyDir(val)
+  // تطبيق Google Translate للمحتوى الديناميكي
+  _triggerTranslate(val)
 })
 
+function _triggerTranslate(lang) {
+  if (typeof window === 'undefined') return
+  if (lang === 'ar') {
+    // إعادة الصفحة للعربية الأصلية
+    if (window.__morixTranslate) setTimeout(() => window.__morixTranslate('ar'), 300)
+    return
+  }
+  // أولوية: widget جوجل
+  if (window.__morixTranslate) {
+    setTimeout(() => window.__morixTranslate(lang), 300)
+  }
+}
+
+// تطبيق اللغة المحفوظة عند بدء التطبيق (لو مش عربي)
+if (typeof window !== 'undefined' && currentLang.value !== 'ar') {
+  // انتظر تحميل Google Translate widget
+  const _initTranslate = () => {
+    if (window.__morixTranslate) {
+      window.__morixTranslate(currentLang.value)
+    } else {
+      setTimeout(_initTranslate, 500)
+    }
+  }
+  setTimeout(_initTranslate, 800)
+}
+
+// ════════════════════════════════════════
+//  Public composable
+// ════════════════════════════════════════
 export function useI18n() {
   const lang = currentLang
-  const dir = computed(() => LANGUAGES[lang.value]?.dir || 'rtl')
+  const dir  = computed(() => LANGUAGES[lang.value]?.dir || 'rtl')
 
+  /** Sync translation — checks STATIC dict, then GT cache, then returns Arabic */
   function t(key, fallback) {
-    const entry = TRANSLATIONS[key]
-    if (!entry) return fallback || key
-    return entry[lang.value] || entry.ar || fallback || key
+    const entry = STATIC[key]
+    if (entry) return entry[lang.value] || entry.ar || fallback || key
+    // Check raw Google Translate cache for this Arabic source
+    const cache = getGTCache()
+    const source = fallback || key
+    if (lang.value !== 'ar') {
+      const cached = cache[`${lang.value}||${source}`]
+      if (cached) return cached
+    }
+    return source
+  }
+
+  /** Async translation — for strings not in STATIC, calls Google Translate */
+  async function tAsync(arabicText) {
+    if (!arabicText || lang.value === 'ar') return arabicText
+    const cache = getGTCache()
+    const cacheKey = `${lang.value}||${arabicText}`
+    if (cache[cacheKey]) return cache[cacheKey]
+    return await googleTranslate(arabicText, lang.value)
   }
 
   function setLang(newLang) {
     if (LANGUAGES[newLang]) lang.value = newLang
   }
 
-  return { t, lang, dir, setLang, languages: LANGUAGES }
+  return { t, tAsync, lang, dir, setLang, languages: LANGUAGES }
 }

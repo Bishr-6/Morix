@@ -84,68 +84,73 @@ body {
    البطاقات
    ============================================ */
 .memorix-card {
-  background: rgba(11, 14, 31, 0.8);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  backdrop-filter: blur(10px);
+  background: var(--card, rgba(11, 14, 31, 0.8));
+  border: 1px solid var(--border, var(--border-color, #1a1f3a));
+  border-radius: var(--radius, 16px);
+  backdrop-filter: var(--card-blur, blur(10px));
+  box-shadow: var(--shadow, none);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .memorix-card:hover {
-  border-color: rgba(74, 126, 255, 0.4);
-  transition: border-color 0.3s ease;
+  border-color: var(--accent, rgba(74, 126, 255, 0.4));
+  box-shadow: var(--shadow-hover, 0 4px 20px rgba(74,126,255,0.12));
 }
 
 /* ============================================
    الأزرار
    ============================================ */
 .btn-primary {
-  background: linear-gradient(135deg, #4a7eff, #8b5cf6);
-  color: white;
+  background: var(--btn-gradient, linear-gradient(135deg, #4a7eff, #8b5cf6));
+  color: var(--btn-text, white);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm, 10px);
   padding: 12px 24px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: 'Tajawal', sans-serif;
+  box-shadow: var(--btn-glow, none);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(74, 126, 255, 0.4);
+  box-shadow: var(--shadow-hover, 0 8px 25px rgba(74, 126, 255, 0.4));
 }
 
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 /* ============================================
    الحقول
    ============================================ */
 .memorix-input {
-  background: rgba(26, 31, 58, 0.6);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
+  background: var(--input-bg, rgba(26, 31, 58, 0.6));
+  border: 1px solid var(--input-border, var(--border-color, #1a1f3a));
+  border-radius: var(--radius-sm, 10px);
   padding: 12px 16px;
-  color: var(--text-primary);
+  color: var(--text, var(--text-primary, #e2e8f0));
   font-size: 15px;
   font-family: 'Tajawal', sans-serif;
   width: 100%;
   direction: ltr;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 .memorix-input:focus {
   outline: none;
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(74, 126, 255, 0.15);
+  border-color: var(--accent, var(--blue, #4a7eff));
+  background: var(--input-focus, rgba(26,31,58,0.8));
+  box-shadow: 0 0 0 3px rgba(74, 126, 255, 0.1);
 }
 
 .memorix-input::placeholder {
-  color: var(--text-muted);
+  color: var(--t2, var(--text-muted, #94a3b8));
   direction: ltr;
 }
 
@@ -505,35 +510,30 @@ button, [role="button"] {
 
 /* ═══════════════════════════════════════════════════════════════
    🎨 THEME-SPECIFIC GLOBAL OVERRIDES
-   These apply across ALL hub components regardless of scoped CSS
+   All hub views use CSS vars → themes work automatically
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Shared hub element theming ── */
+/* Hub background */
 .hub { background: var(--bg1) !important; }
 
 /* Sidebar */
 .hub .sidebar,
-.hub aside[class*="sidebar"] {
+.hub aside {
   background: var(--sidebar-bg) !important;
-  backdrop-filter: var(--sidebar-blur) !important;
   border-left: var(--sidebar-border) !important;
-  border-right: var(--sidebar-border) !important;
+  border-right: none !important;
 }
 
 /* Top bar */
 .hub .top-bar,
-.hub header[class*="top"] {
+.hub header {
   background: var(--topbar-bg) !important;
-  backdrop-filter: var(--sidebar-blur) !important;
   border-bottom: var(--topbar-border) !important;
 }
 
 /* Cards */
-.hub .card,
-.hub [class*="form-box"],
-.hub [class*="code-block"] {
+.hub .card {
   background: var(--card) !important;
-  backdrop-filter: var(--card-blur) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow) !important;
@@ -541,142 +541,174 @@ button, [role="button"] {
 .hub .card:hover { box-shadow: var(--shadow-hover) !important; }
 
 /* Brand icon */
-.hub .b-icon,
 .hub .brand-icon {
   background: var(--brand-gradient) !important;
   color: var(--brand-text) !important;
-  border-radius: var(--radius-sm) !important;
 }
 
 /* Nav items */
-.hub .nav-item:hover { background: var(--nav-hover-bg) !important; }
+.hub .nav-item { color: var(--t2) !important; }
+.hub .nav-item:hover { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
 .hub .nav-item.active {
   background: var(--nav-active-bg) !important;
   color: var(--accent) !important;
-  box-shadow: var(--nav-active-shadow) !important;
+  box-shadow: none !important;
 }
 
-/* Buttons */
-.hub .btn-p,
-.hub button[class*="login-btn"] {
+/* Action buttons */
+.hub .btn-p {
   background: var(--btn-gradient) !important;
   color: var(--btn-text) !important;
-  border-radius: var(--radius-sm) !important;
-  box-shadow: var(--btn-glow) !important;
+  box-shadow: none !important;
+}
+.hub .send-btn,
+.hub .new-conv-btn {
+  background: var(--accent) !important;
+  color: var(--btn-text) !important;
 }
 
 /* Inputs */
 .hub .inp,
-.hub input[class*="inp"],
-.hub textarea[class*="inp"],
-.hub select[class*="inp"] {
+.hub input.inp,
+.hub textarea.inp,
+.hub select.inp {
   background: var(--input-bg) !important;
-  border: 1px solid var(--input-border) !important;
-  border-radius: var(--radius-sm) !important;
+  border-color: var(--input-border) !important;
   color: var(--text) !important;
 }
-.hub .inp:focus { border-color: var(--accent) !important; background: var(--input-focus) !important; }
+.hub .inp:focus { border-color: var(--accent) !important; }
 
-/* Avatar / user chip */
-.hub .av,
-.hub .avatar {
-  background: var(--btn-gradient) !important;
-  color: var(--btn-text) !important;
-}
+/* Avatar */
+.hub .avatar { background: var(--btn-gradient) !important; color: var(--btn-text) !important; }
 
 /* List items */
 .hub .list-item,
-.hub .conv-item,
-.hub .sc,
-.hub [class*="stat-card"] {
-  background: var(--card) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius-sm) !important;
+.hub .conv-item {
+  background: var(--bg2) !important;
+  border-color: var(--border) !important;
 }
 
 /* Modals */
-.hub .modal-box,
-.hub [class*="modal-box"] {
-  background: var(--modal-bg) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius) !important;
-}
+.hub .modal-box { background: var(--modal-bg) !important; border-color: var(--border) !important; }
+
+/* Text colors */
+.hub .text-muted,
+.hub [class*="muted"] { color: var(--t2) !important; }
 
 /* Scrollbar */
 .hub ::-webkit-scrollbar-track { background: var(--bg2); }
-.hub ::-webkit-scrollbar-thumb { background: var(--border); }
+.hub ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 .hub ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-/* ── Light theme: NO matrix, bright body ── */
-[data-theme="light"] body { background: #f0f5ff; color: #0f172a; }
-[data-theme="light"] .matrix-canvas { opacity: 0 !important; pointer-events: none; }
-[data-theme="light"] .hub { font-family: 'Segoe UI', 'Cairo', sans-serif; }
+/* ── Matrix: hidden in light & library ── */
+[data-theme="light"]   canvas,
+[data-theme="library"] canvas { opacity: 0 !important; pointer-events: none !important; }
 
-/* Light theme — stronger shadows instead of blur */
+/* ── Body background per theme ── */
+[data-theme="dark"]    body { background: #0d1117; color: #e6edf3; }
+[data-theme="light"]   body { background: #f6f8fa; color: #1f2328; }
+[data-theme="library"] body { background: #1a1209; color: #f0ddb8; }
+
+/* ── Light theme: borders & shadows ── */
 [data-theme="light"] .hub .sidebar,
 [data-theme="light"] .hub .top-bar {
-  box-shadow: 0 2px 20px rgba(0,0,0,0.08) !important;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.07) !important;
 }
-[data-theme="light"] .hub .card:hover {
-  box-shadow: 0 8px 30px rgba(99,102,241,0.18) !important;
-}
-
-/* ── Library theme: parchment body, warm scrollbars ── */
-[data-theme="library"] body { background: #120d05; color: #f0ddb8; }
-[data-theme="library"] .matrix-canvas { opacity: 0 !important; pointer-events: none; }
-
-/* Library — warmer, bookish card borders */
-[data-theme="library"] .hub .card {
-  border-left: 3px solid var(--accent) !important;
+[data-theme="light"] .hub .card {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.05) !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   🎭 PER-HUB ROLE DESIGNS — Unique identity per interface
-   ═══════════════════════════════════════════════════════════════ */
-
-/* 👨‍🎓 Student Hub — Purple/Pink: Playful & Gamified */
-.hub-student .b-icon,
-.hub-student .brand-icon { background: linear-gradient(135deg, #a855f7, #ec4899) !important; }
-.hub-student .nav-item.active { color: #a855f7 !important; }
-.hub-student .new-conv-btn,
-.hub-student .send-btn { background: #a855f7 !important; }
-[data-theme="dark"] .hub-student .nav-item.active {
-  background: rgba(168,85,247,0.15) !important;
-  box-shadow: inset 0 0 12px rgba(168,85,247,0.12) !important;
-}
-
-/* 👨‍🏫 Teacher Hub — Blue: Professional & Academic */
-.hub-teacher .b-icon,
-.hub-teacher .brand-icon { background: linear-gradient(135deg, #3b82f6, #06b6d4) !important; }
-.hub-teacher .nav-item.active { color: #3b82f6 !important; }
-[data-theme="dark"] .hub-teacher .nav-item.active {
-  background: rgba(59,130,246,0.15) !important;
-  box-shadow: inset 0 0 12px rgba(59,130,246,0.12) !important;
-}
-
-/* 🛡️ Admin Hub — Green: Organized & Reliable */
-.hub-admin .b-icon,
-.hub-admin .brand-icon { background: linear-gradient(135deg, #22c55e, #10b981) !important; }
-.hub-admin .nav-item.active { color: #22c55e !important; }
-[data-theme="dark"] .hub-admin .nav-item.active {
-  background: rgba(34,197,94,0.15) !important;
-  box-shadow: inset 0 0 12px rgba(34,197,94,0.12) !important;
-}
-
-/* 👑 Owner Hub — Gold/Purple: Premium & Exclusive */
-.hub-owner .b-icon,
-.hub-owner .brand-icon { background: linear-gradient(135deg, #f59e0b, #a855f7) !important; }
-.hub-owner .nav-item.active { color: #f59e0b !important; }
-[data-theme="dark"] .hub-owner .nav-item.active {
-  background: rgba(245,158,11,0.15) !important;
-  box-shadow: inset 0 0 12px rgba(245,158,11,0.12) !important;
-}
-
-/* 🏫 Manager Hub — Cyan/Teal: Corporate & Strategic */
-.hub-manager .gradient-text {
-  background: linear-gradient(135deg, #06b6d4, #3b82f6) !important;
+/* ── Manager gradient text ── */
+.hub-manager .gradient-text,
+.hub-manager .mgr-gradient-text {
+  background: linear-gradient(135deg, var(--accent), #388bfd) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   🏫 MGR-* CLASSES — ManagerDashboard themed elements
+   These translate inline styles → CSS-var-driven classes
+   ═══════════════════════════════════════════════════════════════ */
+
+.mgr-header {
+  background: var(--topbar-bg, rgba(4,10,28,0.88));
+  border-color: var(--border, rgba(99,102,241,0.15));
+  backdrop-filter: var(--sidebar-blur, blur(14px));
+  -webkit-backdrop-filter: var(--sidebar-blur, blur(14px));
+}
+
+.mgr-tabs {
+  background: var(--bg2, rgba(11,14,31,0.8));
+  border: 1px solid var(--border, rgba(99,102,241,0.15));
+}
+
+.mgr-badge {
+  background: rgba(74,126,255,0.15);
+  color: var(--accent, #4a7eff);
+}
+
+.mgr-muted { color: var(--t2, #94a3b8); }
+
+.mgr-logout-btn {
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.3);
+}
+.mgr-logout-btn:hover {
+  background: rgba(239,68,68,0.2);
+}
+
+/* Table rows / borders in ManagerDashboard */
+.hub-manager .mgr-row-head { background: var(--bg3, rgba(26,31,58,0.8)); }
+.hub-manager .mgr-border   { border-color: var(--border, #1a1f3a) !important; }
+.hub-manager .mgr-th       { color: var(--t2, #94a3b8); }
+.hub-manager .mgr-td-muted { color: var(--t2, #94a3b8); }
+.hub-manager .mgr-td-text  { color: var(--text, #e2e8f0); }
+
+/* Settings: theme / language selector buttons */
+.hub-manager .mgr-select-btn {
+  background: var(--bg3, #0f172a);
+  border: 2px solid var(--border, #1a1f3a);
+  color: var(--text, #fff);
+  transition: border-color 0.2s, background 0.2s;
+}
+.hub-manager .mgr-select-btn.active {
+  border-color: var(--accent, #6366f1);
+  background: var(--nav-active-bg, rgba(99,102,241,0.15));
+}
+
+/* Section labels inside cards */
+.hub-manager .mgr-label { color: var(--t2, #94a3b8); }
+.hub-manager .mgr-value { color: var(--text, #e2e8f0); }
+.hub-manager .mgr-section-divider { border-color: var(--border, #1a1f3a); }
+
+/* Advisor / chat textareas */
+.hub-manager .mgr-textarea {
+  background: var(--input-bg, rgba(15,23,42,0.9));
+  color: var(--text, #fff);
+  border: 1px solid var(--border, #334155);
+}
+
+/* memorix-card inside hub-manager uses CSS vars */
+.hub-manager .memorix-card {
+  background: var(--card, rgba(11,14,31,0.8)) !important;
+  border: 1px solid var(--border, #1a1f3a) !important;
+  border-radius: var(--radius, 16px) !important;
+  backdrop-filter: var(--card-blur, blur(10px)) !important;
+  box-shadow: var(--shadow, none) !important;
+}
+.hub-manager .memorix-card:hover {
+  border-color: var(--accent, rgba(74,126,255,0.4)) !important;
+  box-shadow: var(--shadow-hover, 0 4px 20px rgba(74,126,255,0.15)) !important;
+}
+
+/* Light theme — manager specific */
+[data-theme="light"] .hub-manager .mgr-select-btn { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
+[data-theme="light"] .hub-manager .mgr-select-btn.active { background: rgba(99,102,241,0.1); border-color: #6366f1; }
+[data-theme="light"] .hub-manager .memorix-card { box-shadow: 0 2px 16px rgba(0,0,0,0.07) !important; }
+
+/* Library theme — manager */
+[data-theme="library"] .hub-manager .memorix-card { border-left: 3px solid var(--accent, #d4892a) !important; }
 

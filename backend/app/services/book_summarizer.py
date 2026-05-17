@@ -21,24 +21,49 @@ async def summarize_book(title: str, subject: str, raw_text: str) -> Optional[st
     try:
         from google import genai
         from google.genai import types
+        from app.services.ai_service import _call_with_retry
 
         client = genai.Client(api_key=settings.gemini_api_key)
 
+        # نأخذ أفضل 8000 حرف من النص لتغطية المحتوى الأساسي
+        sample = raw_text[:8000]
+
         prompt = (
-            f"أنت خبير تربوي. لخص محتوى هذا الكتاب المدرسي بشكل مفيد للطلاب.\n\n"
-            f"عنوان الكتاب: {title}\nالمادة: {subject}\n\nالنص:\n{raw_text[:5000]}\n\n"
-            f"اكتب ملخصاً شاملاً يتضمن الموضوعات الرئيسية والمفاهيم الأساسية والأهداف التعليمية. "
-            f"باللغة العربية ولا يتجاوز 500 كلمة."
+            f"أنت خبير تربوي متخصص. لخّص محتوى هذا الكتاب المدرسي تلخيصاً دقيقاً ومفيداً للطلاب والمعلمين.\n\n"
+            f"عنوان الكتاب: {title}\nالمادة: {subject}\n\n"
+            f"محتوى الكتاب:\n{sample}\n\n"
+            f"اكتب ملخصاً شاملاً يتضمن:\n"
+            f"1. الموضوعات الرئيسية والفصول الأساسية\n"
+            f"2. المفاهيم والمصطلحات العلمية الأساسية\n"
+            f"3. الأهداف التعليمية لكل موضوع\n"
+            f"4. أمثلة وتطبيقات عملية مذكورة في الكتاب\n"
+            f"باللغة العربية، منظم بنقاط واضحة، لا يتجاوز 600 كلمة."
         )
 
-        response = client.models.generate_content(
-            model="models/gemini-2.5-flash",
-            contents=prompt,
-        )
-        summary = response.text
+        config = types.GenerateContentConfig(temperature=0.3, max_output_tokens=1500)
+
+        summary = None
+        for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
+            try:
+                response = await _call_with_retry(
+                    client.models.generate_content,
+                    model=model_name, contents=prompt, config=config,
+                    max_retries=2
+                )
+                summary = response.text
+                if summary:
+                    break
+            except Exception as model_err:
+                logger.warning(f"Summarizer model {model_name} failed: {model_err}")
+                continue
+
+        if not summary:
+            raise RuntimeError("All summarizer models failed")
+
         await set_cached(cache_key, "book_summary", {"summary": summary}, SUMMARY_TTL_HOURS)
         return summary
 
     except Exception as e:
         logger.error(f"Book summarizer error: {e}")
-        return None
+        # fallback بسيط بدل None
+        return f"📚 {title} — {subject}\n\n[تعذر توليد الملخص التلقائي. يمكن للمعلم إضافة ملخص يدوياً من قسم الكتب.]"

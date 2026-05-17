@@ -1,73 +1,218 @@
 <template>
-  <div class="hub-manager min-h-screen relative" style="background: linear-gradient(135deg, #00000e 0%, #030814 100%)">
+  <div class="hub-manager min-h-screen relative" :style="{ background: 'var(--bg1)' }">
     <Stars />
     <MatrixBackground />
 
     <div class="relative z-10">
       <!-- الهيدر -->
-      <header class="border-b px-3 md:px-6 py-3 md:py-4 flex items-center justify-between flex-wrap gap-2"
-              style="border-color: #1a1f3a; background: rgba(11, 14, 31, 0.8); backdrop-filter: blur(10px)">
-        <div class="flex items-center gap-2 md:gap-3 min-w-0">
-          <div class="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-               style="background: linear-gradient(135deg, #4a7eff, #8b5cf6)">
-            <span class="text-white font-black text-sm">M</span>
-          </div>
-          <span class="font-black text-base md:text-xl gradient-text">Memorix</span>
-          <span class="hidden sm:inline text-xs px-2 py-1 rounded-full" style="background: rgba(74,126,255,0.15); color: #4a7eff">
-            لوحة الإدارة
-          </span>
-        </div>
-        <div class="flex items-center gap-2 md:gap-3 min-w-0">
-          <span class="text-xs md:text-sm truncate max-w-[100px] md:max-w-none" style="color: #94a3b8">{{ auth.user?.full_name }}</span>
-          <button @click="handleLogout" class="text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg transition-colors"
-                  style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3)">
-            خروج
-          </button>
-        </div>
-      </header>
+      <NavBar
+        title="لوحة الإدارة"
+        :name="auth.user?.full_name?.split(' ')?.[0] || 'مدير'"
+        :avatar-url="mgrSettings.avatar_url || ''"
+        :current-theme="mgrSettings.theme"
+        :current-lang="lang"
+        @theme="v => { mgrSettings.theme = v; saveMgrSettings() }"
+        @lang="changeMgrLang"
+      />
 
       <div class="max-w-7xl mx-auto p-3 md:p-6">
         <!-- التبويبات (تمرير أفقي على الموبايل) -->
-        <div class="flex gap-2 mb-4 md:mb-6 p-1 rounded-xl overflow-x-auto"
-             style="background: rgba(11,14,31,0.8); border: 1px solid #1a1f3a; -webkit-overflow-scrolling: touch">
+        <div class="mgr-tabs flex gap-2 mb-4 md:mb-6 p-1 rounded-xl overflow-x-auto" style="-webkit-overflow-scrolling: touch">
           <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
                   class="flex-shrink-0 py-2 md:py-2.5 px-3 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap"
                   :style="activeTab === tab.id
-                    ? 'background: linear-gradient(135deg, #4a7eff, #8b5cf6); color: white'
-                    : 'color: #94a3b8'">
+                    ? { background: 'var(--btn-gradient)', color: 'var(--btn-text)' }
+                    : { color: 'var(--t2)' }">
             {{ tab.icon }} {{ tab.label }}
           </button>
         </div>
 
         <!-- ============ تبويب الإحصائيات ============ -->
         <div v-if="activeTab === 'stats'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">📊 لوحة الإحصائيات</h2>
+          <div class="flex items-center justify-between mb-6 flex-wrap gap-2">
+            <h2 class="text-2xl font-bold gradient-text">📊 نظرة عامة شاملة</h2>
+            <button @click="loadStats" :disabled="statsLoading"
+                    class="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1"
+                    style="background: rgba(74,126,255,0.15); color: #4a7eff; border: 1px solid rgba(74,126,255,0.3)">
+              <span v-if="statsLoading" class="inline-block w-3 h-3 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin"/>
+              🔄 تحديث
+            </button>
+          </div>
 
+          <!-- skeleton -->
           <div v-if="statsLoading" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div v-for="i in 4" :key="i" class="skeleton h-28 rounded-xl" />
+            <div v-for="i in 8" :key="i" class="skeleton h-28 rounded-xl" />
           </div>
 
-          <div v-else-if="stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div v-for="stat in statCards" :key="stat.label" class="memorix-card p-5 text-center">
-              <div class="text-3xl mb-1">{{ stat.icon }}</div>
-              <div class="text-3xl font-black" :style="`color: ${stat.color}`">{{ stat.value }}</div>
-              <div class="text-xs mt-1" style="color: #94a3b8">{{ stat.label }}</div>
-            </div>
-          </div>
+          <template v-else-if="stats">
 
-          <!-- أساليب التعلم -->
-          <div v-if="stats" class="memorix-card p-6">
-            <h3 class="font-bold mb-4" style="color: #00d4ff">🧠 توزيع أساليب التعلم</h3>
-            <div class="grid grid-cols-3 gap-4">
-              <div v-for="style in learningStyleCards" :key="style.key" class="text-center p-4 rounded-xl"
-                   :style="`background: ${style.bg}; border: 1px solid ${style.border}`">
-                <div class="text-2xl mb-1">{{ style.icon }}</div>
-                <div class="text-2xl font-black" :style="`color: ${style.color}`">
-                  {{ stats.learning_styles[style.key] || 0 }}
-                </div>
-                <div class="text-xs mt-1" style="color: #94a3b8">{{ style.label }}</div>
+            <!-- ====== بطاقات المستخدمين ====== -->
+            <h3 class="text-sm font-semibold mb-3 mgr-muted uppercase tracking-wider">👥 المستخدمون</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div v-for="stat in statCards" :key="stat.label" class="memorix-card p-5 text-center stat-glow-card">
+                <div class="text-3xl mb-1">{{ stat.icon }}</div>
+                <div class="text-3xl font-black" :style="`color: ${stat.color}`">{{ stat.value ?? '—' }}</div>
+                <div class="text-xs mt-1 mgr-muted">{{ stat.label }}</div>
               </div>
             </div>
+
+            <!-- ====== نشاط المنصة ====== -->
+            <h3 class="text-sm font-semibold mb-3 mgr-muted uppercase tracking-wider">🔥 النشاط</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(16,185,129,.3)">
+                <div class="text-3xl mb-1">🟢</div>
+                <div class="text-3xl font-black" style="color:#10b981">{{ stats.active_users_week ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">نشطون هذا الأسبوع</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(16,185,129,.3)">
+                <div class="text-3xl mb-1">🆕</div>
+                <div class="text-3xl font-black" style="color:#10b981">{{ stats.new_users_month ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">مستخدمون جدد (30 يوم)</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(251,191,36,.3)">
+                <div class="text-3xl mb-1">🔐</div>
+                <div class="text-3xl font-black" style="color:#fbbf24">{{ stats.logins_week ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">دخول هذا الأسبوع</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(251,191,36,.3)">
+                <div class="text-3xl mb-1">📅</div>
+                <div class="text-3xl font-black" style="color:#fbbf24">{{ stats.logins_month ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">دخول هذا الشهر</div>
+              </div>
+            </div>
+
+            <!-- ====== الذكاء الاصطناعي ====== -->
+            <h3 class="text-sm font-semibold mb-3 mgr-muted uppercase tracking-wider">🤖 الذكاء الاصطناعي</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(139,92,246,.3)">
+                <div class="text-3xl mb-1">💬</div>
+                <div class="text-3xl font-black" style="color:#8b5cf6">{{ stats.total_conversations ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">محادثات</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(139,92,246,.3)">
+                <div class="text-3xl mb-1">📝</div>
+                <div class="text-3xl font-black" style="color:#8b5cf6">{{ stats.total_ai_messages ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">رسائل AI</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(139,92,246,.3)">
+                <div class="text-3xl mb-1">📚</div>
+                <div class="text-3xl font-black" style="color:#8b5cf6">{{ stats.total_books ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">كتب/مصادر</div>
+              </div>
+            </div>
+
+            <!-- ====== الأكاديمي ====== -->
+            <h3 class="text-sm font-semibold mb-3 mgr-muted uppercase tracking-wider">🎓 الأكاديمي</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(0,212,255,.3)">
+                <div class="text-3xl mb-1">📋</div>
+                <div class="text-3xl font-black" style="color:#00d4ff">{{ stats.total_homework ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">واجبات</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(0,212,255,.3)">
+                <div class="text-3xl mb-1">✅</div>
+                <div class="text-3xl font-black" style="color:#00d4ff">{{ stats.homework_submissions ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">تسليمات واجبات</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(74,126,255,.3)">
+                <div class="text-3xl mb-1">📝</div>
+                <div class="text-3xl font-black" style="color:#4a7eff">{{ stats.total_tests ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">اختبارات</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(74,126,255,.3)">
+                <div class="text-3xl mb-1">🏆</div>
+                <div class="text-3xl font-black" style="color:#4a7eff">
+                  {{ stats.avg_test_score != null ? stats.avg_test_score + '%' : '—' }}
+                </div>
+                <div class="text-xs mt-1 mgr-muted">متوسط نتائج الاختبارات</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(245,158,11,.3)">
+                <div class="text-3xl mb-1">📄</div>
+                <div class="text-3xl font-black" style="color:#f59e0b">{{ stats.total_worksheets ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">أوراق عمل</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(245,158,11,.3)">
+                <div class="text-3xl mb-1">🎮</div>
+                <div class="text-3xl font-black" style="color:#f59e0b">{{ stats.games_played ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">ألعاب تعليمية</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(245,158,11,.3)">
+                <div class="text-3xl mb-1">⏱️</div>
+                <div class="text-3xl font-black" style="color:#f59e0b">{{ stats.focus_sessions ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">جلسات تركيز</div>
+              </div>
+              <div class="memorix-card p-5 text-center stat-glow-card" style="--glow-c: rgba(16,185,129,.3)">
+                <div class="text-3xl mb-1">🏅</div>
+                <div class="text-3xl font-black" style="color:#10b981">{{ stats.badges_earned ?? 0 }}</div>
+                <div class="text-xs mt-1 mgr-muted">شارات مكتسبة</div>
+              </div>
+            </div>
+
+            <!-- ====== ثلاثة بطاقات ثانوية ====== -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+              <!-- أساليب التعلم -->
+              <div class="memorix-card p-6">
+                <h3 class="font-bold mb-4" style="color: #00d4ff">🧠 أساليب التعلم</h3>
+                <div class="space-y-3">
+                  <div v-for="style in learningStyleCards" :key="style.key" class="flex items-center gap-3">
+                    <span class="text-xl">{{ style.icon }}</span>
+                    <div class="flex-1">
+                      <div class="flex justify-between text-xs mb-1">
+                        <span>{{ style.label }}</span>
+                        <span :style="`color:${style.color}`">{{ stats.learning_styles[style.key] || 0 }}</span>
+                      </div>
+                      <div class="h-2 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.07)">
+                        <div class="h-full rounded-full transition-all duration-700"
+                             :style="`width:${learningStylePct(style.key)}%; background: ${style.color}`" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- توزيع الصفوف -->
+              <div class="memorix-card p-6">
+                <h3 class="font-bold mb-4" style="color: #f59e0b">🏫 توزيع الصفوف</h3>
+                <div v-if="gradesList.length" class="space-y-2 max-h-52 overflow-y-auto">
+                  <div v-for="[grade, count] in gradesList" :key="grade" class="flex items-center justify-between text-sm">
+                    <span class="mgr-muted truncate max-w-[120px]">{{ grade }}</span>
+                    <span class="font-bold" style="color:#f59e0b">{{ count }}</span>
+                  </div>
+                </div>
+                <p v-else class="mgr-muted text-xs">لا توجد بيانات صفوف</p>
+              </div>
+
+              <!-- الشكاوى والتنبيهات -->
+              <div class="memorix-card p-6">
+                <h3 class="font-bold mb-4" style="color: #ef4444">🚨 التنبيهات</h3>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between p-3 rounded-xl" style="background: rgba(239,68,68,0.1)">
+                    <span class="text-sm">📮 شكاوى مسجّلة</span>
+                    <span class="font-black text-lg" style="color:#ef4444">{{ stats.complaints_count ?? 0 }}</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 rounded-xl" style="background: rgba(251,191,36,0.1)">
+                    <span class="text-sm">📄 نتائج اختبارات</span>
+                    <span class="font-black text-lg" style="color:#fbbf24">{{ stats.test_results ?? 0 }}</span>
+                  </div>
+                  <div v-if="stats.avg_test_score != null"
+                       class="flex items-center justify-between p-3 rounded-xl"
+                       :style="`background: ${stats.avg_test_score >= 70 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}`">
+                    <span class="text-sm">📊 مستوى المنصة</span>
+                    <span class="font-black text-lg"
+                          :style="`color:${stats.avg_test_score >= 70 ? '#10b981' : '#ef4444'}`">
+                      {{ stats.avg_test_score >= 70 ? '✅ جيد' : '⚠️ يحتاج متابعة' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </template>
+
+          <div v-else class="memorix-card p-12 text-center mgr-muted">
+            <div class="text-5xl mb-3">📊</div>
+            <p>لا توجد إحصائيات بعد. اضغط تحديث للتحميل.</p>
           </div>
         </div>
 
@@ -87,35 +232,35 @@
             <button @click="createNewSchool" :disabled="newSchoolLoading || !newSchool.name.trim()"
                     class="btn-primary text-sm flex items-center gap-2">
               <span v-if="newSchoolLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              💾 إضافة وحفظ في قاعدة البيانات
+              💾 {{ t('save') }}
             </button>
             <p v-if="newSchoolMsg" class="mt-3 text-sm" :style="{color: newSchoolMsg.startsWith('✅')?'#10b981':'#ef4444'}">{{ newSchoolMsg }}</p>
           </div>
 
           <!-- قائمة المدارس -->
           <div class="memorix-card overflow-hidden">
-            <div class="p-4" style="border-bottom: 1px solid #1a1f3a">
+            <div class="p-4 mgr-section-divider" style="border-bottom-width:1px;border-bottom-style:solid">
               <h3 class="font-bold">📋 المدارس المسجلة ({{ schools.length }})</h3>
             </div>
-            <div v-if="!schools.length" class="p-8 text-center" style="color: #94a3b8">لا توجد مدارس بعد. أضف مدرستك الأولى أعلاه.</div>
+            <div v-if="!schools.length" class="p-8 text-center mgr-muted">{{ t('no_schools_yet') }}</div>
             <table v-else class="w-full text-sm">
               <thead>
-                <tr style="background: rgba(26,31,58,0.8)">
-                  <th class="p-3 text-right" style="color: #94a3b8">الاسم</th>
-                  <th class="p-3 text-right" style="color: #94a3b8">الحالة</th>
-                  <th class="p-3 text-right" style="color: #94a3b8">إجراءات</th>
+                <tr class="mgr-row-head">
+                  <th class="p-3 text-right mgr-th">الاسم</th>
+                  <th class="p-3 text-right mgr-th">الحالة</th>
+                  <th class="p-3 text-right mgr-th">{{ t('actions_label') }}</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="s in schools" :key="s.id" class="border-t" style="border-color: #1a1f3a">
+                <tr v-for="s in schools" :key="s.id" class="border-t mgr-border">
                   <td class="p-3 font-medium">{{ s.name }}</td>
                   <td class="p-3">
-                    <span v-if="s.setup_completed" class="text-xs px-2 py-1 rounded-full" style="background: rgba(16,185,129,0.15); color: #10b981">✅ معدّة</span>
-                    <span v-else class="text-xs px-2 py-1 rounded-full" style="background: rgba(251,191,36,0.15); color: #fbbf24">⏳ بانتظار الإعداد</span>
+                    <span v-if="s.setup_completed" class="text-xs px-2 py-1 rounded-full" style="background: rgba(16,185,129,0.15); color: #10b981">✅ {{ t('configured') }}</span>
+                    <span v-else class="text-xs px-2 py-1 rounded-full" style="background: rgba(251,191,36,0.15); color: #fbbf24">⏳ {{ t('awaiting_setup') }}</span>
                   </td>
                   <td class="p-3 flex gap-2">
-                    <button @click="goToSetup(s.id)" class="text-xs px-3 py-1 rounded" style="background: rgba(74,126,255,0.15); color: #4a7eff">📤 رفع Excel</button>
-                    <button @click="confirmDeleteSchool(s)" class="text-xs px-3 py-1 rounded" style="background: rgba(239,68,68,0.15); color: #ef4444">🗑️ حذف</button>
+                    <button @click="goToSetup(s.id)" class="text-xs px-3 py-1 rounded" style="background: rgba(74,126,255,0.15); color: #4a7eff">📤 {{ t('upload_excel') }}</button>
+                    <button @click="confirmDeleteSchool(s)" class="text-xs px-3 py-1 rounded" style="background: rgba(239,68,68,0.15); color: #ef4444">🗑️ {{ t('delete_btn') }}</button>
                   </td>
                 </tr>
               </tbody>
@@ -129,7 +274,7 @@
 
           <!-- اختيار المدرسة -->
           <div class="memorix-card p-6 mb-6">
-            <label class="block text-sm font-medium mb-2" style="color: #94a3b8">اختر المدرسة</label>
+            <label class="block text-sm font-medium mb-2 mgr-muted">اختر المدرسة</label>
             <select v-model="selectedSchool" class="memorix-input" style="direction: rtl">
               <option value="">-- اختر مدرسة --</option>
               <option v-for="s in schools" :key="s.id" :value="s.id">{{ s.name }}</option>
@@ -141,7 +286,7 @@
           <div v-if="selectedSchool" class="memorix-card p-6 mb-6" style="border:1px solid rgba(74,126,255,.3)">
             <h3 class="font-bold mb-3" style="color:#4a7eff">📋 صيغة ملف Excel المتوقعة</h3>
             <p class="text-xs mb-3" style="color:#94a3b8">يجب أن يحتوي الملف على هذه الأعمدة (الترتيب غير مهم):</p>
-            <table class="w-full text-xs" style="background:#0f172a;border-radius:8px">
+            <table class="w-full text-xs mgr-textarea" style="border-radius:8px">
               <thead>
                 <tr style="background:rgba(99,102,241,.15)">
                   <th class="p-2">الاسم</th>
@@ -172,9 +317,9 @@
             </button>
             <div v-if="uploadResult" class="mt-4 p-4 rounded-lg" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3)">
               <h4 class="font-bold mb-2" style="color:#10b981">✅ تم بنجاح!</h4>
-              <p style="color:#94a3b8">المدرسة: {{ uploadResult.school_name }}</p>
-              <p style="color:#94a3b8">إجمالي الحسابات المولدة: {{ uploadResult.total }}</p>
-              <p style="color:#94a3b8">طلاب: {{ uploadResult.students_count }} • معلمون: {{ uploadResult.teachers_count }} • إداريون: {{ uploadResult.admins_count }}</p>
+              <p class="mgr-muted">المدرسة: {{ uploadResult.school_name }}</p>
+              <p class="mgr-muted">إجمالي الحسابات المولدة: {{ uploadResult.total }}</p>
+              <p class="mgr-muted">طلاب: {{ uploadResult.students_count }} • معلمون: {{ uploadResult.teachers_count }} • إداريون: {{ uploadResult.admins_count }}</p>
               <p class="mt-2 text-sm" style="color:#fbbf24">📋 الحسابات وكلمات السر متاحة الآن في تبويب "الحسابات"</p>
             </div>
           </div>
@@ -187,13 +332,13 @@
             <button v-if="accounts.length && selectedSchoolForAccounts"
                     @click="downloadCSV"
                     class="btn-primary text-sm py-2 flex items-center gap-2">
-              📥 تحميل CSV
+              📥 {{ t('download_csv') }}
             </button>
           </div>
 
           <!-- اختيار المدرسة -->
           <div class="memorix-card p-4 mb-6 flex items-center gap-4">
-            <label class="text-sm" style="color: #94a3b8">المدرسة:</label>
+            <label class="text-sm mgr-muted">المدرسة:</label>
             <select v-model="selectedSchoolForAccounts" @change="loadAccounts" class="memorix-input w-64" style="direction: rtl">
               <option value="">-- اختر مدرسة --</option>
               <option v-for="s in schools" :key="s.id" :value="s.id">{{ s.name }}</option>
@@ -209,20 +354,19 @@
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
-                  <tr style="background: rgba(26,31,58,0.8)">
-                    <th class="p-3 text-right" style="color: #94a3b8">الاسم</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">الإيميل</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">الدور</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">الصف</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">المادة</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">كلمة السر</th>
-                    <th class="p-3 text-right" style="color: #94a3b8">إجراءات</th>
+                  <tr class="mgr-row-head">
+                    <th class="p-3 text-right mgr-th">الاسم</th>
+                    <th class="p-3 text-right mgr-th">الإيميل</th>
+                    <th class="p-3 text-right mgr-th">الدور</th>
+                    <th class="p-3 text-right mgr-th">الصف</th>
+                    <th class="p-3 text-right mgr-th">المادة</th>
+                    <th class="p-3 text-right mgr-th">كلمة السر</th>
+                    <th class="p-3 text-right mgr-th">{{ t('actions_label') }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="acc in accounts" :key="acc.id"
-                      class="border-t transition-colors hover:bg-white/5"
-                      style="border-color: #1a1f3a">
+                      class="border-t mgr-border transition-colors hover:bg-white/5">
                     <td class="p-3">{{ acc.full_name }}</td>
                     <td class="p-3 font-mono text-xs" style="color: #4a7eff; direction: ltr">{{ acc.email }}</td>
                     <td class="p-3">
@@ -231,8 +375,8 @@
                         {{ roleLabel(acc.role) }}
                       </span>
                     </td>
-                    <td class="p-3" style="color: #94a3b8">{{ acc.grade || '-' }}</td>
-                    <td class="p-3" style="color: #94a3b8">{{ acc.subject || '-' }}</td>
+                    <td class="p-3 mgr-td-muted">{{ acc.grade || '-' }}</td>
+                    <td class="p-3 mgr-td-muted">{{ acc.subject || '-' }}</td>
                     <td class="p-3">
                       <button v-if="!revealedPasswords[acc.id]"
                               @click="revealPassword(acc.id)"
@@ -264,13 +408,13 @@
                 </tbody>
               </table>
             </div>
-            <div class="p-3 text-center text-sm" style="color: #94a3b8; border-top: 1px solid #1a1f3a">
+            <div class="p-3 text-center text-sm mgr-muted mgr-section-divider" style="border-top-width:1px;border-top-style:solid">
               إجمالي: {{ accounts.length }} حساب
             </div>
           </div>
 
-          <div v-else-if="selectedSchoolForAccounts" class="memorix-card p-12 text-center" style="color: #94a3b8">
-            لا توجد حسابات بعد. اذهب لتبويب "إعداد + رفع Excel" لتوليدها.
+          <div v-else-if="selectedSchoolForAccounts" class="memorix-card p-12 text-center mgr-muted">
+            {{ t('no_accounts_yet') }}
           </div>
         </div>
 
@@ -341,7 +485,7 @@
             <button @click="addBook" class="btn-primary text-sm flex items-center gap-2"
                     :disabled="bookLoading || bookExtractLoading || !newBook.title || !newBook.subject">
               <span v-if="bookLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              📖 {{ bookLoading ? (bookFileText ? '⏳ يُوَلِّد الملخص بالـ AI...' : '⏳ جاري الإضافة...') : 'إضافة الكتاب' }}
+              📖 {{ bookLoading ? (bookFileText ? '⏳ يُوَلِّد الملخص بالـ AI...' : '⏳ جاري الإضافة...') : t('add_book') }}
             </button>
             <p class="text-xs mt-2" style="color:#94a3b8">
               💡 يمكن إضافة الكتاب بدون ملف — الملخص سيُولَّد لاحقاً عند رفع الملف
@@ -350,14 +494,14 @@
 
           <!-- قائمة الكتب -->
           <div v-if="!books.length" class="memorix-card p-8 text-center" style="color:#94a3b8">
-            لا توجد كتب بعد. أضف كتابك الأول بالضغط على "إضافة كتاب جديد" أعلاه.
+            {{ t('no_books_yet') }}
           </div>
           <div v-else class="grid md:grid-cols-2 gap-4">
             <div v-for="book in books" :key="book.id" class="memorix-card p-5">
               <div class="flex items-start justify-between mb-2">
                 <h4 class="font-bold">{{ book.title }}</h4>
                 <span class="text-xs px-2 py-1 rounded-full" style="background: rgba(74,126,255,0.15); color: #4a7eff">
-                  {{ book.grade || 'غير محدد' }}
+                  {{ book.grade || t('not_specified') }}
                 </span>
               </div>
               <p class="text-xs mb-3" style="color: #8b5cf6">📚 {{ book.subject }}</p>
@@ -397,9 +541,9 @@
             <div v-if="chatThinking" style="display:flex;justify-content:flex-end">
               <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
                 <span style="font-size:20px">🤖</span>
-                <div class="p-3 rounded-xl" style="background:rgba(26,31,58,0.8);border:1px solid #1a1f3a">
+                <div class="p-3 rounded-xl mgr-textarea">
                   <div style="display:flex;gap:4px;align-items:center">
-                    <span v-for="n in 3" :key="n" style="width:8px;height:8px;background:#94a3b8;border-radius:50%;animation:bounce 1s infinite" :style="`animation-delay:${(n-1)*0.15}s`"></span>
+                    <span v-for="n in 3" :key="n" class="mgr-muted" style="width:8px;height:8px;border-radius:50%;display:inline-block;animation:bounce 1s infinite;background:currentColor" :style="`animation-delay:${(n-1)*0.15}s`"></span>
                   </div>
                 </div>
               </div>
@@ -419,13 +563,13 @@
         <div v-if="activeTab === 'health'" class="animate-fade-in">
           <h2 class="text-2xl font-bold mb-6 gradient-text">💪 صحة المدارس</h2>
           <button @click="loadHealth" :disabled="hlLoading" class="btn-primary px-6 py-3 mb-4" style="border-radius:10px">
-            {{ hlLoading ? '⏳' : '🔄 تحديث' }}
+            {{ hlLoading ? '⏳' : '🔄 ' + t('refresh_btn') }}
           </button>
           <div v-if="health.length" class="grid gap-3">
             <div v-for="h in health" :key="h.school_id" class="memorix-card p-4 flex justify-between items-center">
               <div>
                 <h3 class="font-bold">{{ h.name }}</h3>
-                <p class="text-sm" style="color:#94a3b8">{{ h.users }} مستخدم • {{ h.active_week }} نشط</p>
+                <p class="text-sm mgr-muted">{{ h.users }} مستخدم • {{ h.active_week }} {{ t('active_label') }}</p>
               </div>
               <div class="text-left">
                 <div style="font-size:28px;font-weight:bold;color:#fbbf24">{{ h.score }}</div>
@@ -440,13 +584,13 @@
           <h2 class="text-2xl font-bold mb-6 gradient-text">🧠 المستشار الاستراتيجي</h2>
           <div class="memorix-card p-6">
             <textarea v-model="adQuestion" rows="3" placeholder="مثال: كيف أحسّن نسبة الاحتفاظ بالطلاب في مدرسة الرياض؟"
-                      class="w-full p-3 rounded-lg mb-3" style="background:#0f172a;color:#fff;border:1px solid #334155"></textarea>
+                      class="w-full p-3 rounded-lg mb-3 mgr-textarea"></textarea>
             <textarea v-model="adContext" rows="2" placeholder="سياق إضافي (اختياري): البيانات/التحديات الحالية..."
-                      class="w-full p-3 rounded-lg mb-3" style="background:#0f172a;color:#fff;border:1px solid #334155"></textarea>
+                      class="w-full p-3 rounded-lg mb-3 mgr-textarea"></textarea>
             <button @click="askAdvisor" :disabled="adLoading" class="btn-primary px-6 py-3" style="border-radius:10px">
-              {{ adLoading ? '⏳ يحلل...' : '🚀 احصل على استشارة' }}
+              {{ adLoading ? '⏳ ' + t('analyze_btn') : '🚀 ' + t('get_consultation') }}
             </button>
-            <div v-if="adAnswer" class="mt-4 p-4 rounded-lg" style="background:#0f172a;white-space:pre-wrap;line-height:1.8;color:#e2e8f0">
+            <div v-if="adAnswer" class="mt-4 p-4 rounded-lg mgr-textarea" style="white-space:pre-wrap;line-height:1.8">
               {{ adAnswer }}
             </div>
           </div>
@@ -473,24 +617,24 @@
                   <button @click="$refs.mgrAvatarInput?.click()" class="btn-primary text-sm" style="width:100%">📷 {{ t('upload_avatar') }}</button>
                 </div>
               </div>
-              <div class="flex justify-between py-2 text-sm" style="border-bottom:1px solid #1a1f3a;color:#94a3b8"><span>{{ t('full_name') }}</span><b style="color:#e2e8f0">{{ auth.user?.full_name }}</b></div>
-              <div class="flex justify-between py-2 text-sm" style="border-bottom:1px solid #1a1f3a;color:#94a3b8"><span>{{ t('email') }}</span><b style="color:#e2e8f0;direction:ltr">{{ auth.user?.email }}</b></div>
-              <div class="flex justify-between py-2 text-sm" style="color:#94a3b8"><span>الدور</span><b style="color:#10b981">{{ t('role_manager') }}</b></div>
+              <div class="flex justify-between py-2 text-sm mgr-label mgr-section-divider" style="border-bottom-width:1px;border-bottom-style:solid"><span>{{ t('full_name') }}</span><b class="mgr-value">{{ auth.user?.full_name }}</b></div>
+              <div class="flex justify-between py-2 text-sm mgr-label mgr-section-divider" style="border-bottom-width:1px;border-bottom-style:solid"><span>{{ t('email') }}</span><b class="mgr-value" style="direction:ltr">{{ auth.user?.email }}</b></div>
+              <div class="flex justify-between py-2 text-sm mgr-label"><span>الدور</span><b style="color:#10b981">{{ t('role_manager') }}</b></div>
             </div>
 
             <!-- المظهر -->
             <div class="memorix-card p-6">
               <h3 class="font-bold mb-4" style="color: #00d4ff">🎨 {{ t('appearance') }}</h3>
-              <p class="text-xs mb-2" style="color:#94a3b8">{{ t('theme') }}</p>
+              <p class="text-xs mb-2 mgr-muted">{{ t('theme') }}</p>
               <div class="flex gap-2 mb-5 flex-wrap">
                 <button v-for="th in [{k:'dark',l:t('theme_dark'),i:'🌑'},{k:'light',l:t('theme_light'),i:'☀️'},{k:'library',l:t('theme_library'),i:'📚'}]"
                         :key="th.k" @click="mgrSettings.theme=th.k; saveMgrSettings()"
-                        class="flex-1 py-3 rounded-xl font-medium transition-all"
-                        :style="{border: mgrSettings.theme===th.k?'2px solid #6366f1':'2px solid #1a1f3a', background: mgrSettings.theme===th.k?'rgba(99,102,241,.15)':'#0f172a', color:'#fff'}">
+                        class="flex-1 py-3 rounded-xl font-medium transition-all mgr-select-btn"
+                        :class="{ active: mgrSettings.theme === th.k }">
                   {{ th.i }} {{ th.l }}
                 </button>
               </div>
-              <p class="text-xs mb-2" style="color:#94a3b8">☀️ {{ t('brightness') }}: {{ mgrSettings.brightness }}%</p>
+              <p class="text-xs mb-2 mgr-muted">☀️ {{ t('brightness') }}: {{ mgrSettings.brightness }}%</p>
               <input type="range" v-model.number="mgrSettings.brightness" @change="saveMgrSettings" min="20" max="100" style="width:100%" />
             </div>
 
@@ -500,8 +644,8 @@
               <div class="grid grid-cols-2 gap-2">
                 <button v-for="(L, code) in languages" :key="code"
                         @click="changeMgrLang(code)"
-                        class="py-3 rounded-xl font-medium transition-all"
-                        :style="{border: mgrSettings.language===code?'2px solid #6366f1':'2px solid #1a1f3a', background: mgrSettings.language===code?'rgba(99,102,241,.15)':'#0f172a', color:'#fff'}">
+                        class="py-3 rounded-xl font-medium transition-all mgr-select-btn"
+                        :class="{ active: mgrSettings.language === code }">
                   {{ L.flag }} {{ L.name }}
                 </button>
               </div>
@@ -512,7 +656,7 @@
               <h3 class="font-bold mb-4" style="color: #f59e0b">🔔 {{ t('notifications') }}</h3>
               <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" v-model="mgrSettings.notifications_enabled" @change="saveMgrSettings" />
-                <span style="color:#e2e8f0">{{ t('notifications_enabled') }}</span>
+                <span class="mgr-value">{{ t('notifications_enabled') }}</span>
               </label>
             </div>
           </div>
@@ -527,7 +671,7 @@
       <div class="memorix-card p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-bold text-xl" style="color: #00d4ff">✅ تم توليد {{ generatedAccounts.length }} حساب</h3>
-          <button @click="generatedAccounts = []" style="color: #94a3b8; font-size: 24px; background: none; border: none; cursor: pointer">×</button>
+          <button @click="generatedAccounts = []" class="mgr-muted" style="font-size: 24px; background: none; border: none; cursor: pointer">×</button>
         </div>
         <div class="p-3 rounded-lg mb-4 text-sm"
              style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444">
@@ -535,8 +679,8 @@
         </div>
         <div class="space-y-2">
           <div v-for="acc in generatedAccounts" :key="acc.email"
-               class="p-3 rounded-lg flex items-center justify-between"
-               style="background: rgba(26,31,58,0.6); border: 1px solid #1a1f3a">
+               class="p-3 rounded-lg flex items-center justify-between mgr-textarea"
+               style="border-radius:8px">
             <div>
               <div class="font-medium text-sm">{{ acc.full_name }}</div>
               <div class="text-xs font-mono mt-0.5" style="color: #4a7eff; direction: ltr">{{ acc.email }}</div>
@@ -546,7 +690,7 @@
                    style="background: rgba(139,92,246,0.2); color: #8b5cf6">
                 {{ acc.password }}
               </div>
-              <div class="text-xs mt-1" style="color: #94a3b8">{{ roleLabel(acc.role) }}</div>
+              <div class="text-xs mt-1 mgr-muted">{{ roleLabel(acc.role) }}</div>
             </div>
           </div>
         </div>
@@ -564,6 +708,7 @@ import Stars from '../components/Stars.vue'
 import MatrixBackground from '../components/MatrixBackground.vue'
 import { useTheme } from '../composables/useTheme.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
+import NavBar from '../components/NavBar.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -588,17 +733,29 @@ const stats = ref(null)
 const statsLoading = ref(false)
 
 const statCards = computed(() => stats.value ? [
-  { label: 'إجمالي المستخدمين', value: stats.value.total_users, icon: '👤', color: '#4a7eff' },
-  { label: 'الطلبة', value: stats.value.total_students, icon: '👨‍🎓', color: '#00d4ff' },
-  { label: 'المعلمون', value: stats.value.total_teachers, icon: '👨‍🏫', color: '#8b5cf6' },
-  { label: 'المحادثات', value: stats.value.total_conversations, icon: '💬', color: '#10b981' },
+  { label: 'إجمالي المستخدمين', value: stats.value.total_users,    icon: '👤', color: '#4a7eff' },
+  { label: 'الطلبة',            value: stats.value.total_students,  icon: '👨‍🎓', color: '#00d4ff' },
+  { label: 'المعلمون',          value: stats.value.total_teachers,  icon: '👨‍🏫', color: '#8b5cf6' },
+  { label: 'إداريون',           value: stats.value.total_admins,    icon: '🛡️', color: '#f59e0b' },
 ] : [])
 
 const learningStyleCards = [
-  { key: 'visual', label: 'بصري', icon: '👁️', color: '#4a7eff', bg: 'rgba(74,126,255,0.1)', border: 'rgba(74,126,255,0.3)' },
-  { key: 'auditory', label: 'سمعي', icon: '🎧', color: '#00d4ff', bg: 'rgba(0,212,255,0.1)', border: 'rgba(0,212,255,0.3)' },
-  { key: 'kinesthetic', label: 'حركي', icon: '🤸', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', border: 'rgba(139,92,246,0.3)' },
+  { key: 'visual',      label: 'بصري', icon: '👁️', color: '#4a7eff' },
+  { key: 'auditory',    label: 'سمعي', icon: '🎧', color: '#00d4ff' },
+  { key: 'kinesthetic', label: 'حركي', icon: '🤸', color: '#8b5cf6' },
 ]
+
+function learningStylePct(key) {
+  if (!stats.value) return 0
+  const ls = stats.value.learning_styles || {}
+  const total = Object.values(ls).reduce((a, b) => a + b, 0)
+  return total ? Math.round((ls[key] || 0) / total * 100) : 0
+}
+
+const gradesList = computed(() => {
+  if (!stats.value?.grades_dist) return []
+  return Object.entries(stats.value.grades_dist).sort((a, b) => b[1] - a[1])
+})
 
 // المدارس والحسابات
 const schools = ref([])
@@ -1059,5 +1216,14 @@ onMounted(async () => {
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
+}
+
+/* بطاقات الإحصائيات ذات التوهج */
+.stat-glow-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-glow-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 24px var(--glow-c, rgba(74,126,255,0.25));
 }
 </style>

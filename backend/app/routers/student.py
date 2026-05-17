@@ -173,7 +173,7 @@ async def update_settings(
 
     # تطبيع theme
     if "theme" in all_data:
-        if all_data["theme"] not in {"dark", "light", "library"}:
+        if all_data["theme"] not in {"dark", "light", "library", "neon"}:
             all_data["theme"] = "dark"
 
     # تطبيع brightness
@@ -239,16 +239,17 @@ async def submit_homework(
     current_user: dict = Depends(_require_student),
     db=Depends(get_db)
 ):
+    content = str(body.get("content", ""))[:10000]  # حد 10K حرف للإجابة
     existing = db.table("homework_submissions") \
         .select("id").eq("homework_id", homework_id).eq("student_id", current_user["id"]).execute()
     if existing.data:
-        db.table("homework_submissions").update({"content": body.get("content", "")}) \
+        db.table("homework_submissions").update({"content": content}) \
             .eq("homework_id", homework_id).eq("student_id", current_user["id"]).execute()
     else:
         db.table("homework_submissions").insert({
             "homework_id": homework_id,
             "student_id": current_user["id"],
-            "content": body.get("content", "")
+            "content": content
         }).execute()
     return {"message": "تم تسليم الواجب"}
 
@@ -276,7 +277,12 @@ async def get_test(test_id: str, current_user: dict = Depends(_require_student),
     result = db.table("tests").select("*").eq("id", test_id).eq("is_active", True).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="الاختبار غير موجود")
-    return result.data[0]
+    test = result.data[0]
+    # منع الوصول لاختبارات مدارس أخرى
+    student_school = current_user.get("school_id")
+    if student_school and test.get("school_id") and test["school_id"] != student_school:
+        raise HTTPException(status_code=403, detail="لا يمكنك الوصول لهذا الاختبار")
+    return test
 
 
 @router.post("/tests/{test_id}/submit")
@@ -287,12 +293,20 @@ async def submit_test(
     db=Depends(get_db)
 ):
     # حساب الدرجة
-    test = db.table("tests").select("questions").eq("id", test_id).execute()
+    test = db.table("tests").select("questions, school_id").eq("id", test_id).execute()
     if not test.data:
         raise HTTPException(status_code=404, detail="الاختبار غير موجود")
+    # التحقق من نفس المدرسة
+    student_school = current_user.get("school_id")
+    if student_school and test.data[0].get("school_id") and test.data[0]["school_id"] != student_school:
+        raise HTTPException(status_code=403, detail="لا يمكنك تسليم هذا الاختبار")
 
     questions = test.data[0].get("questions", [])
     answers = body.get("answers", {})
+    if not isinstance(answers, dict):
+        answers = {}
+    # حد أقصى لعدد الإجابات
+    answers = {str(k): str(v)[:500] for k, v in list(answers.items())[:200]}
 
     correct = 0
     for q in questions:
@@ -335,7 +349,12 @@ async def get_worksheet(worksheet_id: str, current_user: dict = Depends(_require
     result = db.table("worksheets").select("*").eq("id", worksheet_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="ورقة العمل غير موجودة")
-    return result.data[0]
+    ws = result.data[0]
+    # منع الوصول لأوراق مدارس أخرى
+    student_school = current_user.get("school_id")
+    if student_school and ws.get("school_id") and ws["school_id"] != student_school:
+        raise HTTPException(status_code=403, detail="لا يمكنك الوصول لهذه الورقة")
+    return ws
 
 
 # ============================================
@@ -353,9 +372,9 @@ async def get_games(current_user: dict = Depends(_require_student), db=Depends(g
 async def create_game(body: dict, current_user: dict = Depends(_require_student), db=Depends(get_db)):
     from app.services.ai_service import generate_game_content
 
-    game_type = body.get("game_type", "mcq")
-    subject = body.get("subject", "")
-    topic = body.get("topic", "")
+    game_type = str(body.get("game_type", "mcq"))[:20]
+    subject = str(body.get("subject", ""))[:100]
+    topic = str(body.get("topic", ""))[:200]
 
     content = await generate_game_content(game_type, subject, topic)
     if not content:
@@ -532,8 +551,8 @@ async def log_mood(
     current_user: dict = Depends(_require_student),
     db=Depends(get_db),
 ):
-    mood = body.get("mood", "neutral")
-    note = body.get("note", "")
+    mood = str(body.get("mood", "neutral"))[:20]
+    note = str(body.get("note", ""))[:500]
     suggestions = {
         "happy":   "🌟 أنت في قمة طاقتك! استغل هذا الوقت في حل اختبار صعب.",
         "focused": "🎯 تركيزك ممتاز! ابدأ جلسة بومودورو 25 دقيقة الآن.",
@@ -574,8 +593,12 @@ async def log_focus_session(
     current_user: dict = Depends(_require_student),
     db=Depends(get_db),
 ):
-    duration = int(body.get("duration_minutes", 25))
-    technique = body.get("technique", "pomodoro")
+    try:
+        duration = int(body.get("duration_minutes", 25))
+    except (ValueError, TypeError):
+        duration = 25
+    duration = max(1, min(duration, 120))  # بين 1 و 120 دقيقة
+    technique = str(body.get("technique", "pomodoro"))[:30]
     bonus_stars = 2 if duration >= 25 else 1
     try:
         db.table("analytics").insert({
@@ -638,7 +661,7 @@ async def save_reflection(
     current_user: dict = Depends(_require_student),
     db=Depends(get_db),
 ):
-    text = (body.get("text") or "").strip()
+    text = str(body.get("text") or "").strip()[:2000]  # حد 2000 حرف
     if not text:
         raise HTTPException(400, "اكتب تأملك")
     try:
@@ -656,3 +679,46 @@ async def save_reflection(
     except Exception:
         pass
     return {"stars_earned": 3, "message": "🌟 شكراً لمشاركتك تأملك اليومي! +3 نجوم"}
+
+
+# ============================================
+# 🎬 توليد سكريبت الفيديو للطالب
+# ============================================
+@router.post("/generate-video")
+async def generate_video_for_student(body: dict, current_user: dict = Depends(_require_student)):
+    from app.services.ai_service import generate_video_script
+
+    topic = str(body.get("topic", ""))[:200]
+    subject = str(body.get("subject", ""))[:100]
+    try:
+        duration = int(body.get("duration_seconds", 300))
+    except (ValueError, TypeError):
+        duration = 300
+    duration = max(30, min(duration, 600))
+
+    if not topic:
+        raise HTTPException(status_code=400, detail="الموضوع مطلوب")
+
+    result = await generate_video_script(topic, subject, duration)
+    if not result:
+        minutes = duration // 60
+        fallback = f"""# 🎬 سكربت فيديو: {topic}
+المادة: {subject} | المدة: {minutes} دقيقة
+
+## [00:00 - 00:30] المقدمة
+- ترحيب بالمشاهدين وطرح سؤال محفّز
+- توضيح ما ستتعلمه
+
+## [00:30 - {(duration//3)//60:02d}:{(duration//3)%60:02d}] الفكرة الأساسية
+- شرح مفهوم {topic} بمثال بسيط
+- ربط بالحياة اليومية
+
+## [{(duration//3)//60:02d}:{(duration//3)%60:02d} - {(2*duration//3)//60:02d}:{(2*duration//3)%60:02d}] التفاصيل والأمثلة
+- 3 أمثلة تطبيقية مع شرح خطوة بخطوة
+
+## [{(2*duration//3)//60:02d}:{(2*duration//3)%60:02d} - {duration//60:02d}:{duration%60:02d}] الخلاصة
+- أهم 3 نقاط من الفيديو
+- نشاط بسيط للمتابعة"""
+        return {"script": fallback}
+
+    return {"script": result}

@@ -1,247 +1,518 @@
 <template>
-  <div class="hub hub-owner">
+  <div class="intel-hub">
+    <!-- ═══ خلفيات ═══ -->
+    <div class="scanlines" />
     <MatrixBackground />
-    <!-- Mobile menu -->
-    <button class="mobile-toggle" @click="mobileOpen = !mobileOpen" aria-label="Menu">{{ mobileOpen ? '✕' : '☰' }}</button>
-    <div :class="['mobile-overlay', { open: mobileOpen }]" @click="mobileOpen = false"></div>
+    <div class="grid-overlay" />
 
-    <aside :class="['sidebar',{collapsed:sb, open: mobileOpen}]">
-      <div class="sb-header" @click="sb=!sb">
-        <div class="brand"><div class="b-icon">M</div><span v-if="!sb" class="b-name">Morix Owner</span></div>
+    <!-- ═══ Mobile toggle ═══ -->
+    <button class="mobile-toggle" @click="mobileOpen = !mobileOpen">{{ mobileOpen ? '✕' : '☰' }}</button>
+    <div :class="['mobile-overlay', { open: mobileOpen }]" @click="mobileOpen = false" />
+
+    <!-- ════════════════════════════════════════
+         SIDEBAR — ملف التصنيف السري
+    ════════════════════════════════════════ -->
+    <aside :class="['intel-sidebar', { collapsed: sb, open: mobileOpen }]">
+      <!-- شعار المالك -->
+      <div class="sb-brand" @click="sb = !sb">
+        <div class="brand-orb">
+          <span class="brand-glyph">M</span>
+          <div class="brand-ring" />
+        </div>
+        <div v-if="!sb" class="brand-text">
+          <div class="brand-name">MORIX</div>
+          <div class="brand-level">OWNER CLEARANCE</div>
+        </div>
       </div>
+
+      <!-- حالة الاتصال -->
+      <div v-if="!sb" class="sb-status">
+        <span class="status-dot" />
+        <span class="status-text">SYSTEM ONLINE</span>
+        <span class="status-time">{{ currentTime }}</span>
+      </div>
+
+      <!-- الأقسام -->
       <nav class="sb-nav">
-        <button v-for="s in sections" :key="s.id" :class="['nav-item',{active:cur===s.id}]" @click="cur=s.id; mobileOpen=false">
-          <span>{{ s.icon }}</span><span v-if="!sb">{{ s.label }}</span>
+        <div v-if="!sb" class="sb-section-label">/// OPERATIONS</div>
+        <button v-for="s in sections" :key="s.id"
+          :class="['intel-nav-btn', { active: cur === s.id }]"
+          @click="cur = s.id; mobileOpen = false">
+          <span class="nav-icon">{{ s.icon }}</span>
+          <span v-if="!sb" class="nav-label">{{ s.label }}</span>
+          <span v-if="!sb && s.id === 'complaints' && pendingComplaints > 0"
+            class="nav-badge">{{ pendingComplaints }}</span>
         </button>
-        <div style="height:1px;background:rgba(255,255,255,.08);margin:8px 4px"></div>
-        <div style="padding:8px 12px;color:rgba(255,255,255,.3);font-size:11px" v-if="!sb">وصول كامل</div>
-        <button v-for="s in otherSections" :key="s.path" class="nav-item" @click="router.push(s.path)">
-          <span>{{ s.icon }}</span><span v-if="!sb">{{ s.label }}</span>
+
+        <div v-if="!sb" class="sb-divider">/// LINKED HUBS</div>
+        <button v-for="s in otherSections" :key="s.path"
+          class="intel-nav-btn linked"
+          @click="router.push(s.path); mobileOpen = false">
+          <span class="nav-icon">{{ s.icon }}</span>
+          <span v-if="!sb" class="nav-label">{{ s.label }}</span>
+          <span v-if="!sb" class="nav-arrow">↗</span>
         </button>
       </nav>
+
       <div class="sb-footer">
-        <button class="logout-btn" @click="doLogout"><span>🚪</span><span v-if="!sb">خروج</span></button>
+        <button class="logout-intel" @click="doLogout">
+          <span>⏻</span>
+          <span v-if="!sb">DISCONNECT</span>
+        </button>
       </div>
     </aside>
 
-    <main class="main">
-      <header class="top-bar">
-        <h2>{{ sections.find(s=>s.id===cur)?.label || 'لوحة المالك' }}</h2>
-        <div class="chip"><div class="av">👑</div><span>المالك</span></div>
+    <!-- ════════════════════════════════════════
+         MAIN — مركز العمليات
+    ════════════════════════════════════════ -->
+    <main class="intel-main">
+
+      <!-- Header strip -->
+      <header class="intel-header">
+        <div class="hdr-left">
+          <div class="hdr-breadcrumb">
+            <span class="hdr-crumb-root">MORIX CONTROL</span>
+            <span class="hdr-sep">›</span>
+            <span class="hdr-crumb-cur">{{ sections.find(s => s.id === cur)?.label || 'OVERVIEW' }}</span>
+          </div>
+          <div class="hdr-classify">
+            <span class="classify-badge">👑 TOP ACCESS</span>
+            <span class="classify-badge warn" v-if="pendingComplaints > 0">⚠️ {{ pendingComplaints }} PENDING</span>
+          </div>
+        </div>
+        <div class="hdr-right">
+          <div class="hdr-metric" title="المستخدمون النشطون">
+            <div class="metric-dot green" />
+            <span>{{ stats?.total_users ?? '—' }} USERS</span>
+          </div>
+          <div class="hdr-metric" title="المدارس">
+            <div class="metric-dot blue" />
+            <span>{{ stats?.total_schools ?? '—' }} SCHOOLS</span>
+          </div>
+          <div class="intel-avatar" :title="ownerSettings.full_name">
+            <img v-if="ownerSettings.avatar_url" :src="ownerSettings.avatar_url" class="av-img" />
+            <span v-else>👑</span>
+          </div>
+        </div>
       </header>
 
-      <!-- ===== PLATFORM OVERVIEW ===== -->
-      <section v-show="cur==='overview'" class="body pad">
-        <div class="stats-grid" v-if="stats">
-          <div class="sc"><div class="sn">{{ stats.total_schools }}</div><div class="sl">مدارس</div></div>
-          <div class="sc"><div class="sn">{{ stats.total_users }}</div><div class="sl">مستخدمون</div></div>
-          <div class="sc"><div class="sn">{{ stats.role_counts?.student||0 }}</div><div class="sl">طلاب</div></div>
-          <div class="sc"><div class="sn">{{ stats.role_counts?.teacher||0 }}</div><div class="sl">معلمون</div></div>
-          <div class="sc"><div class="sn">{{ stats.total_conversations }}</div><div class="sl">محادثات AI</div></div>
-          <div class="sc warn"><div class="sn">{{ stats.complaint_stats?.pending||0 }}</div><div class="sl">شكاوى معلقة</div></div>
+      <!-- ════ OVERVIEW ════ -->
+      <section v-show="cur === 'overview'" class="intel-body">
+        <!-- شريط الحالة العلوي -->
+        <div class="threat-bar">
+          <div class="threat-label">PLATFORM STATUS</div>
+          <div class="threat-levels">
+            <div :class="['tlevel', threatLevel === 'secure' ? 'active' : '']">🟢 SECURE</div>
+            <div :class="['tlevel', threatLevel === 'advisory' ? 'active' : '']">🟡 ADVISORY</div>
+            <div :class="['tlevel', threatLevel === 'elevated' ? 'active' : '']">🔴 ELEVATED</div>
+          </div>
+          <button class="intel-btn sm" @click="refreshAll">
+            <span v-if="loadingAll" class="spin-icon">⟳</span>
+            <span v-else>⟳ REFRESH</span>
+          </button>
         </div>
 
-        <div class="card mt" v-if="stats?.schools?.length">
-          <h3>🏫 المدارس</h3>
-          <div class="list-col">
-            <div v-for="sch in stats.schools" :key="sch.id" class="list-item">
-              <div style="flex:1"><h4>{{ sch.name }}</h4></div>
-              <span :class="sch.setup_completed ? 'badge-ok' : 'badge-warn'">
-                {{ sch.setup_completed ? '✅ جاهزة' : '⚠️ غير مكتملة' }}
-              </span>
+        <!-- بطاقات الإحصائيات الرئيسية -->
+        <div class="kpi-grid">
+          <div v-for="kpi in kpiCards" :key="kpi.label" class="kpi-card" :style="`--kc: ${kpi.color}`">
+            <div class="kpi-label">{{ kpi.label }}</div>
+            <div class="kpi-value" :style="`color: ${kpi.color}`">
+              <span class="kpi-num">{{ kpi.value ?? '—' }}</span>
+            </div>
+            <div class="kpi-bar">
+              <div class="kpi-fill" :style="`width: ${kpi.pct}%; background: ${kpi.color}`" />
+            </div>
+            <div class="kpi-icon">{{ kpi.icon }}</div>
+          </div>
+        </div>
+
+        <!-- جدول المدارس -->
+        <div class="intel-panel mt-4" v-if="stats?.schools?.length">
+          <div class="panel-header">
+            <span class="panel-title">🏫 REGISTERED SCHOOLS — FIELD STATUS</span>
+            <span class="panel-count">{{ stats.schools.length }} TOTAL</span>
+          </div>
+          <div class="school-table">
+            <div v-for="(sch, i) in stats.schools" :key="sch.id" class="school-row">
+              <div class="school-index">[{{ String(i + 1).padStart(2, '0') }}]</div>
+              <div class="school-name">{{ sch.name }}</div>
+              <div class="school-branch" v-if="sch.branch">{{ sch.branch }}</div>
+              <div class="school-users">
+                <span class="mini-badge blue">{{ sch.user_count ?? 0 }} مستخدم</span>
+              </div>
+              <div class="school-status">
+                <span v-if="sch.setup_completed" class="mini-badge green">✅ OPERATIONAL</span>
+                <span v-else class="mini-badge amber">⚠️ PENDING SETUP</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- آخر النشاط -->
+        <div class="intel-panel mt-4">
+          <div class="panel-header">
+            <span class="panel-title">📡 RECENT ACTIVITY LOG</span>
+          </div>
+          <div class="activity-feed">
+            <div v-for="log in activityLog" :key="log.id" class="activity-row">
+              <span class="activity-time">{{ log.time }}</span>
+              <span :class="['activity-type', log.type]">{{ log.tag }}</span>
+              <span class="activity-msg">{{ log.msg }}</span>
+            </div>
+            <div v-if="!activityLog.length" class="empty-feed">/// NO RECENT ACTIVITY DETECTED</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ PULSE ════ -->
+      <section v-show="cur === 'pulse'" class="intel-body">
+        <div class="intel-panel">
+          <div class="panel-header">
+            <span class="panel-title">📡 PLATFORM PULSE — LIVE INTELLIGENCE</span>
+            <button class="intel-btn sm" @click="loadPulse" :disabled="pulseLoading">
+              <span v-if="pulseLoading" class="spin-icon">⟳</span>
+              <span v-else>⟳ SCAN NOW</span>
+            </button>
+          </div>
+
+          <div v-if="!pulse && !pulseLoading" class="scan-prompt">
+            <div class="scan-icon">📡</div>
+            <p>اضغط SCAN NOW لجلب بيانات المنصة اللحظية</p>
+          </div>
+
+          <div v-if="pulseLoading" class="scanning-anim">
+            <div class="scan-line" />
+            <p class="scan-text">/// SCANNING PLATFORM NODES...</p>
+          </div>
+
+          <div v-if="pulse" class="pulse-grid">
+            <div v-for="m in pulseMetrics" :key="m.label" class="pulse-metric" :style="`--pm: ${m.color}`">
+              <div class="pm-icon">{{ m.icon }}</div>
+              <div class="pm-value" :style="`color: ${m.color}`">{{ m.value }}</div>
+              <div class="pm-label">{{ m.label }}</div>
+              <div class="pm-glow" />
+            </div>
+          </div>
+
+          <div v-if="pulse" class="health-bar-section">
+            <div class="hbs-label">PLATFORM HEALTH SCORE</div>
+            <div class="hbs-track">
+              <div class="hbs-fill"
+                :style="`width: ${pulse.health_score}%; background: ${pulse.health_score >= 70 ? '#00ff41' : pulse.health_score >= 40 ? '#fbbf24' : '#ef4444'}`" />
+            </div>
+            <div class="hbs-value">{{ pulse.health_score }}<span style="font-size:14px">/100</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ AI COST ════ -->
+      <section v-show="cur === 'aicost'" class="intel-body">
+        <div class="intel-panel">
+          <div class="panel-header">
+            <span class="panel-title">💰 OPERATIONS BUDGET — AI EXPENDITURE</span>
+            <button class="intel-btn sm" @click="loadAiCost" :disabled="aiCostLoading">
+              <span v-if="aiCostLoading" class="spin-icon">⟳</span>
+              <span v-else>📊 CALCULATE</span>
+            </button>
+          </div>
+
+          <div v-if="!aiCost && !aiCostLoading" class="scan-prompt">
+            <div class="scan-icon">💰</div>
+            <p>احسب تكلفة الذكاء الاصطناعي للمنصة</p>
+          </div>
+
+          <div v-if="aiCostLoading" class="scanning-anim">
+            <div class="scan-line" />
+            <p class="scan-text">/// CALCULATING OPERATIONAL COSTS...</p>
+          </div>
+
+          <div v-if="aiCost" class="cost-grid">
+            <div class="cost-card">
+              <div class="cost-label">WEEKLY CALLS</div>
+              <div class="cost-value blue">{{ aiCost.calls_this_week }}</div>
+            </div>
+            <div class="cost-card">
+              <div class="cost-label">WEEKLY COST</div>
+              <div class="cost-value green">${{ aiCost.estimated_cost_usd }}</div>
+            </div>
+            <div class="cost-card">
+              <div class="cost-label">PROJECTED MONTHLY</div>
+              <div class="cost-value amber">${{ aiCost.estimated_monthly_cost }}</div>
+            </div>
+            <div class="cost-card">
+              <div class="cost-label">CACHE SAVINGS</div>
+              <div class="cost-value green">{{ aiCost.savings_from_cache }}</div>
+            </div>
+          </div>
+
+          <div v-if="aiCost" class="cost-insight">
+            <div class="ci-icon">🤖</div>
+            <div class="ci-text">
+              كل مكالمة AI تكلف ~${{ (aiCost.estimated_cost_usd / (aiCost.calls_this_week || 1)).toFixed(4) }} — الكاش يوفر وقتاً وتكلفة.
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ===== COMPLAINTS ===== -->
-      <section v-show="cur==='complaints'" class="body pad">
-        <div class="card">
-          <h3>📣 الشكاوى والاقتراحات</h3>
-          <div v-if="complaintsLoading" class="empty">⏳ تحميل...</div>
-          <div v-else-if="!complaints.length" class="empty">لا توجد شكاوى</div>
-          <div v-else class="list-col">
-            <div v-for="c in complaints" :key="c.id" class="complaint-item">
-              <div class="cpl-header">
-                <div class="cpl-meta">
-                  <span :class="['type-badge', c.type]">{{ {complaint:'شكوى',suggestion:'اقتراح',bug:'مشكلة'}[c.type] }}</span>
-                  <span style="color:var(--t2);font-size:12px">{{ c.users?.full_name }}</span>
-                  <span style="color:var(--t2);font-size:12px">{{ fmtDate(c.created_at) }}</span>
-                  <span :class="['status-badge', c.status]">{{ {pending:'معلق',reviewed:'قيد المراجعة',resolved:'محلول'}[c.status] }}</span>
-                </div>
+      <!-- ════ CHURN RISK ════ -->
+      <section v-show="cur === 'churn'" class="intel-body">
+        <div class="intel-panel">
+          <div class="panel-header">
+            <span class="panel-title">⚠️ CHURN RISK ASSESSMENT — THREAT MATRIX</span>
+            <button class="intel-btn sm" @click="loadChurn" :disabled="churnLoading">
+              <span v-if="churnLoading" class="spin-icon">⟳</span>
+              <span v-else>🔍 ANALYZE</span>
+            </button>
+          </div>
+
+          <div v-if="!churn && !churnLoading" class="scan-prompt">
+            <div class="scan-icon">⚠️</div>
+            <p>حلّل مخاطر إلغاء اشتراك المدارس</p>
+          </div>
+
+          <div v-if="churnLoading" class="scanning-anim">
+            <div class="scan-line" />
+            <p class="scan-text">/// ANALYZING THREAT VECTORS...</p>
+          </div>
+
+          <div v-if="churn && !churn.at_risk_schools?.length" class="all-clear">
+            <span>✅</span>
+            <span>ALL SCHOOLS OPERATIONAL — NO CHURN RISK DETECTED</span>
+          </div>
+
+          <div v-if="churn" class="threat-matrix">
+            <div v-for="s in churn.at_risk_schools" :key="s.school_id"
+              :class="['threat-row', s.risk_level]">
+              <div class="threat-level-indicator" :class="s.risk_level">
+                {{ s.risk_level === 'high' ? '🔴 HIGH' : '🟡 MED' }}
               </div>
-              <h4>{{ c.title }}</h4>
-              <p style="color:var(--t2);font-size:13px">{{ c.content }}</p>
+              <div class="threat-name">{{ s.school_name }}</div>
+              <div class="threat-stats">
+                <span>INACTIVE: <b>{{ s.inactive_pct }}%</b></span>
+                <span>USERS: <b>{{ s.users ?? '—' }}</b></span>
+              </div>
+              <div class="threat-bar-wrap">
+                <div class="threat-fill"
+                  :style="`width: ${s.inactive_pct}%; background: ${s.risk_level === 'high' ? '#ef4444' : '#fbbf24'}`" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ BROADCAST ════ -->
+      <section v-show="cur === 'broadcast'" class="intel-body">
+        <div class="intel-panel">
+          <div class="panel-header">
+            <span class="panel-title">📡 BROADCAST TRANSMISSION — PLATFORM-WIDE</span>
+          </div>
+
+          <div class="broadcast-form">
+            <div class="bf-field">
+              <label class="bf-label">/// TRANSMISSION TITLE</label>
+              <input v-model="bcTitle" class="intel-input" placeholder="عنوان الرسالة..." />
+            </div>
+            <div class="bf-field">
+              <label class="bf-label">/// MESSAGE PAYLOAD</label>
+              <textarea v-model="bcContent" class="intel-input ta" rows="6"
+                placeholder="محتوى الرسالة للبث على المنصة..."></textarea>
+            </div>
+            <div class="bf-actions">
+              <button class="intel-btn primary" @click="sendBroadcast" :disabled="bcLoading">
+                <span v-if="bcLoading" class="spin-icon">⟳</span>
+                <span v-else>📡 TRANSMIT NOW</span>
+              </button>
+              <div class="bf-hint">
+                ستصل الرسالة لجميع مستخدمي المنصة فوراً
+              </div>
+            </div>
+            <div v-if="bcMsg" class="bc-confirm">
+              <span>✅</span> {{ bcMsg }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ COMPLAINTS — Field Reports ════ -->
+      <section v-show="cur === 'complaints'" class="intel-body">
+        <div class="intel-panel">
+          <div class="panel-header">
+            <span class="panel-title">📋 FIELD REPORTS — COMPLAINTS & SUGGESTIONS</span>
+            <span class="panel-count" v-if="pendingComplaints > 0">
+              🔴 {{ pendingComplaints }} UNRESOLVED
+            </span>
+          </div>
+
+          <div v-if="complaintsLoading" class="scanning-anim">
+            <div class="scan-line" />
+            <p class="scan-text">/// RETRIEVING FIELD REPORTS...</p>
+          </div>
+
+          <div v-else-if="!complaints.length" class="all-clear">
+            <span>✅</span>
+            <span>NO PENDING FIELD REPORTS</span>
+          </div>
+
+          <div v-else class="reports-list">
+            <div v-for="c in complaints" :key="c.id"
+              :class="['report-card', c.status]">
+              <div class="report-header">
+                <span :class="['report-type', c.type]">
+                  {{ { complaint: '🔴 COMPLAINT', suggestion: '🟢 SUGGESTION', bug: '🟡 BUG REPORT' }[c.type] }}
+                </span>
+                <span class="report-meta">{{ c.users?.full_name }}</span>
+                <span class="report-meta">{{ fmtDate(c.created_at) }}</span>
+                <span :class="['report-status', c.status]">
+                  {{ { pending: '⏳ PENDING', reviewed: '🔵 IN REVIEW', resolved: '✅ RESOLVED' }[c.status] }}
+                </span>
+              </div>
+              <div class="report-title">{{ c.title }}</div>
+              <div class="report-content">{{ c.content }}</div>
+
+              <div v-if="c.response && respondingTo !== c.id" class="report-response">
+                <span class="rr-label">/// OWNER RESPONSE:</span>
+                <span>{{ c.response }}</span>
+              </div>
+
               <div v-if="respondingTo === c.id" class="respond-form">
-                <select v-model="respondStatus" class="inp sm">
-                  <option value="reviewed">قيد المراجعة</option>
-                  <option value="resolved">محلول</option>
+                <select v-model="respondStatus" class="intel-input sm">
+                  <option value="reviewed">IN REVIEW</option>
+                  <option value="resolved">RESOLVED</option>
                 </select>
-                <textarea v-model="respondText" class="inp" rows="3" placeholder="ردك..."></textarea>
-                <div class="row-gap">
-                  <button class="btn-p" @click="sendResponse(c.id)">إرسال الرد</button>
-                  <button class="btn-o" @click="respondingTo=null">إلغاء</button>
+                <textarea v-model="respondText" class="intel-input ta" rows="3"
+                  placeholder="ردك على البلاغ..." />
+                <div style="display:flex;gap:10px;margin-top:8px">
+                  <button class="intel-btn primary sm" @click="sendResponse(c.id)">📤 TRANSMIT RESPONSE</button>
+                  <button class="intel-btn ghost sm" @click="respondingTo = null">✕ CANCEL</button>
                 </div>
               </div>
-              <div v-else-if="c.response" class="response-box">
-                <p style="color:var(--t2);font-size:12px">رد المالك:</p>
-                <p style="font-size:13px">{{ c.response }}</p>
-              </div>
-              <button v-if="respondingTo!==c.id" class="btn-s" style="margin-top:10px" @click="respondingTo=c.id;respondText=c.response||'';respondStatus=c.status">رد</button>
+              <button v-else class="intel-btn ghost sm" style="margin-top:12px"
+                @click="respondingTo = c.id; respondText = c.response || ''; respondStatus = c.status">
+                💬 RESPOND
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ===== 💓 PULSE ===== -->
-      <section v-show="cur==='pulse'" class="body pad">
-        <div class="card">
-          <h3>💓 نبض المنصة لحظياً</h3>
-          <button class="btn-p" @click="loadPulse" :disabled="pulseLoading">{{ pulseLoading?'⏳':'🔄 تحديث' }}</button>
-          <div v-if="pulse" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px">
-            <div class="card"><b>👥 إجمالي المستخدمين</b><div style="font-size:32px;color:var(--accent)">{{ pulse.total_users }}</div></div>
-            <div class="card"><b>🟢 نشط اليوم</b><div style="font-size:32px;color:#10b981">{{ pulse.active_today }}</div></div>
-            <div class="card"><b>📅 نشط هذا الأسبوع</b><div style="font-size:32px;color:#10b981">{{ pulse.active_this_week }}</div></div>
-            <div class="card"><b>🤖 استدعاءات AI</b><div style="font-size:32px;color:#a855f7">{{ pulse.ai_calls_week }}</div></div>
-            <div class="card"><b>📣 شكاوى مفتوحة</b><div style="font-size:32px;color:#ef4444">{{ pulse.open_complaints }}</div></div>
-            <div class="card"><b>💪 درجة الصحة</b><div style="font-size:32px;color:#fbbf24">{{ pulse.health_score }}/100</div></div>
+      <!-- ════ USERS — Agent Database ════ -->
+      <section v-show="cur === 'users'" class="intel-body">
+        <div class="intel-panel">
+          <div class="panel-header">
+            <span class="panel-title">👥 AGENT DATABASE — USER REGISTRY</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="panel-count">{{ filteredUsers.length }}/{{ users.length }}</span>
+              <input v-model="userSearch" class="intel-input sm" style="width:160px" placeholder="🔍 SEARCH..." />
+            </div>
           </div>
-        </div>
-      </section>
 
-      <!-- ===== 💰 AI COST ===== -->
-      <section v-show="cur==='aicost'" class="body pad">
-        <div class="card">
-          <h3>💰 تقدير تكلفة AI</h3>
-          <button class="btn-p" @click="loadAiCost" :disabled="aiCostLoading">{{ aiCostLoading?'⏳':'📊 احسب' }}</button>
-          <div v-if="aiCost" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-            <div class="card"><b>📞 الاستدعاءات هذا الأسبوع</b><div style="font-size:28px;color:var(--accent)">{{ aiCost.calls_this_week }}</div></div>
-            <div class="card"><b>💵 التكلفة الأسبوعية</b><div style="font-size:28px;color:#10b981">${{ aiCost.estimated_cost_usd }}</div></div>
-            <div class="card"><b>📅 تقدير شهري</b><div style="font-size:28px;color:#fbbf24">${{ aiCost.estimated_monthly_cost }}</div></div>
-            <div class="card"><b>♻️ توفير من الكاش</b><div style="font-size:18px;color:#10b981">{{ aiCost.savings_from_cache }}</div></div>
+          <div v-if="usersLoading" class="scanning-anim">
+            <div class="scan-line" />
+            <p class="scan-text">/// QUERYING USER DATABASE...</p>
           </div>
-        </div>
-      </section>
 
-      <!-- ===== ⚠️ CHURN ===== -->
-      <section v-show="cur==='churn'" class="body pad">
-        <div class="card">
-          <h3>⚠️ مخاطر إلغاء اشتراك المدارس</h3>
-          <button class="btn-p" @click="loadChurn" :disabled="churnLoading">{{ churnLoading?'⏳':'🔍 تحليل' }}</button>
-          <div v-if="churn" style="margin-top:16px">
-            <div v-if="!churn.at_risk_schools?.length" style="color:#10b981">✅ لا توجد مدارس في خطر الإلغاء حالياً</div>
-            <div v-for="s in (churn.at_risk_schools||[])" :key="s.school_id" class="card" :style="{margin:'8px 0',borderRight:`4px solid ${s.risk_level==='high'?'#ef4444':'#fbbf24'}`}">
-              <h4>{{ s.school_name }}</h4>
-              <p>نسبة عدم النشاط: <b style="color:#ef4444">{{ s.inactive_pct }}%</b></p>
-              <p>مستوى الخطر: <span :style="{color:s.risk_level==='high'?'#ef4444':'#fbbf24'}">{{ s.risk_level==='high'?'🔴 عالي':'🟡 متوسط' }}</span></p>
+          <div v-else class="agents-table">
+            <div class="agents-thead">
+              <span>AGENT ID</span>
+              <span>NAME</span>
+              <span>ROLE</span>
+              <span>UNIT</span>
+              <span>STATUS</span>
+              <span>ACTION</span>
+            </div>
+            <div v-for="(u, i) in filteredUsers" :key="u.id" class="agent-row">
+              <span class="agent-index">[{{ String(i + 1).padStart(3, '0') }}]</span>
+              <span class="agent-name">{{ u.full_name }}</span>
+              <span :class="['agent-role', u.role]">
+                {{ { manager: '🏛️ MGR', admin: '🛡️ ADM', teacher: '📖 TCH', student: '🎓 STU', owner: '👑 OWN' }[u.role] || u.role }}
+              </span>
+              <span class="agent-school">{{ u.schools?.name || '—' }}</span>
+              <span :class="['agent-status', u.is_active ? 'online' : 'offline']">
+                <span class="status-dot" />
+                {{ u.is_active ? 'ACTIVE' : 'SUSPENDED' }}
+              </span>
+              <button :class="['intel-btn', 'sm', u.is_active ? 'danger' : 'success']"
+                @click="toggleUser(u.id)">
+                {{ u.is_active ? 'SUSPEND' : 'ACTIVATE' }}
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ===== 📢 BROADCAST ===== -->
-      <section v-show="cur==='broadcast'" class="body pad">
-        <div class="card">
-          <h3>📢 بث رسالة لكل المنصة</h3>
-          <input v-model="bcTitle" class="inp" placeholder="عنوان الإعلان" style="width:100%;margin-bottom:8px" />
-          <textarea v-model="bcContent" class="inp" rows="5" placeholder="محتوى الرسالة..." style="width:100%;margin-bottom:8px"></textarea>
-          <button class="btn-p" @click="sendBroadcast" :disabled="bcLoading">{{ bcLoading?'⏳':'📡 بث الآن' }}</button>
-          <div v-if="bcMsg" style="margin-top:12px;color:#10b981">{{ bcMsg }}</div>
-        </div>
-      </section>
-
-      <!-- ===== USERS ===== -->
-      <section v-show="cur==='users'" class="body pad">
-        <div class="card">
-          <div class="row-sb">
-            <h3>👥 كل المستخدمين</h3>
-            <input v-model="userSearch" class="inp" style="width:200px" placeholder="بحث..." />
-          </div>
-          <div v-if="usersLoading" class="empty">⏳ تحميل...</div>
-          <div v-else class="list-col">
-            <div v-for="u in filteredUsers" :key="u.id" class="list-item">
-              <div style="flex:1">
-                <h4>{{ u.full_name }}</h4>
-                <div class="meta">
-                  <span class="role-tag" :class="u.role">{{ {manager:'مدير',admin:'إداري',teacher:'معلم',student:'طالب'}[u.role]||u.role }}</span>
-                  <span style="color:var(--t2);font-size:12px">{{ u.email }}</span>
-                  <span v-if="u.schools" style="color:var(--t2);font-size:12px">🏫 {{ u.schools?.name }}</span>
-                </div>
+      <!-- ════ SETTINGS ════ -->
+      <section v-show="cur === 'settings'" class="intel-body">
+        <div class="settings-grid">
+          <!-- ملف الضابط -->
+          <div class="intel-panel">
+            <div class="panel-header">
+              <span class="panel-title">👤 OPERATOR PROFILE</span>
+            </div>
+            <div class="profile-card">
+              <div class="profile-avatar-wrap" @click="$refs.ownerAvatarInput?.click()">
+                <img v-if="ownerSettings.avatar_url" :src="ownerSettings.avatar_url" class="profile-av-img" />
+                <div v-else class="profile-av-placeholder">👑</div>
+                <div class="av-overlay">📷</div>
               </div>
-              <div style="display:flex;align-items:center;gap:10px">
-                <span :class="u.is_active?'badge-ok':'badge-warn'" style="font-size:12px">{{ u.is_active?'نشط':'معطل' }}</span>
-                <button class="btn-s" @click="toggleUser(u.id)">{{ u.is_active?'تعطيل':'تفعيل' }}</button>
+              <input ref="ownerAvatarInput" type="file" accept="image/*" style="display:none" @change="onOwnerAvatarUpload" />
+              <div class="profile-info">
+                <div class="pi-name">{{ ownerSettings.full_name }}</div>
+                <div class="pi-email">{{ ownerSettings.email }}</div>
+                <div class="pi-role">👑 OWNER — FULL CLEARANCE</div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      <!-- ===== ⚙️ SETTINGS ===== -->
-      <section v-show="cur==='settings'" class="body pad">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
-          <div class="card">
-            <h3>👤 {{ t('account_info') }}</h3>
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
-              <div style="position:relative;cursor:pointer" @click="$refs.ownerAvatarInput?.click()">
-                <img v-if="ownerSettings.avatar_url" :src="ownerSettings.avatar_url" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #6366f1" />
-                <div v-else style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:24px">👑</div>
-              </div>
-              <div style="flex:1">
-                <input ref="ownerAvatarInput" type="file" accept="image/*" style="display:none" @change="onOwnerAvatarUpload" />
-                <button class="btn-p" style="width:100%" @click="$refs.ownerAvatarInput?.click()">📷 {{ t('upload_avatar') }}</button>
-              </div>
+          <!-- المظهر -->
+          <div class="intel-panel">
+            <div class="panel-header"><span class="panel-title">🎨 INTERFACE THEME</span></div>
+            <div class="theme-selector">
+              <button v-for="th in themes" :key="th.k"
+                :class="['theme-opt', { active: ownerSettings.theme === th.k }]"
+                @click="ownerSettings.theme = th.k; saveOwnerSettings()">
+                <span class="theme-icon">{{ th.i }}</span>
+                <span class="theme-label">{{ th.l }}</span>
+              </button>
             </div>
-            <div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>{{ t('full_name') }}:</b> {{ ownerSettings.full_name }}</div>
-            <div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>{{ t('email') }}:</b> <span style="direction:ltr">{{ ownerSettings.email }}</span></div>
-            <div style="padding:8px 0"><b>الدور:</b> 👑 {{ t('role_owner') }}</div>
+            <label class="settings-label">DISPLAY INTENSITY: {{ ownerSettings.brightness }}%</label>
+            <input type="range" v-model.number="ownerSettings.brightness" @change="saveOwnerSettings"
+              min="20" max="100" class="intel-range" />
           </div>
 
-          <div class="card">
-            <h3>🎨 {{ t('appearance') }}</h3>
-            <div style="margin-bottom:14px">
-              <label style="display:block;margin-bottom:6px;color:var(--text2);font-size:13px">{{ t('theme') }}</label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button v-for="th in [{k:'dark',l:t('theme_dark'),i:'🌑'},{k:'light',l:t('theme_light'),i:'☀️'},{k:'library',l:t('theme_library'),i:'📚'}]"
-                        :key="th.k" @click="ownerSettings.theme=th.k; saveOwnerSettings()"
-                        :style="{padding:'10px 16px',borderRadius:'10px',border:`2px solid ${ownerSettings.theme===th.k?'#6366f1':'var(--border)'}`,background:ownerSettings.theme===th.k?'rgba(99,102,241,.2)':'var(--card)',color:'var(--text)',cursor:'pointer',fontWeight:'600'}">
-                  {{ th.i }} {{ th.l }}
-                </button>
-              </div>
-            </div>
-            <div style="margin-bottom:14px">
-              <label style="display:block;margin-bottom:6px;color:var(--text2);font-size:13px">☀️ {{ t('brightness') }}: {{ ownerSettings.brightness }}%</label>
-              <input type="range" v-model.number="ownerSettings.brightness" @change="saveOwnerSettings" min="20" max="100" style="width:100%" />
-            </div>
-          </div>
-
-          <div class="card">
-            <h3>🌐 {{ t('language') }}</h3>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+          <!-- اللغة -->
+          <div class="intel-panel">
+            <div class="panel-header"><span class="panel-title">🌐 LANGUAGE PROTOCOL</span></div>
+            <div class="lang-grid">
               <button v-for="(L, code) in languages" :key="code"
-                      @click="changeLang(code)"
-                      :style="{padding:'10px',borderRadius:'10px',border:`2px solid ${ownerSettings.language===code?'#6366f1':'var(--border)'}`,background:ownerSettings.language===code?'rgba(99,102,241,.2)':'var(--card)',color:'var(--text)',cursor:'pointer',fontWeight:'600'}">
+                :class="['lang-opt', { active: ownerSettings.language === code }]"
+                @click="changeLang(code)">
                 {{ L.flag }} {{ L.name }}
               </button>
             </div>
           </div>
 
-          <div class="card">
-            <h3>🔔 {{ t('notifications') }}</h3>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-              <input type="checkbox" v-model="ownerSettings.notifications_enabled" @change="saveOwnerSettings" />
-              <span>{{ t('notifications_enabled') }}</span>
+          <!-- الإشعارات -->
+          <div class="intel-panel">
+            <div class="panel-header"><span class="panel-title">🔔 ALERT PROTOCOL</span></div>
+            <label class="toggle-row">
+              <div class="intel-toggle">
+                <input type="checkbox" v-model="ownerSettings.notifications_enabled"
+                  @change="saveOwnerSettings" class="toggle-cb" />
+                <span class="toggle-track"><span class="toggle-thumb" /></span>
+              </div>
+              <span class="toggle-label">{{ ownerSettings.notifications_enabled ? '🟢 ALERTS ACTIVE' : '🔴 ALERTS MUTED' }}</span>
             </label>
           </div>
         </div>
-        <p v-if="settingsMsg" style="margin-top:14px;color:#10b981;text-align:center;font-weight:bold">{{ settingsMsg }}</p>
+        <div v-if="settingsMsg" class="settings-saved">{{ settingsMsg }}</div>
       </section>
+
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useRouter } from 'vue-router'
 import { ownerAPI } from '../api.js'
@@ -255,25 +526,163 @@ const { t, setLang } = useI18n()
 const languages = LANGUAGES
 
 const ownerSettings = ref({
-  theme: 'dark', brightness: 100, language: 'ar', notifications_enabled: true,
-  avatar_url: '', email: auth.user?.email || '', full_name: auth.user?.full_name || ''
+  theme: 'dark', brightness: 100, language: 'ar',
+  notifications_enabled: true, avatar_url: '',
+  email: auth.user?.email || '', full_name: auth.user?.full_name || ''
 })
 useTheme(ownerSettings)
 const settingsMsg = ref('')
 
+const themes = [
+  { k: 'dark',    i: '🌙', l: 'DARK INTEL' },
+  { k: 'light',   i: '☀️', l: 'LIGHT OPS' },
+  { k: 'library', i: '📚', l: 'LIBRARY' },
+  { k: 'neon',    i: '💜', l: 'CYBER' },
+]
+
+// ─── Clock ───────────────────────────────────────────────────────────────────
+const currentTime = ref('')
+let clockTimer = null
+function tickClock() {
+  const now = new Date()
+  currentTime.value = now.toTimeString().slice(0, 8)
+}
+tickClock()
+
+// ─── Sections ────────────────────────────────────────────────────────────────
+const sections = computed(() => [
+  { id: 'overview',   icon: '📊', label: 'OVERVIEW' },
+  { id: 'pulse',      icon: '📡', label: 'LIVE PULSE' },
+  { id: 'aicost',     icon: '💰', label: 'AI BUDGET' },
+  { id: 'churn',      icon: '⚠️', label: 'CHURN RISK' },
+  { id: 'broadcast',  icon: '📡', label: 'BROADCAST' },
+  { id: 'complaints', icon: '📋', label: 'FIELD REPORTS' },
+  { id: 'users',      icon: '👥', label: 'USER REGISTRY' },
+  { id: 'settings',   icon: '⚙️', label: 'SETTINGS' },
+])
+const otherSections = computed(() => [
+  { path: '/manager', icon: '🏫',  label: 'MANAGER HUB' },
+  { path: '/admin',   icon: '🛡️', label: 'ADMIN HUB' },
+  { path: '/teacher', icon: '👨‍🏫', label: 'TEACHER HUB' },
+  { path: '/student', icon: '👨‍🎓', label: 'STUDENT HUB' },
+])
+
+const cur = ref('overview')
+const sb  = ref(false)
+const mobileOpen = ref(false)
+const loadingAll = ref(false)
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+const stats = ref(null)
+
+const kpiCards = computed(() => {
+  if (!stats.value) return []
+  const s = stats.value
+  const total = s.total_users || 1
+  return [
+    { label: 'TOTAL USERS',      value: s.total_users,           pct: 100,                              color: '#4a7eff', icon: '👤' },
+    { label: 'STUDENTS',         value: s.role_counts?.student || 0, pct: ((s.role_counts?.student || 0) / total * 100).toFixed(0), color: '#00d4ff', icon: '🎓' },
+    { label: 'TEACHERS',         value: s.role_counts?.teacher || 0, pct: ((s.role_counts?.teacher || 0) / total * 100).toFixed(0), color: '#8b5cf6', icon: '📖' },
+    { label: 'SCHOOLS',          value: s.total_schools,          pct: Math.min(s.total_schools * 10, 100), color: '#10b981', icon: '🏫' },
+    { label: 'AI CONVERSATIONS', value: s.total_conversations,    pct: Math.min((s.total_conversations || 0) / 10, 100), color: '#f59e0b', icon: '🤖' },
+    { label: 'OPEN COMPLAINTS',  value: s.complaint_stats?.pending || 0, pct: Math.min((s.complaint_stats?.pending || 0) * 20, 100), color: '#ef4444', icon: '🚨' },
+  ]
+})
+
+const threatLevel = computed(() => {
+  if (!stats.value) return 'secure'
+  const pending = stats.value.complaint_stats?.pending || 0
+  if (pending >= 5) return 'elevated'
+  if (pending >= 2) return 'advisory'
+  return 'secure'
+})
+
+// ─── Activity Log ─────────────────────────────────────────────────────────────
+const activityLog = ref([])
+
+// ─── Complaints ───────────────────────────────────────────────────────────────
+const complaints = ref([])
+const complaintsLoading = ref(false)
+const respondingTo = ref(null)
+const respondText = ref('')
+const respondStatus = ref('reviewed')
+const pendingComplaints = computed(() => complaints.value.filter(c => c.status === 'pending').length)
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+const users = ref([])
+const usersLoading = ref(false)
+const userSearch = ref('')
+const filteredUsers = computed(() => {
+  if (!userSearch.value) return users.value
+  const q = userSearch.value.toLowerCase()
+  return users.value.filter(u =>
+    u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
+  )
+})
+
+// ─── Pulse ────────────────────────────────────────────────────────────────────
+const pulse = ref(null)
+const pulseLoading = ref(false)
+const pulseMetrics = computed(() => pulse.value ? [
+  { icon: '👥', label: 'TOTAL USERS',      value: pulse.value.total_users,      color: '#4a7eff' },
+  { icon: '🟢', label: 'ACTIVE TODAY',     value: pulse.value.active_today,     color: '#10b981' },
+  { icon: '📅', label: 'ACTIVE WEEK',      value: pulse.value.active_this_week, color: '#10b981' },
+  { icon: '🤖', label: 'AI CALLS / WEEK',  value: pulse.value.ai_calls_week,    color: '#8b5cf6' },
+  { icon: '📣', label: 'OPEN COMPLAINTS',  value: pulse.value.open_complaints,  color: '#ef4444' },
+  { icon: '💪', label: 'HEALTH SCORE',     value: `${pulse.value.health_score}/100`, color: '#fbbf24' },
+] : [])
+
+async function loadPulse() {
+  pulseLoading.value = true
+  try { pulse.value = (await ownerAPI.platformPulse()).data } catch (e) { alert('فشل تحميل البيانات') }
+  pulseLoading.value = false
+}
+
+// ─── AI Cost ─────────────────────────────────────────────────────────────────
+const aiCost = ref(null)
+const aiCostLoading = ref(false)
+async function loadAiCost() {
+  aiCostLoading.value = true
+  try { aiCost.value = (await ownerAPI.aiCost()).data } catch (e) { alert('فشل') }
+  aiCostLoading.value = false
+}
+
+// ─── Churn ────────────────────────────────────────────────────────────────────
+const churn = ref(null)
+const churnLoading = ref(false)
+async function loadChurn() {
+  churnLoading.value = true
+  try { churn.value = (await ownerAPI.churnRisk()).data } catch (e) { alert('فشل') }
+  churnLoading.value = false
+}
+
+// ─── Broadcast ───────────────────────────────────────────────────────────────
+const bcTitle = ref(''), bcContent = ref(''), bcLoading = ref(false), bcMsg = ref('')
+async function sendBroadcast() {
+  if (!bcContent.value.trim()) return alert('اكتب محتوى الرسالة')
+  bcLoading.value = true; bcMsg.value = ''
+  try {
+    const r = await ownerAPI.broadcast({ title: bcTitle.value, content: bcContent.value })
+    bcMsg.value = r.data.message || 'TRANSMISSION SUCCESSFUL'
+    bcTitle.value = ''; bcContent.value = ''
+  } catch { alert('فشل') }
+  bcLoading.value = false
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
 async function loadOwnerSettings() {
   try {
     const r = await ownerAPI.getSettings()
     ownerSettings.value = { ...ownerSettings.value, ...r.data }
     if (ownerSettings.value.language) setLang(ownerSettings.value.language)
-  } catch (e) { console.warn('settings load failed', e) }
+  } catch {}
 }
 async function saveOwnerSettings() {
   try {
     const r = await ownerAPI.updateSettings(ownerSettings.value)
-    settingsMsg.value = r.data.message || '✅'
+    settingsMsg.value = '✅ SETTINGS SAVED'
     setTimeout(() => settingsMsg.value = '', 2500)
-  } catch (e) { settingsMsg.value = '❌ فشل الحفظ' }
+  } catch { settingsMsg.value = '❌ SAVE FAILED' }
 }
 function changeLang(code) {
   ownerSettings.value.language = code
@@ -288,153 +697,1065 @@ function onOwnerAvatarUpload(e) {
   r.readAsDataURL(file)
 }
 
-const sections = computed(() => [
-  {id:'overview',icon:'📊',label:t('overview')},
-  {id:'pulse',icon:'💓',label:'نبض المنصة'},
-  {id:'aicost',icon:'💰',label:'تكلفة AI'},
-  {id:'churn',icon:'⚠️',label:'مخاطر الإلغاء'},
-  {id:'broadcast',icon:'📢',label:'بث رسالة'},
-  {id:'complaints',icon:'📣',label:t('complaints')},
-  {id:'users',icon:'👥',label:t('all_users')},
-  {id:'settings',icon:'⚙️',label:t('settings')},
-])
-const otherSections = [
-  {path:'/manager',icon:'🏫',label:'لوحة المدير'},
-  {path:'/admin',icon:'🛡️',label:'لوحة المشرف الإداري'},
-  {path:'/teacher',icon:'👨‍🏫',label:'لوحة المعلم'},
-  {path:'/student',icon:'👨‍🎓',label:'لوحة الطالب'},
-]
-
-const cur = ref('overview')
-const sb = ref(false)
-const mobileOpen = ref(false)
-const stats = ref(null)
-const complaints = ref([])
-const complaintsLoading = ref(false)
-const users = ref([])
-const usersLoading = ref(false)
-const userSearch = ref('')
-const respondingTo = ref(null)
-const respondText = ref('')
-const respondStatus = ref('reviewed')
-
-const filteredUsers = computed(() => {
-  if (!userSearch.value) return users.value
-  const q = userSearch.value.toLowerCase()
-  return users.value.filter(u => u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
-})
-
-onMounted(async () => {
-  await loadOwnerSettings()
-  try { stats.value=(await ownerAPI.getStats()).data } catch {}
-  complaintsLoading.value=true
-  try { complaints.value=(await ownerAPI.getComplaints()).data } catch {}
-  finally { complaintsLoading.value=false }
-  usersLoading.value=true
-  try { users.value=(await ownerAPI.getUsers()).data } catch {}
-  finally { usersLoading.value=false }
-})
-
+// ─── Actions ─────────────────────────────────────────────────────────────────
 async function sendResponse(id) {
   try {
-    await ownerAPI.respondComplaint(id, { status:respondStatus.value, response:respondText.value })
-    const c = complaints.value.find(c=>c.id===id)
-    if (c) { c.status=respondStatus.value; c.response=respondText.value }
-    respondingTo.value=null
+    await ownerAPI.respondComplaint(id, { status: respondStatus.value, response: respondText.value })
+    const c = complaints.value.find(c => c.id === id)
+    if (c) { c.status = respondStatus.value; c.response = respondText.value }
+    respondingTo.value = null
   } catch {}
 }
-
 async function toggleUser(id) {
   try {
-    const r=await ownerAPI.toggleUser(id)
-    const u=users.value.find(u=>u.id===id)
-    if(u) u.is_active=r.data.is_active
+    const r = await ownerAPI.toggleUser(id)
+    const u = users.value.find(u => u.id === id)
+    if (u) u.is_active = r.data.is_active
   } catch {}
 }
-
 async function doLogout() { await auth.logout(); router.push('/login') }
-function fmtDate(d) { return d?new Date(d).toLocaleDateString('ar-SA'):'' }
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString('ar-SA') : '' }
 
-// 👑 ميزات المالك المتقدمة
-const pulse = ref(null), pulseLoading = ref(false)
-async function loadPulse() { pulseLoading.value=true; try { pulse.value=(await ownerAPI.platformPulse()).data } catch(e){alert('فشل')} pulseLoading.value=false }
-const aiCost = ref(null), aiCostLoading = ref(false)
-async function loadAiCost() { aiCostLoading.value=true; try { aiCost.value=(await ownerAPI.aiCost()).data } catch(e){alert('فشل')} aiCostLoading.value=false }
-const churn = ref(null), churnLoading = ref(false)
-async function loadChurn() { churnLoading.value=true; try { churn.value=(await ownerAPI.churnRisk()).data } catch(e){alert('فشل')} churnLoading.value=false }
-const bcTitle = ref(''), bcContent = ref(''), bcLoading = ref(false), bcMsg = ref('')
-async function sendBroadcast() {
-  if (!bcContent.value.trim()) return alert('اكتب محتوى الرسالة')
-  bcLoading.value=true; bcMsg.value=''
-  try { const r = await ownerAPI.broadcast({title:bcTitle.value,content:bcContent.value}); bcMsg.value=r.data.message; bcTitle.value=''; bcContent.value='' }
-  catch(e){alert('فشل')} bcLoading.value=false
+async function refreshAll() {
+  loadingAll.value = true
+  try { stats.value = (await ownerAPI.getStats()).data } catch {}
+  loadingAll.value = false
+  // بناء سجل النشاط الوهمي من البيانات
+  buildActivityLog()
 }
+
+function buildActivityLog() {
+  if (!stats.value) return
+  const logs = []
+  const now = new Date()
+  if (stats.value.total_conversations)
+    logs.push({ id: 1, time: fmtTime(now, -2), tag: 'AI', type: 'ai', msg: `${stats.value.total_conversations} محادثة AI مسجّلة` })
+  if (stats.value.total_users)
+    logs.push({ id: 2, time: fmtTime(now, -5), tag: 'SYS', type: 'sys', msg: `${stats.value.total_users} مستخدم نشط في النظام` })
+  if (stats.value.complaint_stats?.pending)
+    logs.push({ id: 3, time: fmtTime(now, -10), tag: 'ALERT', type: 'alert', msg: `${stats.value.complaint_stats.pending} شكوى تنتظر ردك` })
+  if (stats.value.total_schools)
+    logs.push({ id: 4, time: fmtTime(now, -15), tag: 'SYS', type: 'sys', msg: `${stats.value.total_schools} مدرسة متصلة` })
+  activityLog.value = logs
+}
+
+function fmtTime(date, offsetMins) {
+  const d = new Date(date.getTime() + offsetMins * 60000)
+  return d.toTimeString().slice(0, 5)
+}
+
+// ─── Mount ────────────────────────────────────────────────────────────────────
+onMounted(async () => {
+  clockTimer = setInterval(tickClock, 1000)
+  await loadOwnerSettings()
+  await refreshAll()
+
+  complaintsLoading.value = true
+  try { complaints.value = (await ownerAPI.getComplaints()).data } catch {}
+  finally { complaintsLoading.value = false }
+
+  usersLoading.value = true
+  try { users.value = (await ownerAPI.getUsers()).data } catch {}
+  finally { usersLoading.value = false }
+})
+onUnmounted(() => clearInterval(clockTimer))
 </script>
 
 <style scoped>
-.hub{display:flex;height:100vh;overflow:hidden;font-family:'Segoe UI','Cairo',sans-serif;direction:rtl;background:var(--bg1);}
-.sidebar{width:220px;min-width:220px;background:var(--sidebar-bg);border-left:var(--sidebar-border);display:flex;flex-direction:column;transition:width .25s,min-width .25s;overflow:hidden;backdrop-filter:var(--sidebar-blur);position:relative;z-index:10;}
-.sidebar.collapsed{width:60px;min-width:60px;}
-.sb-header{padding:14px;cursor:pointer;border-bottom:1px solid var(--border);}
-.brand{display:flex;align-items:center;gap:10px;}
-.b-icon{width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#a855f7,#00c8ff);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;}
-.b-name{font-size:15px;font-weight:800;color:var(--text);}
-.sb-nav{flex:1;padding:8px;overflow-y:auto;}
-.nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:10px;background:none;border:none;color:var(--t2);cursor:pointer;font-size:13px;transition:all .15s;text-align:right;white-space:nowrap;}
-.nav-item:hover{background:rgba(0,255,159,.08);color:var(--text);}
-.nav-item.active{background:rgba(0,255,159,.12);color:var(--accent);box-shadow:inset 0 0 12px rgba(0,255,159,.1);}
-.sb-footer{padding:12px;border-top:1px solid var(--border);}
-.logout-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;border-radius:8px;padding:8px;cursor:pointer;font-size:13px;width:100%;}
-.main{flex:1;display:flex;flex-direction:column;background:transparent;overflow:hidden;position:relative;z-index:10;}
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:var(--topbar-border);background:var(--topbar-bg);backdrop-filter:var(--sidebar-blur);}
-.top-bar h2{color:var(--text);margin:0;font-size:17px;}
-.chip{display:flex;align-items:center;gap:10px;color:var(--t2);font-size:14px;}
-.av{width:32px;height:32px;background:linear-gradient(135deg,#a855f7,#00c8ff);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;}
-.body{flex:1;overflow-y:auto;}.body.pad{padding:24px;}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;backdrop-filter:blur(10px);transition:box-shadow .2s;}.card:hover{box-shadow:var(--glow);}.card h3{color:var(--text);margin:0 0 20px;font-size:16px;}
-.mt{margin-top:16px;}
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
-.sc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;}
-.sc.warn{border-color:rgba(234,179,8,.3);background:rgba(234,179,8,.05);}
-.sn{font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;}
-.sl{color:var(--t2);font-size:12px;}
-.row-sb{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
-.row-gap{display:flex;gap:10px;flex-wrap:wrap;}
-.list-col{display:flex;flex-direction:column;gap:10px;}
-.list-item{display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;}
-.list-item h4{color:var(--text);margin:0 0 4px;}
-.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-.badge-ok{background:rgba(34,197,94,.15);color:#4ade80;border-radius:6px;padding:3px 8px;font-size:12px;}
-.badge-warn{background:rgba(234,179,8,.15);color:#facc15;border-radius:6px;padding:3px 8px;font-size:12px;}
-.complaint-item{padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;}
-.cpl-header{margin-bottom:10px;}
-.cpl-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-.complaint-item h4{color:var(--text);margin:0 0 6px;}
-.type-badge{border-radius:6px;padding:2px 8px;font-size:11px;}
-.type-badge.complaint{background:rgba(239,68,68,.15);color:#f87171;}
-.type-badge.suggestion{background:rgba(34,197,94,.15);color:#4ade80;}
-.type-badge.bug{background:rgba(234,179,8,.15);color:#facc15;}
-.status-badge{border-radius:6px;padding:2px 8px;font-size:11px;}
-.status-badge.pending{background:rgba(234,179,8,.15);color:#facc15;}
-.status-badge.reviewed{background:rgba(99,102,241,.15);color:#818cf8;}
-.status-badge.resolved{background:rgba(34,197,94,.15);color:#4ade80;}
-.respond-form{margin-top:12px;display:flex;flex-direction:column;gap:10px;}
-.response-box{margin-top:10px;padding:12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;}
-.role-tag{border-radius:5px;padding:2px 7px;font-size:11px;}
-.role-tag.manager{background:rgba(239,68,68,.15);color:#f87171;}
-.role-tag.teacher{background:rgba(99,102,241,.15);color:#818cf8;}
-.role-tag.student{background:rgba(34,197,94,.15);color:#4ade80;}
-.role-tag.admin{background:rgba(234,179,8,.15);color:#facc15;}
-.empty{text-align:center;padding:40px;color:var(--t2);font-size:14px;}
-.inp{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px 14px;font-size:14px;font-family:inherit;text-align:right;}
-.inp.sm{padding:8px 12px;font-size:13px;}
-.inp:focus{outline:none;border-color:var(--accent);}
-select.inp{cursor:pointer;}textarea.inp{resize:vertical;}
-.btn-p{background:linear-gradient(135deg,var(--accent),#00c8ff);color:#000;border:none;border-radius:10px;padding:11px 18px;cursor:pointer;font-size:14px;font-weight:700;box-shadow:0 0 14px rgba(0,255,159,.2);transition:box-shadow .15s,opacity .15s;}
-.btn-p:hover:not(:disabled){opacity:.88;box-shadow:0 0 24px rgba(0,255,159,.35);}
-.btn-o{background:transparent;border:1px solid var(--border);color:var(--t2);border-radius:10px;padding:11px 18px;cursor:pointer;font-size:14px;transition:all .15s;}
-.btn-o:hover{border-color:var(--accent);color:var(--accent);}
-.btn-s{background:var(--bg3);border:1px solid var(--border);color:var(--t2);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;transition:all .15s;}
-.btn-s:hover{border-color:var(--accent);color:var(--accent);}
-@media(max-width:768px){.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}}
+/* ════════════════════════════════════════
+   INTELLIGENCE HUB — CONTROL ROOM DESIGN
+════════════════════════════════════════ */
+
+/* ── Layout ── */
+.intel-hub {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Courier New', 'Tajawal', monospace;
+  direction: rtl;
+  background: #000a0f;
+  position: relative;
+}
+
+/* Scanlines Effect */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 65, 0.015) 2px,
+    rgba(0, 255, 65, 0.015) 4px
+  );
+  animation: scanlines-move 8s linear infinite;
+}
+@keyframes scanlines-move {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+
+/* Grid Overlay */
+.grid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Mobile toggle */
+.mobile-toggle {
+  display: none;
+  position: fixed; top: 12px; right: 12px; z-index: 100;
+  background: rgba(0,255,65,0.1); border: 1px solid rgba(0,255,65,0.3);
+  color: #00ff41; border-radius: 6px; padding: 8px 12px; cursor: pointer;
+  font-size: 16px;
+}
+.mobile-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(0,0,0,0.7);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.mobile-overlay.open { opacity: 1; pointer-events: all; }
+
+/* ── Sidebar ── */
+.intel-sidebar {
+  width: 230px;
+  min-width: 230px;
+  background: rgba(0, 10, 15, 0.95);
+  border-left: 1px solid rgba(0,255,65,0.2);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.25s, min-width 0.25s;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+  box-shadow: 4px 0 24px rgba(0,255,65,0.08);
+}
+.intel-sidebar.collapsed { width: 60px; min-width: 60px; }
+
+/* Brand */
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 12px;
+  border-bottom: 1px solid rgba(0,255,65,0.15);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.sb-brand:hover { background: rgba(0,255,65,0.05); }
+.brand-orb {
+  position: relative;
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+}
+.brand-glyph {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #00ff41, #00c8ff);
+  border-radius: 9px;
+  font-weight: 900; font-size: 18px; color: #000;
+  box-shadow: 0 0 16px rgba(0,255,65,0.5);
+}
+.brand-ring {
+  position: absolute;
+  inset: -3px;
+  border: 1px solid rgba(0,255,65,0.4);
+  border-radius: 12px;
+  animation: ring-pulse 2s ease-in-out infinite;
+}
+@keyframes ring-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+.brand-name {
+  font-size: 14px; font-weight: 900; color: #00ff41;
+  letter-spacing: 3px;
+}
+.brand-level {
+  font-size: 9px; color: rgba(0,255,65,0.5);
+  letter-spacing: 1px; margin-top: 2px;
+}
+
+/* Status strip */
+.sb-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 10px;
+  color: rgba(0,255,65,0.6);
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgba(0,255,65,0.08);
+}
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #00ff41;
+  box-shadow: 0 0 6px #00ff41;
+  animation: blink-dot 1.5s ease-in-out infinite;
+}
+@keyframes blink-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.status-text { flex: 1; }
+.status-time { font-variant-numeric: tabular-nums; }
+
+/* Nav */
+.sb-nav { flex: 1; padding: 8px; overflow-y: auto; }
+.sb-section-label {
+  font-size: 9px; color: rgba(0,255,65,0.35);
+  padding: 8px 8px 4px;
+  letter-spacing: 2px;
+}
+.sb-divider {
+  font-size: 9px; color: rgba(0,200,255,0.35);
+  padding: 10px 8px 4px;
+  letter-spacing: 2px;
+  border-top: 1px solid rgba(0,255,65,0.08);
+  margin-top: 4px;
+}
+.intel-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: none;
+  border: 1px solid transparent;
+  color: rgba(0,255,65,0.5);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.18s;
+  text-align: right;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  position: relative;
+  font-family: inherit;
+}
+.intel-nav-btn:hover {
+  background: rgba(0,255,65,0.06);
+  border-color: rgba(0,255,65,0.15);
+  color: #00ff41;
+}
+.intel-nav-btn.active {
+  background: rgba(0,255,65,0.1);
+  border-color: rgba(0,255,65,0.3);
+  color: #00ff41;
+  box-shadow: inset 0 0 12px rgba(0,255,65,0.08), 0 0 8px rgba(0,255,65,0.1);
+}
+.intel-nav-btn.active::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 20%; bottom: 20%;
+  width: 3px;
+  background: #00ff41;
+  border-radius: 2px;
+  box-shadow: 0 0 8px #00ff41;
+}
+.intel-nav-btn.linked { color: rgba(0,200,255,0.5); }
+.intel-nav-btn.linked:hover { color: #00c8ff; border-color: rgba(0,200,255,0.2); }
+.nav-icon { font-size: 14px; flex-shrink: 0; }
+.nav-label { flex: 1; }
+.nav-badge {
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(239,68,68,0.5);
+}
+.nav-arrow { font-size: 11px; opacity: 0.4; }
+
+/* Footer */
+.sb-footer { padding: 10px; border-top: 1px solid rgba(0,255,65,0.12); }
+.logout-intel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px;
+  border-radius: 7px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #f87171;
+  cursor: pointer;
+  font-size: 12px;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.logout-intel:hover {
+  background: rgba(239,68,68,0.15);
+  border-color: rgba(239,68,68,0.4);
+  box-shadow: 0 0 12px rgba(239,68,68,0.2);
+}
+
+/* ── Main ── */
+.intel-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
+/* Header */
+.intel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: rgba(0, 10, 15, 0.9);
+  border-bottom: 1px solid rgba(0,255,65,0.15);
+  backdrop-filter: blur(12px);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.hdr-left { display: flex; flex-direction: column; gap: 4px; }
+.hdr-breadcrumb { display: flex; align-items: center; gap: 6px; }
+.hdr-crumb-root { color: rgba(0,255,65,0.4); font-size: 11px; letter-spacing: 2px; }
+.hdr-sep { color: rgba(0,255,65,0.3); }
+.hdr-crumb-cur { color: #00ff41; font-size: 11px; letter-spacing: 2px; font-weight: 700; }
+.hdr-classify { display: flex; gap: 8px; flex-wrap: wrap; }
+.classify-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(0,255,65,0.3);
+  color: #00ff41;
+  background: rgba(0,255,65,0.07);
+  letter-spacing: 1px;
+}
+.classify-badge.warn {
+  border-color: rgba(239,68,68,0.4);
+  color: #f87171;
+  background: rgba(239,68,68,0.08);
+  animation: blink-warn 1.5s ease-in-out infinite;
+}
+@keyframes blink-warn {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.hdr-right { display: flex; align-items: center; gap: 14px; }
+.hdr-metric {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: rgba(255,255,255,0.5);
+  letter-spacing: 1px;
+}
+.metric-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  animation: blink-dot 2s ease-in-out infinite;
+}
+.metric-dot.green { background: #00ff41; box-shadow: 0 0 6px #00ff41; }
+.metric-dot.blue  { background: #00c8ff; box-shadow: 0 0 6px #00c8ff; }
+.intel-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #a855f7, #00c8ff);
+  border: 2px solid rgba(0,255,65,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 12px rgba(0,255,65,0.2);
+  overflow: hidden;
+}
+.av-img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Body */
+.intel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mt-4 { margin-top: 8px; }
+
+/* ── Panels ── */
+.intel-panel {
+  background: rgba(0, 12, 20, 0.8);
+  border: 1px solid rgba(0,255,65,0.15);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(0,255,65,0.08);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.intel-panel:hover {
+  border-color: rgba(0,255,65,0.25);
+  box-shadow: 0 0 30px rgba(0,0,0,0.5), 0 0 15px rgba(0,255,65,0.06);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0,255,65,0.1);
+  background: rgba(0,255,65,0.03);
+}
+.panel-title {
+  font-size: 11px;
+  color: rgba(0,255,65,0.7);
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+.panel-count {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 1px;
+}
+
+/* ── Threat Bar ── */
+.threat-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(0,12,20,0.8);
+  border: 1px solid rgba(0,255,65,0.1);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.threat-label { font-size: 10px; color: rgba(0,255,65,0.5); letter-spacing: 2px; }
+.threat-levels { display: flex; gap: 8px; flex: 1; }
+.tlevel {
+  font-size: 11px; padding: 4px 10px; border-radius: 4px;
+  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.3);
+  border: 1px solid transparent;
+  letter-spacing: 0.5px;
+  transition: all 0.3s;
+}
+.tlevel.active {
+  color: #fff;
+  border-color: currentColor;
+  box-shadow: 0 0 10px rgba(255,255,255,0.1);
+}
+.tlevel:first-child.active { background: rgba(0,255,65,0.1); border-color: #00ff41; color: #00ff41; }
+.tlevel:nth-child(2).active { background: rgba(251,191,36,0.1); border-color: #fbbf24; color: #fbbf24; }
+.tlevel:nth-child(3).active { background: rgba(239,68,68,0.1); border-color: #ef4444; color: #ef4444; }
+
+/* ── KPI Cards ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.kpi-card {
+  position: relative;
+  background: rgba(0,12,20,0.85);
+  border: 1px solid rgba(var(--kc), 0.15);
+  border-radius: 10px;
+  padding: 16px;
+  overflow: hidden;
+  transition: all 0.25s;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+.kpi-card:hover {
+  border-color: var(--kc);
+  box-shadow: 0 0 20px rgba(0,0,0,0.4), 0 0 12px rgba(var(--kc), 0.15);
+  transform: translateY(-2px);
+}
+.kpi-label {
+  font-size: 9px; color: rgba(255,255,255,0.4);
+  letter-spacing: 2px; margin-bottom: 8px;
+}
+.kpi-value { margin-bottom: 10px; }
+.kpi-num { font-size: 32px; font-weight: 900; }
+.kpi-bar {
+  height: 2px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.kpi-fill {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.8s ease;
+  box-shadow: 0 0 6px currentColor;
+}
+.kpi-icon {
+  position: absolute;
+  top: 12px; left: 12px;
+  font-size: 22px;
+  opacity: 0.12;
+}
+
+/* ── School Table ── */
+.school-table { padding: 8px 0; }
+.school-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0,255,65,0.06);
+  transition: background 0.15s;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.school-row:last-child { border-bottom: none; }
+.school-row:hover { background: rgba(0,255,65,0.03); }
+.school-index { color: rgba(0,255,65,0.3); font-size: 10px; font-family: monospace; flex-shrink: 0; }
+.school-name { flex: 1; color: #e2e8f0; font-weight: 600; min-width: 100px; }
+.school-branch { color: rgba(255,255,255,0.4); font-size: 12px; }
+.school-users, .school-status { flex-shrink: 0; }
+
+/* ── Activity Feed ── */
+.activity-feed { padding: 8px 0; font-size: 12px; }
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(0,255,65,0.05);
+  font-family: 'Courier New', monospace;
+}
+.activity-time { color: rgba(0,255,65,0.4); width: 45px; flex-shrink: 0; font-size: 11px; }
+.activity-type { font-size: 10px; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; letter-spacing: 1px; }
+.activity-type.ai   { background: rgba(139,92,246,0.15); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.3); }
+.activity-type.sys  { background: rgba(0,200,255,0.1); color: #00c8ff; border: 1px solid rgba(0,200,255,0.25); }
+.activity-type.alert{ background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.3); animation: blink-warn 1.5s infinite; }
+.activity-msg { color: rgba(255,255,255,0.5); flex: 1; }
+.empty-feed { padding: 20px 16px; color: rgba(0,255,65,0.3); font-size: 12px; letter-spacing: 1px; }
+
+/* ── Scanning Animation ── */
+.scanning-anim {
+  position: relative;
+  padding: 40px 20px;
+  overflow: hidden;
+  text-align: center;
+}
+.scan-line {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00ff41, transparent);
+  animation: scan-sweep 2s linear infinite;
+  box-shadow: 0 0 12px #00ff41;
+}
+@keyframes scan-sweep {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+.scan-text {
+  color: rgba(0,255,65,0.5);
+  font-size: 12px;
+  letter-spacing: 2px;
+  animation: text-blink 0.8s ease-in-out infinite;
+}
+@keyframes text-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.scan-prompt {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(0,255,65,0.3);
+}
+.scan-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+/* ── Pulse Grid ── */
+.pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+.pulse-metric {
+  position: relative;
+  text-align: center;
+  padding: 20px 12px;
+  background: rgba(0,15,25,0.8);
+  border: 1px solid rgba(var(--pm), 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.25s;
+}
+.pulse-metric:hover {
+  transform: translateY(-3px);
+  border-color: var(--pm);
+  box-shadow: 0 0 16px rgba(var(--pm), 0.15);
+}
+.pm-icon { font-size: 24px; margin-bottom: 8px; }
+.pm-value { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+.pm-label { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+.pm-glow {
+  position: absolute;
+  bottom: 0; left: 0; right: 0; height: 1px;
+  background: var(--pm);
+  box-shadow: 0 0 8px var(--pm);
+}
+
+.health-bar-section {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(0,255,65,0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.hbs-label { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1px; flex-shrink: 0; }
+.hbs-track { flex: 1; height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+.hbs-fill { height: 100%; border-radius: 3px; transition: width 1s ease; box-shadow: 0 0 8px currentColor; }
+.hbs-value { font-size: 20px; font-weight: 900; color: #fbbf24; flex-shrink: 0; }
+
+/* ── Cost Grid ── */
+.cost-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+.cost-card {
+  background: rgba(0,15,25,0.8);
+  border: 1px solid rgba(0,255,65,0.1);
+  border-radius: 10px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+.cost-card:hover { border-color: rgba(0,255,65,0.25); transform: translateY(-2px); }
+.cost-label { font-size: 10px; color: rgba(255,255,255,0.35); letter-spacing: 1.5px; margin-bottom: 8px; }
+.cost-value { font-size: 28px; font-weight: 900; }
+.cost-value.blue { color: #00c8ff; }
+.cost-value.green { color: #00ff41; }
+.cost-value.amber { color: #fbbf24; }
+
+.cost-insight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 16px 16px;
+  padding: 12px 16px;
+  background: rgba(0,255,65,0.04);
+  border: 1px solid rgba(0,255,65,0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+}
+.ci-icon { font-size: 20px; flex-shrink: 0; }
+
+/* ── Threat Matrix ── */
+.all-clear {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 20px;
+  color: #00ff41;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.threat-matrix { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.threat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  flex-wrap: wrap;
+  transition: all 0.2s;
+}
+.threat-row.high { background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.2); }
+.threat-row.medium { background: rgba(251,191,36,0.06); border-color: rgba(251,191,36,0.2); }
+.threat-level-indicator {
+  font-size: 11px; padding: 3px 8px; border-radius: 4px;
+  font-weight: 700; letter-spacing: 1px; flex-shrink: 0;
+}
+.threat-level-indicator.high { background: rgba(239,68,68,0.15); color: #f87171; }
+.threat-level-indicator.medium { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.threat-name { flex: 1; color: #e2e8f0; font-weight: 600; min-width: 100px; }
+.threat-stats { display: flex; gap: 12px; font-size: 12px; color: rgba(255,255,255,0.5); flex-shrink: 0; }
+.threat-bar-wrap { width: 80px; height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+.threat-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+
+/* ── Broadcast Form ── */
+.broadcast-form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.bf-field { display: flex; flex-direction: column; gap: 6px; }
+.bf-label { font-size: 10px; color: rgba(0,255,65,0.5); letter-spacing: 2px; }
+.bf-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.bf-hint { font-size: 11px; color: rgba(255,255,255,0.3); }
+.bc-confirm {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: rgba(0,255,65,0.08);
+  border: 1px solid rgba(0,255,65,0.2);
+  border-radius: 8px;
+  color: #00ff41;
+  font-size: 13px;
+}
+
+/* ── Reports ── */
+.reports-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.report-card {
+  background: rgba(0,15,25,0.8);
+  border: 1px solid rgba(0,255,65,0.1);
+  border-radius: 10px;
+  padding: 14px;
+  transition: all 0.2s;
+}
+.report-card:hover { border-color: rgba(0,255,65,0.2); }
+.report-card.resolved { opacity: 0.7; }
+.report-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.report-type { font-size: 10px; letter-spacing: 1px; font-weight: 700; }
+.report-meta { font-size: 11px; color: rgba(255,255,255,0.35); }
+.report-status { font-size: 10px; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; }
+.report-status.pending { background: rgba(251,191,36,0.1); color: #fbbf24; }
+.report-status.reviewed { background: rgba(99,102,241,0.1); color: #818cf8; }
+.report-status.resolved { background: rgba(0,255,65,0.1); color: #00ff41; }
+.report-title { color: #e2e8f0; font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.report-content { color: rgba(255,255,255,0.5); font-size: 13px; line-height: 1.5; margin-bottom: 8px; }
+.report-response {
+  display: flex; gap: 8px;
+  padding: 8px 12px;
+  background: rgba(99,102,241,0.06);
+  border: 1px solid rgba(99,102,241,0.15);
+  border-radius: 6px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 8px;
+}
+.rr-label { color: rgba(0,255,65,0.5); flex-shrink: 0; letter-spacing: 1px; font-size: 10px; }
+.respond-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+/* ── Agents Table ── */
+.agents-table { overflow-x: auto; }
+.agents-thead {
+  display: grid;
+  grid-template-columns: 60px 1fr 80px 1fr 100px 80px;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 9px;
+  color: rgba(0,255,65,0.4);
+  letter-spacing: 2px;
+  border-bottom: 1px solid rgba(0,255,65,0.1);
+}
+.agent-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 80px 1fr 100px 80px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0,255,65,0.05);
+  font-size: 12px;
+  transition: background 0.15s;
+}
+.agent-row:hover { background: rgba(0,255,65,0.03); }
+.agent-index { color: rgba(0,255,65,0.3); font-family: monospace; font-size: 10px; }
+.agent-name { color: #e2e8f0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-role { font-size: 10px; letter-spacing: 0.5px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+.agent-role.manager { color: #f87171; background: rgba(239,68,68,0.1); }
+.agent-role.teacher { color: #818cf8; background: rgba(99,102,241,0.1); }
+.agent-role.student { color: #00ff41; background: rgba(0,255,65,0.08); }
+.agent-role.admin   { color: #fbbf24; background: rgba(251,191,36,0.1); }
+.agent-role.owner   { color: #a855f7; background: rgba(168,85,247,0.1); }
+.agent-school { color: rgba(255,255,255,0.4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.agent-status {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; letter-spacing: 1px;
+}
+.agent-status .status-dot { width: 5px; height: 5px; }
+.agent-status.online { color: #00ff41; }
+.agent-status.offline { color: #f87171; }
+.agent-status.online .status-dot { background: #00ff41; box-shadow: 0 0 5px #00ff41; animation: blink-dot 2s infinite; }
+.agent-status.offline .status-dot { background: #f87171; animation: none; }
+
+/* ── Settings ── */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+.profile-avatar-wrap {
+  position: relative;
+  width: 64px; height: 64px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.profile-av-img, .profile-av-placeholder {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,255,65,0.3);
+  object-fit: cover;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  background: linear-gradient(135deg, #a855f7, #00c8ff);
+  box-shadow: 0 0 16px rgba(0,255,65,0.2);
+}
+.av-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 20px;
+}
+.profile-avatar-wrap:hover .av-overlay { opacity: 1; }
+.profile-info { flex: 1; }
+.pi-name { color: #e2e8f0; font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+.pi-email { color: rgba(255,255,255,0.4); font-size: 12px; margin-bottom: 4px; direction: ltr; }
+.pi-role { color: #00ff41; font-size: 11px; letter-spacing: 1px; }
+
+.theme-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 12px 16px;
+}
+.theme-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,255,65,0.1);
+  background: rgba(0,15,25,0.8);
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.theme-opt:hover { border-color: rgba(0,255,65,0.25); color: #fff; }
+.theme-opt.active {
+  border-color: #00ff41;
+  background: rgba(0,255,65,0.08);
+  color: #00ff41;
+  box-shadow: 0 0 10px rgba(0,255,65,0.1);
+}
+.theme-icon { font-size: 16px; }
+.theme-label { font-size: 11px; letter-spacing: 1px; }
+
+.settings-label {
+  display: block;
+  font-size: 10px;
+  color: rgba(0,255,65,0.4);
+  letter-spacing: 1.5px;
+  padding: 4px 16px;
+}
+.intel-range {
+  width: calc(100% - 32px);
+  margin: 4px 16px 16px;
+  accent-color: #00ff41;
+  cursor: pointer;
+}
+
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 12px 16px;
+}
+.lang-opt {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,255,65,0.1);
+  background: rgba(0,15,25,0.8);
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.lang-opt:hover { border-color: rgba(0,255,65,0.25); color: #fff; }
+.lang-opt.active {
+  border-color: #00ff41;
+  background: rgba(0,255,65,0.08);
+  color: #00ff41;
+  box-shadow: 0 0 8px rgba(0,255,65,0.1);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+}
+.intel-toggle { position: relative; }
+.toggle-cb { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  display: block;
+  width: 44px; height: 24px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(0,255,65,0.2);
+  border-radius: 12px;
+  position: relative;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+.toggle-cb:checked ~ .toggle-track {
+  background: rgba(0,255,65,0.2);
+  border-color: #00ff41;
+  box-shadow: 0 0 8px rgba(0,255,65,0.3);
+}
+.toggle-thumb {
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 16px; height: 16px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+.toggle-cb:checked ~ .toggle-track .toggle-thumb {
+  right: auto; left: 3px;
+  background: #00ff41;
+  box-shadow: 0 0 6px #00ff41;
+}
+.toggle-label { font-size: 12px; letter-spacing: 1px; color: rgba(255,255,255,0.6); }
+
+.settings-saved {
+  text-align: center;
+  padding: 10px;
+  color: #00ff41;
+  font-size: 12px;
+  letter-spacing: 2px;
+  animation: fade-in 0.3s ease;
+}
+
+/* ── Buttons ── */
+.intel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,255,65,0.3);
+  background: rgba(0,255,65,0.08);
+  color: #00ff41;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.intel-btn:hover:not(:disabled) {
+  background: rgba(0,255,65,0.15);
+  border-color: #00ff41;
+  box-shadow: 0 0 16px rgba(0,255,65,0.2);
+  transform: translateY(-1px);
+}
+.intel-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.intel-btn.sm { padding: 6px 12px; font-size: 11px; }
+.intel-btn.primary {
+  background: linear-gradient(135deg, rgba(0,255,65,0.15), rgba(0,200,255,0.1));
+  border-color: rgba(0,255,65,0.4);
+  box-shadow: 0 0 12px rgba(0,255,65,0.1);
+}
+.intel-btn.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0,255,65,0.25), rgba(0,200,255,0.18));
+  box-shadow: 0 0 24px rgba(0,255,65,0.25);
+}
+.intel-btn.ghost {
+  border-color: rgba(255,255,255,0.15);
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+}
+.intel-btn.ghost:hover:not(:disabled) {
+  border-color: rgba(0,255,65,0.3);
+  color: #00ff41;
+  box-shadow: none;
+}
+.intel-btn.danger {
+  border-color: rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.06);
+  color: #f87171;
+}
+.intel-btn.danger:hover:not(:disabled) {
+  background: rgba(239,68,68,0.12);
+  border-color: #f87171;
+  box-shadow: 0 0 12px rgba(239,68,68,0.2);
+}
+.intel-btn.success {
+  border-color: rgba(0,255,65,0.3);
+  background: rgba(0,255,65,0.06);
+  color: #00ff41;
+}
+
+/* Inputs */
+.intel-input {
+  background: rgba(0,15,25,0.8);
+  border: 1px solid rgba(0,255,65,0.2);
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: 'Courier New', 'Tajawal', monospace;
+  text-align: right;
+  transition: all 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.intel-input:focus {
+  outline: none;
+  border-color: rgba(0,255,65,0.5);
+  box-shadow: 0 0 12px rgba(0,255,65,0.1);
+}
+.intel-input.sm { padding: 6px 10px; font-size: 12px; }
+.intel-input.ta { resize: vertical; }
+select.intel-input { cursor: pointer; }
+
+/* Mini badges */
+.mini-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.mini-badge.green { background: rgba(0,255,65,0.1); color: #00ff41; border: 1px solid rgba(0,255,65,0.2); }
+.mini-badge.amber { background: rgba(251,191,36,0.1); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+.mini-badge.blue  { background: rgba(0,200,255,0.1); color: #00c8ff; border: 1px solid rgba(0,200,255,0.2); }
+
+/* Spin */
+.spin-icon { display: inline-block; animation: spin 0.8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Fade in */
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .mobile-toggle { display: flex; }
+  .mobile-overlay { display: block; }
+  .intel-sidebar {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    z-index: 50;
+    transform: translateX(100%);
+    transition: transform 0.3s;
+  }
+  .intel-sidebar.open { transform: translateX(0); }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .agents-thead, .agent-row { grid-template-columns: 50px 1fr 70px; }
+  .agents-thead span:nth-child(n+4),
+  .agent-row > *:nth-child(n+4) { display: none; }
+}
 </style>

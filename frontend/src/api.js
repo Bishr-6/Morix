@@ -51,7 +51,8 @@ export const managerAPI = {
     const fd = new FormData()
     fd.append('school_id', schoolId)
     fd.append('file', file)
-    return api.post('/manager/upload-excel', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    // لا تضع Content-Type يدوياً — axios يضيف boundary تلقائياً مع multipart
+    return api.post('/manager/upload-excel', fd)
   },
   getAccounts: (schoolId) => api.get(`/manager/accounts/${schoolId}`),
   getAccountPassword: (userId) => api.get(`/manager/account-password/${userId}`),
@@ -64,7 +65,7 @@ export const managerAPI = {
   extractBookText: (file) => {
     const fd = new FormData()
     fd.append('file', file)
-    return api.post('/manager/extract-book-text', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return api.post('/manager/extract-book-text', fd)
   },
   getSavedPasswords: (schoolId) => api.get(`/manager/passwords/${schoolId}`),
   // 👔 ميزات المدير المتقدمة
@@ -130,22 +131,34 @@ export const studentAPI = {
 
   // 🌅 التأمل اليومي
   saveReflection: (text) => api.post('/student/reflection', { text }),
+
+  // 🎬 توليد سكريبت فيديو
+  generateVideo: (data) => api.post('/student/generate-video', data),
 }
 
 // ============================================
 // الذكاء الاصطناعي
 // ============================================
 export const aiAPI = {
-  chat: (message, conversationId = null, bookId = null, imageBase64 = null, fileText = null) => api.post('/ai/chat', {
-    message, conversation_id: conversationId, book_id: bookId,
-    image_base64: imageBase64 || undefined,
-    file_text: fileText || undefined,
-  }),
+  chat: (message, conversationId = null, bookId = null, imageBase64 = null, fileText = null) => {
+    const lang = localStorage.getItem('morix_lang') || 'ar'
+    return api.post('/ai/chat', {
+      message, conversation_id: conversationId, book_id: bookId,
+      image_base64: imageBase64 || undefined,
+      file_text: fileText || undefined,
+      language: lang !== 'ar' ? lang : undefined,  // أرسل اللغة فقط لو مش عربي
+    })
+  },
   getConversations: () => api.get('/ai/conversations'),
   getMessages: (conversationId) => api.get(`/ai/conversations/${conversationId}/messages`),
   deleteConversation: (conversationId) => api.delete(`/ai/conversations/${conversationId}`),
   getBooks: () => api.get('/ai/books'),
   generateImage: (prompt) => api.post('/ai/generate-image', { prompt }),
+  extractFile: (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/ai/extract-file', fd)
+  },
 }
 
 // ============================================
@@ -176,17 +189,21 @@ export const teacherAPI = {
   // التوليد
   generatePPT: (data) => api.post('/teacher/generate-ppt', data),
   generateVideo: (data) => api.post('/teacher/generate-video', data),
-  chat: (message, imageBase64 = null, fileText = null) => api.post('/teacher/chat', {
-    message,
-    image_base64: imageBase64 || undefined,
-    file_text: fileText || undefined,
-  }),
+  chat: (message, imageBase64 = null, fileText = null) => {
+    const lang = localStorage.getItem('morix_lang') || 'ar'
+    return api.post('/teacher/chat', {
+      message,
+      image_base64: imageBase64 || undefined,
+      file_text: fileText || undefined,
+      language: lang !== 'ar' ? lang : undefined,
+    })
+  },
 
   // استخراج نص من ملف (للـ Notebook)
   extractFile: (file) => {
     const fd = new FormData()
     fd.append('file', file)
-    return api.post('/teacher/extract-file', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return api.post('/teacher/extract-file', fd)
   },
 
   // الإعدادات
@@ -215,9 +232,7 @@ export const adminAPI = {
   getStudents: () => api.get('/admin/students'),
   resetPassword: (id, password) => api.put(`/admin/students/${id}/reset-password`, { new_password: password }),
   toggleStudent: (id) => api.put(`/admin/students/${id}/toggle`),
-  uploadExcel: (formData) => api.post('/admin/upload-excel', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
+  uploadExcel: (formData) => api.post('/admin/upload-excel', formData),
   getSettings: () => api.get('/admin/settings'),
   updateSettings: (data) => api.put('/admin/settings', data),
   // 🏫 ميزات إداري متقدمة

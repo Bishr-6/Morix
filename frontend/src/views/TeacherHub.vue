@@ -16,15 +16,20 @@
         </button>
       </nav>
       <div class="sb-footer">
-        <button class="logout-btn" @click="doLogout"><span>🚪</span><span v-if="!sb">خروج</span></button>
+        <button class="logout-btn" @click="doLogout"><span>🚪</span><span v-if="!sb">{{ t('logout_btn') }}</span></button>
       </div>
     </aside>
 
     <main class="main">
-      <header class="top-bar">
-        <h2>{{ sections.find(s=>s.id===cur)?.label }}</h2>
-        <div class="chip"><div class="av">{{ firstName[0] }}</div><span>{{ firstName }}</span></div>
-      </header>
+      <NavBar
+        :title="sections.find(s=>s.id===cur)?.label || ''"
+        :name="firstName"
+        :avatar-url="tSettings.avatar_url"
+        :current-theme="tSettings.theme"
+        :current-lang="lang"
+        @theme="v => { tSettings.theme = v; saveTeacherSettings() }"
+        @lang="changeTeacherLang"
+      />
 
       <!-- ===== OVERVIEW ===== -->
       <section v-show="cur==='overview'" class="body pad">
@@ -43,7 +48,7 @@
       <!-- ===== HOMEWORK ===== -->
       <section v-show="cur==='homework'" class="body pad">
         <div class="card">
-          <div class="row-sb"><h3>📚 الواجبات</h3><button class="btn-p" @click="hwForm=!hwForm">+ إضافة</button></div>
+          <div class="row-sb"><h3>📚 الواجبات</h3><button class="btn-p" @click="hwForm=!hwForm">+ {{ t('add_btn') }}</button></div>
           <div v-if="hwForm" class="form-box">
             <p style="color:var(--t2);font-size:13px;margin:0 0 8px">🤖 AI يولّد العنوان والتعليمات تلقائياً — فقط أدخل الموضوع والمادة.</p>
             <input v-model="hwNew.topic" class="inp" placeholder="الموضوع / ما تريد الطلاب يدرسونه *" />
@@ -52,17 +57,17 @@
               <input v-model="hwNew.grade" class="inp" placeholder="الصف" />
               <input v-model="hwNew.due_date" class="inp" type="datetime-local" />
             </div>
-            <div class="row-gap"><button class="btn-p" @click="createHw" :disabled="hwLoading||!hwNew.topic||!hwNew.subject">{{ hwLoading?'⏳ AI يولّد...':'✨ إنشاء بالـ AI' }}</button><button class="btn-o" @click="hwForm=false">إلغاء</button></div>
+            <div class="row-gap"><button class="btn-p" @click="createHw" :disabled="hwLoading||!hwNew.topic||!hwNew.subject">{{ hwLoading?'⏳ AI يولّد...':'✨ ' + t('create_ai') }}</button><button class="btn-o" @click="hwForm=false">{{ t('cancel') }}</button></div>
           </div>
-          <div v-if="!homework.length" class="empty">لا توجد واجبات</div>
+          <div v-if="!homework.length" class="empty">{{ t('no_homework') }}</div>
           <div v-else class="list-col">
             <div v-for="hw in homework" :key="hw.id" class="list-item">
               <div style="flex:1"><h4>{{ hw.title }}</h4>
                 <div class="meta"><span>📚 {{ hw.subject }}</span><span v-if="hw.grade">🎓 {{ hw.grade }}</span><span v-if="hw.due_date">📅 {{ fmtDate(hw.due_date) }}</span></div>
               </div>
               <div class="row-gap">
-                <button class="btn-s" @click="viewSubmissions(hw.id)">عرض التسليمات</button>
-                <button class="btn-s danger" @click="deleteHw(hw.id)">حذف</button>
+                <button class="btn-s" @click="viewSubmissions(hw.id)">{{ t('view_submissions') }}</button>
+                <button class="btn-s danger" @click="deleteHw(hw.id)">{{ t('delete_btn') }}</button>
               </div>
             </div>
           </div>
@@ -80,22 +85,80 @@
       <!-- ===== TESTS ===== -->
       <section v-show="cur==='tests'" class="body pad">
         <div class="card">
-          <div class="row-sb"><h3>📝 الاختبارات</h3><button class="btn-p" @click="testForm=!testForm">+ إضافة</button></div>
-          <div v-if="testForm" class="form-box">
-            <p style="color:var(--t2);font-size:13px;margin:0 0 8px">🤖 AI يولّد الأسئلة تلقائياً — فقط حدد الموضوع والمادة.</p>
-            <input v-model="testNew.topic" class="inp" placeholder="الموضوع المحدد *" />
-            <div class="row-gap">
+          <div class="row-sb"><h3>📝 الاختبارات</h3><button class="btn-p" @click="testForm=!testForm">{{ testForm ? '✕ إغلاق' : '+ ' + t('add_btn') }}</button></div>
+
+          <!-- ── نموذج إنشاء الاختبار اليدوي ── -->
+          <div v-if="testForm" class="form-box" style="border:2px solid var(--accent);border-radius:12px;padding:16px;margin-top:12px">
+            <h4 style="color:var(--accent);margin-bottom:12px">📝 بانية الاختبار اليدوي</h4>
+
+            <!-- معلومات الاختبار -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+              <input v-model="testNew.title" class="inp" placeholder="عنوان الاختبار *" />
               <input v-model="testNew.subject" class="inp" placeholder="المادة *" />
               <input v-model="testNew.grade" class="inp" placeholder="الصف" />
-              <input v-model.number="testNew.duration_minutes" class="inp" type="number" placeholder="المدة (دقيقة)" />
+              <input v-model.number="testNew.duration_minutes" class="inp" type="number" placeholder="المدة (دقيقة)" min="5" max="180" />
             </div>
-            <div class="row-gap"><button class="btn-p" @click="createTest" :disabled="testLoading||!testNew.topic||!testNew.subject">{{ testLoading?'⏳ AI يولّد الأسئلة...':'✨ إنشاء بالـ AI' }}</button><button class="btn-o" @click="testForm=false">إلغاء</button></div>
+
+            <!-- الأسئلة -->
+            <div v-for="(q, qi) in testQuestions" :key="qi" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <span style="font-weight:700;color:var(--accent)">سؤال {{ qi+1 }}</span>
+                <button class="btn-s danger" @click="removeQuestion(qi)" style="padding:4px 10px;font-size:12px">🗑 حذف</button>
+              </div>
+              <input v-model="q.question" class="inp" :placeholder="`نص السؤال ${qi+1} *`" style="margin-bottom:8px" />
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+                <input v-for="(opt, oi) in ['a','b','c','d']" :key="oi"
+                       v-model="q.options[opt]" class="inp"
+                       :placeholder="`الخيار ${['أ','ب','ج','د'][oi]} *`"
+                       :style="{borderColor: q.answer===opt ? 'var(--accent)' : 'var(--border)'}" />
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="color:var(--t2);font-size:13px">الإجابة الصحيحة:</span>
+                <button v-for="(opt,oi) in ['a','b','c','d']" :key="oi"
+                        @click="q.answer=opt"
+                        :class="['btn-s', q.answer===opt ? '' : 'btn-outline']"
+                        :style="{background: q.answer===opt ? 'var(--accent)' : 'transparent', color: q.answer===opt ? '#fff' : 'var(--t2)', border: '1px solid var(--border)', padding:'4px 12px'}">
+                  {{ ['أ','ب','ج','د'][oi] }}
+                </button>
+                <input v-model="q.explanation" class="inp" placeholder="شرح الإجابة (اختياري)" style="flex:1;min-width:120px" />
+              </div>
+            </div>
+
+            <!-- أزرار الأسئلة -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+              <button class="btn-o" @click="addQuestion" style="flex:1">➕ إضافة سؤال</button>
+              <button class="btn-o" @click="addQuestionBlock(5)" style="flex:1">➕ إضافة 5 أسئلة</button>
+            </div>
+
+            <!-- معاينة عدد الأسئلة -->
+            <div v-if="testQuestions.length" style="padding:8px;background:rgba(99,102,241,.1);border-radius:8px;margin-bottom:10px;font-size:13px;color:var(--t2)">
+              📊 عدد الأسئلة: <b style="color:var(--accent)">{{ testQuestions.length }}</b> سؤال
+            </div>
+
+            <div style="display:flex;gap:8px">
+              <button class="btn-p" style="flex:1" @click="createTest"
+                :disabled="testLoading || !testNew.title || !testNew.subject || !testQuestions.length || testQuestions.some(q=>!q.question||!q.options.a||!q.options.b||!q.options.c||!q.options.d||!q.answer)">
+                {{ testLoading ? '⏳ جاري الحفظ...' : '💾 حفظ الاختبار' }}
+              </button>
+              <button class="btn-o" @click="testForm=false;testQuestions=[]">إلغاء</button>
+            </div>
+            <p v-if="testSaveError" style="color:#f87171;font-size:12px;margin-top:6px">⚠️ {{ testSaveError }}</p>
           </div>
-          <div v-if="!myTests.length" class="empty">لا توجد اختبارات</div>
+
+          <!-- قائمة الاختبارات -->
+          <div v-if="!myTests.length" class="empty">{{ t('no_tests') }}</div>
           <div v-else class="list-col">
-            <div v-for="t in myTests" :key="t.id" class="list-item">
-              <div style="flex:1"><h4>{{ t.title }}</h4><div class="meta"><span>📚 {{ t.subject }}</span><span>⏱ {{ t.duration_minutes }}د</span></div></div>
-              <button class="btn-s danger" @click="deleteTest(t.id)">حذف</button>
+            <div v-for="tst in myTests" :key="tst.id" class="list-item">
+              <div style="flex:1">
+                <h4>{{ tst.title }}</h4>
+                <div class="meta">
+                  <span>📚 {{ tst.subject }}</span>
+                  <span v-if="tst.grade">🎓 {{ tst.grade }}</span>
+                  <span>⏱ {{ tst.duration_minutes }}د</span>
+                  <span style="color:var(--accent)">❓ {{ (tst.questions||[]).length }} سؤال</span>
+                </div>
+              </div>
+              <button class="btn-s danger" @click="deleteTest(tst.id)">{{ t('delete_btn') }}</button>
             </div>
           </div>
         </div>
@@ -104,7 +167,7 @@
       <!-- ===== WORKSHEETS ===== -->
       <section v-show="cur==='worksheets'" class="body pad">
         <div class="card">
-          <div class="row-sb"><h3>📋 أوراق العمل</h3><button class="btn-p" @click="wsForm=!wsForm">+ إضافة</button></div>
+          <div class="row-sb"><h3>📋 أوراق العمل</h3><button class="btn-p" @click="wsForm=!wsForm">+ {{ t('add_btn') }}</button></div>
           <div v-if="wsForm" class="form-box">
             <p style="color:var(--t2);font-size:13px;margin:0 0 8px">🤖 AI يولّد ورقة العمل الكاملة — فقط أدخل الموضوع والمادة.</p>
             <input v-model="wsNew.topic" class="inp" placeholder="الموضوع المحدد *" />
@@ -112,13 +175,13 @@
               <input v-model="wsNew.subject" class="inp" placeholder="المادة *" />
               <input v-model="wsNew.grade" class="inp" placeholder="الصف" />
             </div>
-            <div class="row-gap"><button class="btn-p" @click="createWs" :disabled="wsLoading||!wsNew.topic||!wsNew.subject">{{ wsLoading?'⏳ AI يولّد ورقة العمل...':'✨ إنشاء بالـ AI' }}</button><button class="btn-o" @click="wsForm=false">إلغاء</button></div>
+            <div class="row-gap"><button class="btn-p" @click="createWs" :disabled="wsLoading||!wsNew.topic||!wsNew.subject">{{ wsLoading?'⏳ AI يولّد ورقة العمل...':'✨ ' + t('create_ai') }}</button><button class="btn-o" @click="wsForm=false">{{ t('cancel') }}</button></div>
           </div>
-          <div v-if="!worksheets.length" class="empty">لا توجد أوراق عمل</div>
+          <div v-if="!worksheets.length" class="empty">{{ t('no_worksheets') }}</div>
           <div v-else class="list-col">
             <div v-for="ws in worksheets" :key="ws.id" class="list-item clickable" @click="viewWs(ws)">
               <div style="flex:1"><h4>{{ ws.title }}</h4><div class="meta"><span>📚 {{ ws.subject }}</span><span v-if="ws.ai_generated" class="ai-tag">🤖 AI</span></div></div>
-              <button class="btn-s danger" @click.stop="deleteWs(ws.id)">حذف</button>
+              <button class="btn-s danger" @click.stop="deleteWs(ws.id)">{{ t('delete_btn') }}</button>
             </div>
           </div>
         </div>
@@ -133,14 +196,14 @@
         <div class="card">
           <h3>👨‍🎓 الطلاب</h3>
           <div v-if="studLoading" class="empty">⏳ تحميل...</div>
-          <div v-else-if="!students.length" class="empty">لا يوجد طلاب</div>
+          <div v-else-if="!students.length" class="empty">{{ t('no_students') }}</div>
           <div v-else class="list-col">
             <div v-for="s in students" :key="s.id" class="list-item">
               <div style="flex:1">
                 <h4>{{ s.full_name }}</h4>
                 <div class="meta">
                   <span v-if="s.grade">🎓 {{ s.grade }}</span>
-                  <span v-if="s.learning_style">🧠 {{ {visual:'بصري',auditory:'سمعي',kinesthetic:'حركي'}[s.learning_style]||s.learning_style }}</span>
+                  <span v-if="s.learning_style">🧠 {{ {visual:t('visual'),auditory:t('auditory'),kinesthetic:t('kinesthetic')}[s.learning_style]||s.learning_style }}</span>
                   <span>🔥 {{ s.streak_count||0 }} يوم</span>
                   <span>⭐ {{ s.stars_count||0 }}</span>
                 </div>
@@ -172,14 +235,14 @@
             <input v-model="pptSubject" class="inp" placeholder="المادة الدراسية *" />
             <textarea v-model="pptContent" class="inp" rows="4" placeholder="محتوى الكتاب (اختياري — الصفحات الأولى)"></textarea>
             <button class="btn-p" @click="genPPT" :disabled="pptLoading||!pptTitle||!pptSubject">
-              {{ pptLoading?'⏳ جاري التوليد...':'✨ توليد المخطط' }}
+              {{ pptLoading?'⏳ ' + t('generating'):'✨ ' + t('generate_btn') }}
             </button>
           </div>
           <div v-if="pptHtml" class="result-box" style="margin-top:16px">
             <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-              <button class="btn-s" @click="downloadPpt">⬇ تحميل HTML</button>
+              <button class="btn-s" @click="downloadPpt">⬇ {{ t('download_btn') }} HTML</button>
               <button class="btn-s" @click="openPptNewTab">🔗 فتح في نافذة جديدة</button>
-              <button class="btn-s" @click="copyText(pptResult)">📋 نسخ JSON</button>
+              <button class="btn-s" @click="copyText(pptResult)">📋 {{ t('copy_btn') }} JSON</button>
             </div>
             <iframe :srcdoc="pptHtml"
                     style="width:100%;height:600px;border:2px solid var(--accent);border-radius:16px;background:#0f172a"
@@ -252,12 +315,12 @@
               <div style="display:flex;justify-content:space-between;color:var(--t2);font-size:12px;margin-top:4px"><span>30 ثانية</span><span>10 دقائق</span></div>
             </div>
             <button class="btn-p" @click="genVid" :disabled="vidLoading||!vidTopic">
-              {{ vidLoading ? '⏳ جاري التوليد...' : '✨ توليد السكريبت' }}
+              {{ vidLoading ? '⏳ ' + t('generating') : '✨ ' + t('generate_script') }}
             </button>
           </div>
           <div v-if="vidScript" class="result-box" style="margin-top:20px">
             <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;color:var(--t2);font-size:14px;line-height:1.8;white-space:pre-wrap;max-height:500px;overflow-y:auto" v-html="fmt(vidScript)"></div>
-            <button class="btn-s" style="margin-top:10px" @click="copyText(vidScript)">📋 نسخ</button>
+            <button class="btn-s" style="margin-top:10px" @click="copyText(vidScript)">📋 {{ t('copy_btn') }}</button>
           </div>
         </div>
       </section>
@@ -286,7 +349,7 @@
           <input v-model="lp.grade" placeholder="المرحلة (مثال: الصف الخامس)" class="memorix-input" style="width:100%;margin-bottom:8px" />
           <input v-model.number="lp.duration_minutes" type="number" placeholder="المدة بالدقائق" class="memorix-input" style="width:100%;margin-bottom:8px" />
           <textarea v-model="lp.objectives" placeholder="النتائج المرجوة (اختياري)" rows="3" class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
-          <button class="btn-primary" :disabled="lpLoading" @click="genLessonPlan">{{ lpLoading?'⏳ يولّد...':'🚀 ولّد الخطة' }}</button>
+          <button class="btn-primary" :disabled="lpLoading" @click="genLessonPlan">{{ lpLoading?'⏳ يولّد...':'🚀 ' + t('generate_plan') }}</button>
           <div v-if="lpResult" class="card mt" style="margin-top:16px">
             <h4 style="color:var(--accent)">{{ lpResult.title || 'الخطة' }}</h4>
             <div v-if="lpResult.objectives"><b>🎯 الأهداف:</b><ul><li v-for="o in lpResult.objectives" :key="o">{{o}}</li></ul></div>
@@ -315,7 +378,7 @@
                     :key="m.k" class="btn-s" :class="{active: mm.mode===m.k}" @click="mm.mode=m.k"
                     :style="{background: mm.mode===m.k?'var(--accent)':'var(--card)'}">{{ m.l }}</button>
           </div>
-          <button class="btn-primary" :disabled="mmLoading" @click="convertMM">{{ mmLoading?'⏳':'🚀 حوّل' }}</button>
+          <button class="btn-primary" :disabled="mmLoading" @click="convertMM">{{ mmLoading?'⏳':'🚀 ' + t('convert_btn') }}</button>
           <div v-if="mmResult" class="card mt" style="margin-top:16px">
             <pre v-if="typeof mmResult==='string'" style="white-space:pre-wrap;color:var(--text)">{{ mmResult }}</pre>
             <div v-else>
@@ -384,7 +447,7 @@
           <input v-model="cm.student_name" placeholder="اسم الطالب (اختياري)" class="memorix-input" style="width:100%;margin-bottom:8px" />
           <textarea v-model="cm.purpose" rows="2" placeholder="غرض الرسالة..." class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
           <textarea v-model="cm.notes" rows="3" placeholder="ملاحظات إضافية..." class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
-          <button class="btn-primary" :disabled="cmLoading" @click="composeMsg">{{ cmLoading?'⏳':'✍️ اكتب الرسالة' }}</button>
+          <button class="btn-primary" :disabled="cmLoading" @click="composeMsg">{{ cmLoading?'⏳':'✍️ ' + t('compose_msg') }}</button>
           <div v-if="cmResult" class="card mt" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ cmResult }}</div>
         </div>
       </section>
@@ -397,7 +460,7 @@
           <input v-model="fb.subject" placeholder="المادة" class="memorix-input" style="width:100%;margin-bottom:8px" />
           <textarea v-model="fb.strengths" rows="2" placeholder="نقاط القوة (اكتب بسرعة، AI ينظمها)" class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
           <textarea v-model="fb.weaknesses" rows="2" placeholder="نقاط الضعف (اكتب بسرعة، AI ينظمها)" class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
-          <button class="btn-primary" :disabled="fbLoading" @click="genFeedback">{{ fbLoading?'⏳':'📋 ولّد التقرير' }}</button>
+          <button class="btn-primary" :disabled="fbLoading" @click="genFeedback">{{ fbLoading?'⏳':'📋 ' + t('generate_report') }}</button>
           <div v-if="fbResult" class="card mt" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ fbResult }}</div>
         </div>
       </section>
@@ -437,7 +500,7 @@
             <option value="intermediate">🟡 متوسط</option>
             <option value="advanced">🔴 متقدم</option>
           </select>
-          <button class="btn-primary" :disabled="smLoading" @click="simplify">{{ smLoading?'⏳':'✨ بسّط' }}</button>
+          <button class="btn-primary" :disabled="smLoading" @click="simplify">{{ smLoading?'⏳':'✨ ' + t('simplify_btn') }}</button>
           <div v-if="smResult" class="card mt" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ smResult }}</div>
         </div>
       </section>
@@ -447,7 +510,7 @@
         <div class="card">
           <h3>🌈 استراتيجيات التعلم المتمايز</h3>
           <input v-model="diff.concept" placeholder="المفهوم التعليمي" class="memorix-input" style="width:100%;margin-bottom:8px" />
-          <button class="btn-primary" :disabled="diffLoading" @click="genDiff">{{ diffLoading?'⏳':'🎨 اقترح طرقاً' }}</button>
+          <button class="btn-primary" :disabled="diffLoading" @click="genDiff">{{ diffLoading?'⏳':'🎨 ' + t('suggest_methods') }}</button>
           <div v-if="diffResult" class="mt" style="margin-top:16px;display:grid;gap:8px">
             <div v-if="diffResult.visual" class="card" style="border-right:4px solid #6366f1">
               <h4>👁️ بصري</h4>
@@ -477,7 +540,7 @@
         <div class="card">
           <h3>🧠 الموجه التربوي الذكي</h3>
           <textarea v-model="coachInput" rows="4" placeholder="اوصف التحدي الصفي..." class="memorix-input" style="width:100%;margin-bottom:8px"></textarea>
-          <button class="btn-primary" :disabled="coachLoading" @click="askCoach">{{ coachLoading?'⏳':'💬 احصل على نصيحة' }}</button>
+          <button class="btn-primary" :disabled="coachLoading" @click="askCoach">{{ coachLoading?'⏳':'💬 ' + t('get_advice') }}</button>
           <div v-if="coachAdvice" class="card mt" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ coachAdvice }}</div>
         </div>
       </section>
@@ -547,15 +610,15 @@
           <h3>📓 دفتري الذكي للمعلم — Morix Notebook</h3>
           <p style="color:var(--t2);margin-bottom:12px">ارفع المنهج/المرجع وولّد ملخصات، أسئلة، خرائط، وبودكاست AI داخل المنصة</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-            <button @click="nbTab='upload'" class="btn-s" :style="{background:nbTab==='upload'?'var(--accent)':'var(--card)',padding:'8px 14px'}">{{ nbExtractLoading ? '⏳' : '📤' }} رفع ملف</button>
-            <button @click="nbTab='ask'" :disabled="!nbFileText||nbExtractLoading" class="btn-s" :style="{background:nbTab==='ask'?'var(--accent)':'var(--card)',padding:'8px 14px',opacity:nbFileText&&!nbExtractLoading?1:0.5}">💬 اسأل عن الملف</button>
-            <button @click="nbTab='generate'" :disabled="!nbFileText||nbExtractLoading" class="btn-s" :style="{background:nbTab==='generate'?'var(--accent)':'var(--card)',padding:'8px 14px',opacity:nbFileText&&!nbExtractLoading?1:0.5}">✨ ولّد محتوى تعليمي</button>
+            <button @click="nbTab='upload'" class="btn-s" :style="{background:nbTab==='upload'?'var(--accent)':'var(--card)',padding:'8px 14px'}">{{ nbExtractLoading ? '⏳' : '📤' }} {{ t('upload_file') }}</button>
+            <button @click="nbTab='ask'" :disabled="!nbFileText||nbExtractLoading" class="btn-s" :style="{background:nbTab==='ask'?'var(--accent)':'var(--card)',padding:'8px 14px',opacity:nbFileText&&!nbExtractLoading?1:0.5}">💬 {{ t('ask_about_file') }}</button>
+            <button @click="nbTab='generate'" :disabled="!nbFileText||nbExtractLoading" class="btn-s" :style="{background:nbTab==='generate'?'var(--accent)':'var(--card)',padding:'8px 14px',opacity:nbFileText&&!nbExtractLoading?1:0.5}">✨ {{ t('generate_content') }}</button>
           </div>
 
           <div v-if="nbTab==='upload'" class="card" style="background:var(--card)">
-            <input ref="nbFileInput" type="file" accept=".pdf,.txt,.md" @change="onNbFileUpload" style="display:none" />
+            <input ref="nbFileInput" type="file" accept=".pdf,.txt,.md,.pptx,.docx" @change="onNbFileUpload" style="display:none" />
             <button @click="$refs.nbFileInput?.click()" class="btn-p" style="width:100%;padding:24px;font-size:16px" :disabled="nbExtractLoading">
-              {{ nbExtractLoading ? '⏳ جاري استخراج النص...' : '📤 اختر ملف PDF / TXT / MD' }}
+              {{ nbExtractLoading ? '⏳ ' + t('extracting_text') : '📤 اختر ملف PDF / PPTX / DOCX / TXT' }}
             </button>
             <div v-if="nbFileName && nbFileText" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;border:1px solid var(--accent)">
               ✅ <b>{{ nbFileName }}</b> — جاهز ({{ Math.round(nbFileText.length/1000) }}K حرف)
@@ -580,14 +643,14 @@
 
           <div v-if="nbTab==='generate'" class="card" style="background:var(--card)">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:12px">
-              <button @click="genNb('summary')" :disabled="nbGenLoading" class="btn-p">📝 ملخص الكتاب</button>
-              <button @click="genNb('lesson_plan')" :disabled="nbGenLoading" class="btn-p">📋 خطة درس من الكتاب</button>
-              <button @click="genNb('mcq_test')" :disabled="nbGenLoading" class="btn-p">📝 اختبار MCQ</button>
-              <button @click="genNb('worksheet')" :disabled="nbGenLoading" class="btn-p">📄 ورقة عمل</button>
-              <button @click="genNb('mindmap')" :disabled="nbGenLoading" class="btn-p">🧠 خريطة ذهنية</button>
-              <button @click="genNb('podcast')" :disabled="nbGenLoading" class="btn-p">🎙️ سكربت بودكاست</button>
+              <button @click="genNb('summary')" :disabled="nbGenLoading" class="btn-p">📝 {{ t('comprehensive_summary') }}</button>
+              <button @click="genNb('lesson_plan')" :disabled="nbGenLoading" class="btn-p">📋 {{ t('lesson_plan') }}</button>
+              <button @click="genNb('mcq_test')" :disabled="nbGenLoading" class="btn-p">📝 MCQ {{ t('tests') }}</button>
+              <button @click="genNb('worksheet')" :disabled="nbGenLoading" class="btn-p">📄 {{ t('worksheets') }}</button>
+              <button @click="genNb('mindmap')" :disabled="nbGenLoading" class="btn-p">🧠 {{ t('mind_map') }}</button>
+              <button @click="genNb('podcast')" :disabled="nbGenLoading" class="btn-p">🎙️ {{ t('podcast_script') }}</button>
             </div>
-            <div v-if="nbGenLoading" style="text-align:center;padding:20px;color:var(--t2)">⏳ جاري التوليد...</div>
+            <div v-if="nbGenLoading" style="text-align:center;padding:20px;color:var(--t2)">⏳ {{ t('generating') }}</div>
             <div v-if="nbGenResult" style="padding:16px;background:var(--bg3);border-radius:8px;white-space:pre-wrap;line-height:1.8;max-height:60vh;overflow-y:auto">{{ nbGenResult }}</div>
           </div>
         </div>
@@ -644,13 +707,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useRouter } from 'vue-router'
 import { teacherAPI, aiAPI } from '../api.js'
 import { useTheme } from '../composables/useTheme.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 import MatrixBackground from '../components/MatrixBackground.vue'
+import NavBar from '../components/NavBar.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -659,7 +723,7 @@ const firstName = ref(auth.user?.full_name?.split(' ')?.[0] || 'معلم')
 // Settings
 const tSettings = ref({ theme:'dark', brightness:100, language:'ar', notifications_enabled:true, avatar_url:'', email:'', full_name:'' })
 useTheme(tSettings)
-const { setLang: setTLang } = useI18n()
+const { t, lang, setLang: setTLang } = useI18n()
 const languages = LANGUAGES
 function changeTeacherLang(code) {
   tSettings.value.language = code
@@ -668,31 +732,31 @@ function changeTeacherLang(code) {
 }
 const settingsMsg = ref('')
 
-const sections = [
-  {id:'overview',icon:'🏠',label:'نظرة عامة'},
-  {id:'homework',icon:'📚',label:'الواجبات'},
-  {id:'tests',icon:'📝',label:'الاختبارات'},
-  {id:'worksheets',icon:'📋',label:'أوراق العمل'},
-  {id:'students',icon:'👨‍🎓',label:'الطلاب'},
-  {id:'ppt',icon:'📊',label:'توليد PPT'},
-  {id:'video',icon:'🎬',label:'سكريبت فيديو'},
-  {id:'chat',icon:'💬',label:'مساعد AI'},
-  {id:'image',icon:'🎨',label:'توليد صور'},
-  {id:'lesson_plan',icon:'📋',label:'خطة درس ذكية'},
-  {id:'multimedia',icon:'🔄',label:'محول الوسائط'},
-  {id:'activity',icon:'🎯',label:'تصميم أنشطة'},
-  {id:'compose',icon:'✉️',label:'صياغة رسائل'},
-  {id:'feedback',icon:'📝',label:'تقارير ذكية'},
-  {id:'insights',icon:'📊',label:'تحليل الأداء'},
-  {id:'simplify',icon:'🔍',label:'تبسيط المحتوى'},
-  {id:'differentiate',icon:'🌈',label:'تعلم متمايز'},
-  {id:'coach',icon:'🧠',label:'مدرب تربوي'},
-  {id:'research',icon:'📰',label:'أبحاث تربوية'},
-  {id:'prompts',icon:'📚',label:'مكتبة قوالب'},
-  {id:'library',icon:'📚',label:'المكتبة الرقمية'},
-  {id:'notebook',icon:'📓',label:'NotebookLM'},
-  {id:'settings',icon:'⚙️',label:'الإعدادات'},
-]
+const sections = computed(() => [
+  { id:'overview',     icon:'🏠', label: t('overview') },
+  { id:'homework',     icon:'📚', label: t('homework') },
+  { id:'tests',        icon:'📝', label: t('tests') },
+  { id:'worksheets',   icon:'📋', label: t('worksheets') },
+  { id:'students',     icon:'👨‍🎓',label: t('students') },
+  { id:'ppt',          icon:'📊', label: t('ppt_generator') },
+  { id:'video',        icon:'🎬', label: t('video_script') },
+  { id:'chat',         icon:'💬', label: t('ai_assistant') },
+  { id:'image',        icon:'🎨', label: t('image_gen') },
+  { id:'lesson_plan',  icon:'📋', label: t('lesson_plan') },
+  { id:'multimedia',   icon:'🔄', label: t('multimedia') },
+  { id:'activity',     icon:'🎯', label: t('activity') },
+  { id:'compose',      icon:'✉️', label: t('compose') },
+  { id:'feedback',     icon:'📝', label: t('smart_feedback') },
+  { id:'insights',     icon:'📊', label: t('insights') },
+  { id:'simplify',     icon:'🔍', label: t('simplify') },
+  { id:'differentiate',icon:'🌈', label: t('differentiate') },
+  { id:'coach',        icon:'🧠', label: t('coach') },
+  { id:'research',     icon:'📰', label: t('research') },
+  { id:'prompts',      icon:'📚', label: t('prompt_library') },
+  { id:'library',      icon:'📚', label: t('digital_library') },
+  { id:'notebook',     icon:'📓', label: t('notebook') },
+  { id:'settings',     icon:'⚙️', label: t('settings') },
+])
 
 const cur = ref('overview')
 const sb = ref(false)
@@ -707,7 +771,17 @@ const submissions = ref([])
 const myTests = ref([])
 const testForm = ref(false)
 const testLoading = ref(false)
-const testNew = ref({title:'',subject:'',grade:'',duration_minutes:60,ai_generate:false,topic:''})
+const testSaveError = ref('')
+const testNew = ref({title:'',subject:'',grade:'',duration_minutes:60})
+
+// بانية الأسئلة اليدوية
+const testQuestions = ref([])
+function _emptyQ() {
+  return { question:'', options:{a:'',b:'',c:'',d:''}, answer:'', explanation:'' }
+}
+function addQuestion() { testQuestions.value.push(_emptyQ()) }
+function addQuestionBlock(n) { for(let i=0;i<n;i++) testQuestions.value.push(_emptyQ()) }
+function removeQuestion(i) { testQuestions.value.splice(i,1) }
 
 const worksheets = ref([])
 const wsForm = ref(false)
@@ -765,11 +839,34 @@ async function saveTeacherSettings() {
 }
 async function onTAvatarUpload(e) {
   const file = e.target.files?.[0]; if(!file) return
-  if(file.size > 500 * 1024) { alert('الصورة أكبر من 500 كيلوبايت — اختر صورة أصغر'); return }
-  const reader = new FileReader()
-  reader.onload = async (ev) => { tSettings.value.avatar_url = ev.target.result; await saveTeacherSettings() }
-  reader.readAsDataURL(file)
+  if(file.size > 5 * 1024 * 1024) { alert('الصورة أكبر من 5MB'); return }
+  // ضغط الصورة قبل الرفع (max 400×400)
+  const dataUrl = await _compressImage(file, 400, 400, 0.75)
+  tSettings.value.avatar_url = dataUrl
+  await saveTeacherSettings()
   if(tAvatarInput.value) tAvatarInput.value.value = ''
+}
+
+function _compressImage(file, maxW, maxH, quality) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let w = img.width, h = img.height
+        if(w > maxW || h > maxH) {
+          const ratio = Math.min(maxW/w, maxH/h)
+          w = Math.round(w*ratio); h = Math.round(h*ratio)
+        }
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.src = ev.target.result
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
 async function loadHomework() { try { homework.value=(await teacherAPI.getHomework()).data } catch {} }
@@ -788,11 +885,38 @@ async function deleteHw(id) { try { await teacherAPI.deleteHomework(id); await l
 async function viewSubmissions(id) { try { submissions.value=(await teacherAPI.getSubmissions(id)).data } catch {} }
 
 async function createTest() {
+  testSaveError.value = ''
+  // تحقق من اكتمال كل سؤال
+  for(let i=0;i<testQuestions.value.length;i++) {
+    const q = testQuestions.value[i]
+    if(!q.question.trim()) { testSaveError.value=`السؤال ${i+1} فارغ`; return }
+    if(!q.options.a||!q.options.b||!q.options.c||!q.options.d) { testSaveError.value=`أكمل خيارات السؤال ${i+1}`; return }
+    if(!q.answer) { testSaveError.value=`حدد الإجابة الصحيحة للسؤال ${i+1}`; return }
+  }
   testLoading.value=true
   try {
-    await teacherAPI.createTest({ ...testNew.value, ai_generate: true, title: testNew.value.topic })
-    testForm.value=false; testNew.value={topic:'',subject:'',grade:'',duration_minutes:60}; await loadTests()
-  } catch {} finally { testLoading.value=false }
+    const questions = testQuestions.value.map((q,i) => ({
+      id: i+1,
+      question: q.question.trim(),
+      options: q.options,
+      answer: q.answer,
+      explanation: q.explanation.trim() || undefined
+    }))
+    await teacherAPI.createTest({
+      title: testNew.value.title,
+      subject: testNew.value.subject,
+      grade: testNew.value.grade,
+      duration_minutes: testNew.value.duration_minutes || 60,
+      questions,
+      ai_generate: false
+    })
+    testForm.value=false
+    testNew.value={title:'',subject:'',grade:'',duration_minutes:60}
+    testQuestions.value=[]
+    await loadTests()
+  } catch(e) {
+    testSaveError.value = e.response?.data?.detail || 'فشل حفظ الاختبار'
+  } finally { testLoading.value=false }
 }
 async function deleteTest(id) { try { await teacherAPI.deleteTest(id); await loadTests() } catch {} }
 
@@ -854,15 +978,30 @@ async function onTFileAttach(e) {
   const file = e.target.files?.[0]; if(!file) return
   tAttachedFile.value = file
   tAttachedBase64.value = null; tAttachedFileText.value = null
+
   if(file.type.startsWith('image/')) {
+    // صورة → base64 مباشرة
     const reader = new FileReader()
     reader.onload = ev => { tAttachedBase64.value = ev.target.result.split(',')[1] }
     reader.readAsDataURL(file)
-  } else {
+  } else if(file.name.toLowerCase().endsWith('.txt') || file.name.toLowerCase().endsWith('.md')) {
+    // نص عادي → قراءة مباشرة
     const reader = new FileReader()
-    reader.onload = ev => { tAttachedFileText.value = ev.target.result }
-    reader.readAsText(file)
+    reader.onload = ev => { tAttachedFileText.value = (ev.target.result || '').slice(0, 50000) }
+    reader.readAsText(file, 'utf-8')
+  } else {
+    // PDF / PPTX / DOCX → استخراج نص عبر الباكند
+    try {
+      tAttachedFile.value = { name: file.name + ' (⏳ جاري الاستخراج...)' }
+      const res = await teacherAPI.extractFile(file)
+      tAttachedFileText.value = res.data.text || ''
+      tAttachedFile.value = { name: `📄 ${file.name} (${Math.round((tAttachedFileText.value.length/1000))}K حرف)` }
+    } catch(err) {
+      tAttachedFile.value = null
+      alert(err.response?.data?.detail || 'فشل استخراج نص الملف — تأكد أن الملف يحتوي على نص')
+    }
   }
+
   if(tFileInputEl.value) tFileInputEl.value.value = ''
 }
 function clearTAttach() { tAttachedFile.value=null; tAttachedBase64.value=null; tAttachedFileText.value=null }
@@ -1075,16 +1214,16 @@ async function onNbFileUpload(e) {
         r.onerror = () => { nbExtractError.value = 'فشل قراءة الملف'; resolve() }
         r.readAsText(file, 'utf-8')
       })
-    } else if (ext === '.pdf') {
-      // استخراج عبر الباك إند
+    } else if (['.pdf', '.pptx', '.docx'].includes(ext)) {
+      // ملفات ثنائية → استخراج عبر الباكند
       const res = await teacherAPI.extractFile(file)
       nbFileText.value = res.data.text || ''
       if (!nbFileText.value.trim()) {
-        nbExtractError.value = 'لم يُستخرج نص من الـ PDF — تأكد أنه يحتوي على نص وليس صور فقط'
+        nbExtractError.value = 'لم يُستخرج نص من الملف — تأكد أنه يحتوي على نص قابل للقراءة'
         nbFileName.value = ''
       }
     } else {
-      nbExtractError.value = 'صيغة غير مدعومة — استخدم PDF أو TXT أو MD'
+      nbExtractError.value = 'صيغة غير مدعومة — استخدم PDF أو PPTX أو DOCX أو TXT أو MD'
       nbFileName.value = ''
     }
   } catch (err) {

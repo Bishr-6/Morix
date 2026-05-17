@@ -1,5 +1,5 @@
 # راوتر المصادقة
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from app.models.schemas import LoginRequest, TokenResponse, ChangePasswordRequest
 from app.auth import (
     validate_memorix_email, verify_password, create_access_token,
@@ -9,9 +9,31 @@ from app.database import get_db
 from app.config import settings
 import logging
 from datetime import datetime, timezone
+from collections import defaultdict
+import time
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["المصادقة"])
+
+# ── Rate Limiter بسيط في الذاكرة للـ login ───────────────────────────────
+# الحد: 10 محاولات كل 5 دقائق لكل IP
+_LOGIN_ATTEMPTS: dict[str, list[float]] = defaultdict(list)
+_MAX_ATTEMPTS = 10
+_WINDOW_SECONDS = 300  # 5 دقائق
+
+
+def _check_rate_limit(ip: str):
+    now = time.time()
+    window_start = now - _WINDOW_SECONDS
+    # نحذف المحاولات القديمة
+    _LOGIN_ATTEMPTS[ip] = [t for t in _LOGIN_ATTEMPTS[ip] if t > window_start]
+    if len(_LOGIN_ATTEMPTS[ip]) >= _MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="تجاوزت عدد محاولات تسجيل الدخول المسموحة. انتظر 5 دقائق وأعد المحاولة.",
+            headers={"Retry-After": "300"}
+        )
+    _LOGIN_ATTEMPTS[ip].append(now)
 
 
 def _update_streak(user_id: str, db):
@@ -65,8 +87,12 @@ def _update_streak(user_id: str, db):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest, db=Depends(get_db)):
+async def login(request: LoginRequest, http_request: Request, db=Depends(get_db)):
     """تسجيل الدخول - يرفض أي إيميل لا ينتهي بـ @morix.tech"""
+
+    # ── Rate Limiting ──
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    _check_rate_limit(client_ip)
 
     # التحقق من الدومين أولاً
     if not validate_memorix_email(request.email):

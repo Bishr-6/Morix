@@ -15,19 +15,20 @@
         </button>
       </nav>
       <div class="sb-footer">
-        <button class="logout-btn" @click="doLogout"><span>🚪</span><span v-if="!sb">خروج</span></button>
+        <button class="logout-btn" @click="doLogout"><span>🚪</span><span v-if="!sb">{{ t('logout_btn') }}</span></button>
       </div>
     </aside>
 
     <main class="main">
-      <header class="top-bar">
-        <h2>{{ sections.find(s=>s.id===cur)?.label }}</h2>
-        <div class="chip">
-          <img v-if="settings.avatar_url" :src="settings.avatar_url" class="av-img" />
-          <div v-else class="av">{{ firstName[0] }}</div>
-          <span>{{ firstName }}</span>
-        </div>
-      </header>
+      <NavBar
+        :title="sections.find(s=>s.id===cur)?.label || ''"
+        :name="firstName"
+        :avatar-url="settings.avatar_url"
+        :current-theme="settings.theme"
+        :current-lang="lang"
+        @theme="v => { settings.theme = v; saveSettings() }"
+        @lang="changeAdminLang"
+      />
 
       <!-- ===== OVERVIEW ===== -->
       <section v-show="cur==='overview'" class="body pad">
@@ -48,10 +49,10 @@
         <div class="card">
           <div class="row-sb">
             <h3>👨‍🎓 الطلاب</h3>
-            <input v-model="search" class="inp search" placeholder="🔍 بحث..." />
+            <input v-model="search" class="inp search" :placeholder="'🔍 ' + t('search_ph')" />
           </div>
           <div v-if="loading" class="empty">⏳ تحميل...</div>
-          <div v-else-if="!filteredStudents.length" class="empty">لا يوجد طلاب</div>
+          <div v-else-if="!filteredStudents.length" class="empty">{{ t('no_students') }}</div>
           <div v-else class="list-col">
             <div v-for="s in filteredStudents" :key="s.id" class="list-item">
               <div style="flex:1">
@@ -65,7 +66,7 @@
               <div class="row-gap">
                 <button class="btn-s" @click="openReset(s)">🔑 كلمة المرور</button>
                 <button class="btn-s" :class="{danger:s.is_active}" @click="toggleStudent(s)">
-                  {{ s.is_active ? 'تعطيل' : 'تفعيل' }}
+                  {{ s.is_active ? t('disable_btn') : t('enable_btn') }}
                 </button>
               </div>
             </div>
@@ -75,12 +76,12 @@
         <!-- Reset Password Modal -->
         <div v-if="resetModal" class="modal-bg" @click.self="resetModal=null">
           <div class="modal-box">
-            <h3>🔑 إعادة تعيين كلمة مرور</h3>
+            <h3>🔑 {{ t('reset_password') }}</h3>
             <p style="color:var(--t2);font-size:14px;margin:0 0 16px">{{ resetModal.full_name }}</p>
             <input v-model="newPass" type="text" class="inp" placeholder="كلمة المرور الجديدة (6+ أحرف)" />
             <div class="row-gap" style="margin-top:14px">
-              <button class="btn-p" @click="doReset" :disabled="newPass.length<6">حفظ</button>
-              <button class="btn-o" @click="resetModal=null">إلغاء</button>
+              <button class="btn-p" @click="doReset" :disabled="newPass.length<6">{{ t('save') }}</button>
+              <button class="btn-o" @click="resetModal=null">{{ t('cancel') }}</button>
             </div>
             <p v-if="resetMsg" :style="{color:resetMsg.includes('✅')?'#4ade80':'#f87171',fontSize:'13px',marginTop:'10px'}">{{ resetMsg }}</p>
           </div>
@@ -103,7 +104,7 @@
               <button @click="selectedFile=null;fileInput.value=''" style="background:none;border:none;cursor:pointer;color:var(--t2)">✕</button>
             </div>
             <button class="btn-p" @click="uploadFile" :disabled="!selectedFile||uploading">
-              {{ uploading ? '⏳ جاري الرفع...' : '⬆️ رفع وإنشاء الحسابات' }}
+              {{ uploading ? '⏳ ' + t('uploading') : '⬆️ ' + t('upload_btn') }}
             </button>
           </div>
           <div v-if="uploadError" style="color:#f87171;font-size:13px;margin-top:12px">{{ uploadError }}</div>
@@ -122,20 +123,20 @@
               <div class="pass-badge">{{ acc.password }}</div>
             </div>
           </div>
-          <button class="btn-s" style="margin-top:14px" @click="copyAccounts">📋 نسخ كل الحسابات</button>
+          <button class="btn-s" style="margin-top:14px" @click="copyAccounts">📋 {{ t('copy_btn') }}</button>
         </div>
       </section>
 
       <!-- ===== 💓 SCHOOL PULSE ===== -->
       <section v-show="cur==='pulse'" class="body pad">
         <div class="card">
-          <h3>💓 نبض المدرسة</h3>
-          <button class="btn-p" @click="loadPulse" :disabled="pulseLoading">{{ pulseLoading?'⏳':'🔄 تحديث' }}</button>
+          <h3>💓 {{ t('school_pulse') }}</h3>
+          <button class="btn-p" @click="loadPulse" :disabled="pulseLoading">{{ pulseLoading?'⏳':'🔄 ' + t('refresh_btn') }}</button>
           <div v-if="pulse" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px">
             <div class="card"><b>👨‍🎓 الطلاب</b><div style="font-size:32px;color:var(--accent)">{{ pulse.students }}</div></div>
             <div class="card"><b>👨‍🏫 المعلمون</b><div style="font-size:32px;color:#a855f7">{{ pulse.teachers }}</div></div>
-            <div class="card"><b>🟢 نشط اليوم</b><div style="font-size:32px;color:#10b981">{{ pulse.active_today }}</div></div>
-            <div class="card"><b>📅 نشط أسبوعياً</b><div style="font-size:32px;color:#10b981">{{ pulse.active_week }}</div></div>
+            <div class="card"><b>🟢 {{ t('active_today') }}</b><div style="font-size:32px;color:#10b981">{{ pulse.active_today }}</div></div>
+            <div class="card"><b>📅 {{ t('active_weekly') }}</b><div style="font-size:32px;color:#10b981">{{ pulse.active_week }}</div></div>
             <div class="card"><b>🤖 استدعاءات AI</b><div style="font-size:32px;color:#fbbf24">{{ pulse.ai_calls_week }}</div></div>
             <div class="card"><b>💪 التفاعل</b><div style="font-size:32px;color:#fbbf24">{{ pulse.engagement_pct }}%</div></div>
           </div>
@@ -145,10 +146,10 @@
       <!-- ===== 📢 ANNOUNCEMENTS ===== -->
       <section v-show="cur==='announce'" class="body pad">
         <div class="card">
-          <h3>📢 إعلانات المدرسة</h3>
+          <h3>📢 {{ t('announcements') }}</h3>
           <input v-model="annTitle" class="inp" placeholder="عنوان الإعلان" style="width:100%;margin-bottom:8px" />
           <textarea v-model="annContent" class="inp" rows="4" placeholder="محتوى الإعلان..." style="width:100%;margin-bottom:8px"></textarea>
-          <button class="btn-p" @click="postAnnouncement" :disabled="annLoading">{{ annLoading?'⏳':'📡 نشر' }}</button>
+          <button class="btn-p" @click="postAnnouncement" :disabled="annLoading">{{ annLoading?'⏳':'📡 ' + t('post_btn') }}</button>
           <div v-if="annMsg" style="margin-top:12px;color:#10b981">{{ annMsg }}</div>
           <h4 style="margin-top:24px">📜 السابقة</h4>
           <button class="btn-s" @click="loadAnnouncements">🔄 تحميل</button>
@@ -171,7 +172,7 @@
             <option value="إصابة">إصابة</option>
           </select>
           <textarea v-model="incSummary" class="inp" rows="5" placeholder="ملخص الموقف بكلمات بسيطة..." style="width:100%;margin-bottom:8px"></textarea>
-          <button class="btn-p" @click="genIncident" :disabled="incLoading">{{ incLoading?'⏳':'✍️ ولّد التقرير' }}</button>
+          <button class="btn-p" @click="genIncident" :disabled="incLoading">{{ incLoading?'⏳':'✍️ ' + t('generate_report') }}</button>
           <div v-if="incReport" class="card" style="margin-top:16px;white-space:pre-wrap;line-height:1.8">{{ incReport }}</div>
         </div>
       </section>
@@ -248,20 +249,32 @@ import { adminAPI } from '../api.js'
 import { useTheme } from '../composables/useTheme.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 import MatrixBackground from '../components/MatrixBackground.vue'
+import NavBar from '../components/NavBar.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 const firstName = computed(() => (auth.user?.full_name || 'مشرف').split(' ')[0])
 
-const sections = [
-  { id:'overview', icon:'🏠', label:'نظرة عامة' },
-  { id:'students', icon:'👨‍🎓', label:'الطلاب' },
-  { id:'upload',   icon:'📊', label:'رفع Excel' },
-  { id:'pulse',    icon:'💓', label:'نبض المدرسة' },
-  { id:'announce', icon:'📢', label:'الإعلانات' },
-  { id:'incident', icon:'📋', label:'تقرير حادثة AI' },
-  { id:'settings', icon:'⚙️', label:'الإعدادات' },
-]
+// Settings
+const settings = ref({ theme:'dark', brightness:100, language:'ar', notifications_enabled:true, avatar_url:'', email:'', full_name:'' })
+useTheme(settings)
+const { t, lang, setLang: setALang } = useI18n()
+const languages = LANGUAGES
+function changeAdminLang(code) {
+  settings.value.language = code
+  setALang(code)
+  saveSettings()
+}
+
+const sections = computed(() => [
+  { id:'overview', icon:'🏠', label: t('overview') },
+  { id:'students', icon:'👨‍🎓',label: t('students') },
+  { id:'upload',   icon:'📊', label: t('upload_excel') },
+  { id:'pulse',    icon:'💓', label: t('school_pulse') },
+  { id:'announce', icon:'📢', label: t('announcements') },
+  { id:'incident', icon:'📋', label: t('incident_report') },
+  { id:'settings', icon:'⚙️', label: t('settings') },
+])
 
 const cur = ref('overview')
 const sb = ref(false)
@@ -292,16 +305,6 @@ const uploading = ref(false)
 const uploadResult = ref(null)
 const uploadError = ref('')
 
-// Settings
-const settings = ref({ theme:'dark', brightness:100, language:'ar', notifications_enabled:true, avatar_url:'', email:'', full_name:'' })
-useTheme(settings)
-const { setLang: setALang } = useI18n()
-const languages = LANGUAGES
-function changeAdminLang(code) {
-  settings.value.language = code
-  setALang(code)
-  saveSettings()
-}
 const settingsMsg = ref('')
 const adminAvatarInput = ref(null)
 
@@ -357,12 +360,32 @@ function setTheme(t) { settings.value.theme = t; saveSettings() }
 async function saveSettings() {
   try { await adminAPI.updateSettings(settings.value); settingsMsg.value = '✅ تم الحفظ'; setTimeout(()=>{settingsMsg.value=''}, 2000) } catch {}
 }
+function _compressImage(file, maxW, maxH, quality) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let w = img.width, h = img.height
+        if (w > maxW || h > maxH) { const ratio = Math.min(maxW/w, maxH/h); w = Math.round(w*ratio); h = Math.round(h*ratio) }
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.src = ev.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
 async function onAdminAvatarUpload(e) {
   const file = e.target.files?.[0]; if(!file) return
-  if(file.size > 500 * 1024) { alert('الصورة أكبر من 500 كيلوبايت — اختر صورة أصغر'); return }
-  const reader = new FileReader()
-  reader.onload = async (ev) => { settings.value.avatar_url = ev.target.result; await saveSettings() }
-  reader.readAsDataURL(file)
+  if(file.size > 10 * 1024 * 1024) { alert('الصورة أكبر من 10MB'); return }
+  try {
+    const dataUrl = await _compressImage(file, 400, 400, 0.75)
+    settings.value.avatar_url = dataUrl
+    await saveSettings()
+  } catch { alert('تعذر معالجة الصورة') }
   if(adminAvatarInput.value) adminAvatarInput.value.value = ''
 }
 

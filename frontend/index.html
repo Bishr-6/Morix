@@ -17,9 +17,230 @@
       href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap"
       rel="stylesheet"
     />
+    <!-- ═══ Global Glow CSS ═══ -->
+    <style>
+      :root {
+        --accent-rgb: 79, 158, 255;
+      }
+      * { box-sizing: border-box; }
+
+      /* Glass cards */
+      .card {
+        background: var(--card);
+        backdrop-filter: var(--card-blur);
+        -webkit-backdrop-filter: var(--card-blur);
+        border: var(--card-border, 1px solid var(--border));
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: var(--shadow);
+        transition: box-shadow 0.25s, transform 0.25s, border-color 0.25s;
+        position: relative;
+        overflow: hidden;
+      }
+      .card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 1px;
+        background: linear-gradient(90deg, transparent, var(--glass-border, rgba(79,158,255,0.2)), transparent);
+        pointer-events: none;
+      }
+      .card:hover {
+        box-shadow: var(--shadow-hover);
+        border-color: var(--accent);
+        transform: translateY(-2px);
+      }
+
+      /* ═══ Smooth Global Buttons ═══ */
+      button, .btn, [class*="btn-"] {
+        cursor: pointer;
+        font-family: 'Tajawal', sans-serif;
+        border-radius: var(--radius, 10px);
+        transition:
+          background 0.22s ease,
+          color 0.22s ease,
+          box-shadow 0.22s ease,
+          transform 0.18s cubic-bezier(0.34,1.56,0.64,1),
+          filter 0.18s ease,
+          border-color 0.22s ease,
+          opacity 0.18s ease !important;
+      }
+
+      /* Glow buttons */
+      .btn-primary, .btn-p, button[class*="btn-p"] {
+        background: var(--btn-gradient) !important;
+        color: var(--btn-text) !important;
+        box-shadow: var(--btn-glow) !important;
+        border: none !important;
+        transition:
+          background 0.22s ease,
+          box-shadow 0.22s ease,
+          transform 0.18s cubic-bezier(0.34,1.56,0.64,1),
+          filter 0.18s ease !important;
+      }
+      .btn-primary:hover:not(:disabled), .btn-p:hover:not(:disabled) {
+        filter: brightness(1.12) !important;
+        transform: translateY(-2px) scale(1.02) !important;
+        box-shadow: var(--glow-accent, var(--btn-glow)), 0 8px 24px rgba(0,0,0,0.25) !important;
+      }
+      .btn-primary:active:not(:disabled), .btn-p:active:not(:disabled) {
+        transform: translateY(0px) scale(0.97) !important;
+        filter: brightness(0.95) !important;
+        transition-duration: 0.08s !important;
+      }
+      .btn-primary:disabled, .btn-p:disabled, button:disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        filter: none !important;
+      }
+
+      /* Ghost / secondary buttons */
+      .btn-ghost, .btn-secondary, .btn-outline {
+        transition:
+          background 0.22s ease,
+          color 0.22s ease,
+          border-color 0.22s ease,
+          box-shadow 0.22s ease,
+          transform 0.18s cubic-bezier(0.34,1.56,0.64,1) !important;
+      }
+      .btn-ghost:hover:not(:disabled),
+      .btn-secondary:hover:not(:disabled),
+      .btn-outline:hover:not(:disabled) {
+        transform: translateY(-1px) !important;
+      }
+      .btn-ghost:active:not(:disabled),
+      .btn-secondary:active:not(:disabled),
+      .btn-outline:active:not(:disabled) {
+        transform: translateY(0) scale(0.97) !important;
+        transition-duration: 0.08s !important;
+      }
+
+      /* Danger / warning buttons */
+      .btn-danger:hover:not(:disabled) {
+        transform: translateY(-1px) scale(1.02) !important;
+        filter: brightness(1.1) !important;
+      }
+      .btn-danger:active:not(:disabled) {
+        transform: scale(0.97) !important;
+        transition-duration: 0.08s !important;
+      }
+
+      /* Small buttons */
+      .btn-sm:hover:not(:disabled), button.sm:hover:not(:disabled) {
+        transform: translateY(-1px) !important;
+      }
+
+      /* Icon buttons */
+      .btn-icon, button[title] {
+        transition:
+          background 0.2s ease,
+          color 0.2s ease,
+          transform 0.18s cubic-bezier(0.34,1.56,0.64,1),
+          box-shadow 0.2s ease !important;
+      }
+      .btn-icon:hover:not(:disabled) {
+        transform: scale(1.12) !important;
+      }
+      .btn-icon:active:not(:disabled) {
+        transform: scale(0.95) !important;
+        transition-duration: 0.08s !important;
+      }
+
+      /* Glow pulse animation */
+      @keyframes glow-pulse {
+        0%, 100% { box-shadow: var(--btn-glow); }
+        50% { box-shadow: var(--glow-accent, var(--btn-glow)); }
+      }
+      @keyframes btn-ripple {
+        0% { opacity: 0.4; transform: scale(0); }
+        100% { opacity: 0; transform: scale(2.5); }
+      }
+
+      /* Scrollbar glow */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent);
+        box-shadow: 0 0 6px var(--accent);
+      }
+
+      /* Glow pulse animation */
+      @keyframes glow-pulse {
+        0%, 100% { box-shadow: var(--btn-glow); }
+        50% { box-shadow: var(--glow-accent, var(--btn-glow)); }
+      }
+
+      /* Google Translate widget — visually hidden but functional */
+      /* نخفيه بصريًا بدون إزالته من الـ DOM حتى يعمل الـ widget */
+      #google_translate_element {
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .goog-te-banner-frame { display: none !important; }
+      .skiptranslate > font, .skiptranslate iframe { display: none !important; }
+      body { top: 0 !important; }
+      /* إخفاء شريط Google Translate العلوي */
+      .goog-te-gadget-simple { display: none !important; }
+      .VIpgJd-ZVi9od-aZ2wEe-wOHMyf-ti6hGc { display: none !important; }
+    </style>
   </head>
   <body>
     <div id="app"></div>
+    <div id="google_translate_element"></div>
     <script type="module" src="/src/main.js"></script>
+    <!-- Google Translate — hidden widget for programmatic use -->
+    <script>
+      function googleTranslateElementInit() {
+        try {
+          new google.translate.TranslateElement({
+            pageLanguage: 'ar',
+            includedLanguages: 'ar,en,zh-CN,de,es,fr',
+            autoDisplay: false,
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+          }, 'google_translate_element')
+        } catch(e) {}
+      }
+
+      // ترجمة الصفحة — يُستدعى من useI18n.js
+      window.__morixTranslate = function(langCode) {
+        try {
+          const map = { ar:'ar', en:'en', zh:'zh-CN', de:'de', es:'es', fr:'fr' }
+          const code = map[langCode] || langCode
+
+          if (langCode === 'ar') {
+            // العودة للعربية: أزل كوكيز جوجل وأعد تحميل
+            var restore = document.querySelector('.goog-te-menu-value span')
+            if (restore) restore.click()
+            // أو نستخدم الـ combo box
+            var sel = document.querySelector('.goog-te-combo')
+            if (sel) { sel.value = 'ar'; sel.dispatchEvent(new Event('change')) }
+            // خيار آخر: إزالة googtrans cookie وإعادة load
+            document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+            document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + location.hostname
+            return
+          }
+
+          var sel = document.querySelector('.goog-te-combo')
+          if (sel) {
+            sel.value = code
+            sel.dispatchEvent(new Event('change'))
+          } else {
+            // widget لم يُحمَّل بعد — أعد المحاولة
+            setTimeout(function() { window.__morixTranslate(langCode) }, 600)
+          }
+        } catch(e) {}
+      }
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
   </body>
 </html>
