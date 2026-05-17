@@ -264,6 +264,77 @@ const STATIC = {
   start_journey:    { ar:'ابدأ رحلتك التعليمية', en:'Start Your Learning Journey', zh:'开始您的学习之旅', de:'Starte deine Lernreise', es:'Comienza tu viaje educativo', fr:'Commencez votre parcours éducatif' },
   join_thousands:   { ar:'سجّل دخولك وانضم إلى آلاف الطلاب والمعلمين', en:'Login and join thousands of students and teachers', zh:'登录并加入数以千计的学生和教师', de:'Melde dich an und werde Teil einer wachsenden Gemeinschaft', es:'Inicia sesión y únete a miles de estudiantes y profesores', fr:"Connectez-vous et rejoignez des milliers d'étudiants et d'enseignants" },
   footer_tagline:   { ar:'منصة التعلم الذكي', en:'Smart Learning Platform', zh:'智能学习平台', de:'Intelligente Lernplattform', es:'Plataforma de Aprendizaje Inteligente', fr:"Plateforme d'Apprentissage Intelligent" },
+
+  // ── Login page — hero & misc ──────────
+  hero_badge:       { ar:'🚀 منصة التعلم الذكي #1', en:'🚀 #1 Smart Learning Platform', zh:'🚀 #1 智能学习平台', de:'🚀 #1 Intelligente Lernplattform', es:'🚀 Plataforma de Aprendizaje #1', fr:"🚀 Plateforme d'Apprentissage #1" },
+  hero_for:         { ar:'للطلاب، المعلمين، والمدارس.', en:'For students, teachers, and schools.', zh:'面向学生、教师和学校。', de:'Für Schüler, Lehrer und Schulen.', es:'Para estudiantes, profesores y escuelas.', fr:'Pour les étudiants, enseignants et écoles.' },
+  discover_more:    { ar:'اكتشف المزيد ↓', en:'Discover More ↓', zh:'了解更多 ↓', de:'Mehr erfahren ↓', es:'Descubre más ↓', fr:'En savoir plus ↓' },
+
+  // Float cards
+  fc_ai:            { ar:'مساعد AI', en:'AI Assistant', zh:'AI助手', de:'KI-Assistent', es:'Asistente IA', fr:'Assistant IA' },
+  fc_games:         { ar:'ألعاب تعليمية', en:'Educational Games', zh:'教育游戏', de:'Lernspiele', es:'Juegos educativos', fr:'Jeux éducatifs' },
+  fc_analytics:     { ar:'تحليل الأداء', en:'Analytics', zh:'成绩分析', de:'Analyse', es:'Análisis', fr:'Analytique' },
+  fc_leaderboard:   { ar:'لوحة المتصدرين', en:'Leaderboard', zh:'排行榜', de:'Bestenliste', es:'Clasificación', fr:'Classement' },
+
+  // Stats
+  stat_students:    { ar:'طالب نشط', en:'Active Students', zh:'活跃学生', de:'Aktive Schüler', es:'Estudiantes activos', fr:'Étudiants actifs' },
+  stat_teachers:    { ar:'معلم محترف', en:'Pro Teachers', zh:'专业教师', de:'Professionelle Lehrer', es:'Profesores', fr:'Enseignants pro' },
+  stat_schools_lbl: { ar:'مدرسة', en:'Schools', zh:'学校', de:'Schulen', es:'Escuelas', fr:'Écoles' },
+  stat_satisfaction:{ ar:'رضا المستخدمين', en:'User Satisfaction', zh:'用户满意度', de:'Zufriedenheit', es:'Satisfacción', fr:'Satisfaction' },
+
+  // Features section
+  feat_tag:         { ar:'✨ المميزات', en:'✨ Features', zh:'✨ 功能特色', de:'✨ Funktionen', es:'✨ Características', fr:'✨ Fonctionnalités' },
+  feat_title:       { ar:'كل ما تحتاجه في مكان واحد', en:'Everything You Need in One Place', zh:'所需一切尽在一处', de:'Alles was du brauchst', es:'Todo en un solo lugar', fr:'Tout en un seul endroit' },
+  feat_sub:         { ar:'منصة شاملة مدعومة بأحدث تقنيات الذكاء الاصطناعي', en:'A comprehensive platform powered by the latest AI', zh:'由最新AI技术驱动的综合平台', de:'Eine umfassende KI-Plattform', es:'Plataforma integral con la última IA', fr:"Plateforme complète alimentée par l'IA" },
+
+  feat_ai_t:        { ar:'مساعد AI ذكي', en:'Smart AI Assistant', zh:'智能AI助手', de:'KI-Assistent', es:'Asistente IA', fr:'Assistant IA' },
+  feat_ai_d:        { ar:'محادثات تعليمية مدعومة بـ Gemini AI مع إمكانية رفع الملفات والصور', en:'Educational chats powered by Gemini AI with file & image upload', zh:'Gemini AI教育对话，支持文件和图片', de:'Bildungschats mit Gemini AI, Datei- und Bild-Upload', es:'Chats educativos con Gemini AI y soporte de archivos', fr:'Discussions éducatives Gemini AI avec fichiers et images' },
+  feat_games_t:     { ar:'ألعاب تعليمية', en:'Educational Games', zh:'教育游戏', de:'Lernspiele', es:'Juegos educativos', fr:'Jeux éducatifs' },
+  feat_games_d:     { ar:'اختبارات MCQ وبطاقات تعليمية ومطابقة المفاهيم بشكل تفاعلي ممتع', en:'MCQ quizzes, flashcards, and concept matching — fun & interactive', zh:'MCQ测验、闪卡和概念匹配', de:'MCQ-Quiz, Lernkarten und Konzeptzuordnung', es:'Cuestionarios MCQ, tarjetas y emparejamiento interactivo', fr:'Quiz MCQ, cartes et association de concepts' },
+  feat_perf_t:      { ar:'تحليل الأداء', en:'Performance Analytics', zh:'成绩分析', de:'Leistungsanalyse', es:'Análisis de rendimiento', fr:'Analyse de performance' },
+  feat_perf_d:      { ar:'رسوم بيانية وإحصاءات مفصلة لتتبع تقدم الطلاب وتحديد نقاط الضعف', en:'Charts and statistics to track progress and identify weaknesses', zh:'图表和统计数据跟踪学生进度', de:'Diagramme und Statistiken zum Lernfortschritt', es:'Gráficos y estadísticas para seguir el progreso', fr:'Graphiques et statistiques de progression' },
+  feat_books_t:     { ar:'ملخصات الكتب', en:'Book Summaries', zh:'书籍摘要', de:'Buchzusammenfassungen', es:'Resúmenes de libros', fr:'Résumés de livres' },
+  feat_books_d:     { ar:'رفع الكتب وتوليد ملخصات ذكية وأسئلة تفاعلية بضغطة واحدة', en:'Upload books and generate smart summaries with one click', zh:'上传书籍一键生成智能摘要', de:'Bücher hochladen und Zusammenfassungen generieren', es:'Sube libros y genera resúmenes inteligentes', fr:'Téléchargez des livres et générez des résumés' },
+  feat_points_t:    { ar:'نظام النقاط', en:'Points System', zh:'积分系统', de:'Punktesystem', es:'Sistema de puntos', fr:'Système de points' },
+  feat_points_d:    { ar:'نجوم ومتصدرون وتحديات يومية لتحفيز الطلاب على الاستمرار', en:'Stars, leaderboards, and daily challenges to keep students motivated', zh:'星星、排行榜和每日挑战激励学习', de:'Sterne, Bestenlisten und tägliche Herausforderungen', es:'Estrellas, clasificaciones y desafíos diarios', fr:'Étoiles, classements et défis quotidiens' },
+  feat_hw_t:        { ar:'واجبات واختبارات', en:'Homework & Tests', zh:'作业和考试', de:'Hausaufgaben & Tests', es:'Tareas y exámenes', fr:'Devoirs et tests' },
+  feat_hw_d:        { ar:'إنشاء وتوزيع الواجبات والاختبارات وتصحيحها تلقائياً بالذكاء الاصطناعي', en:'Create, distribute, and auto-grade homework & tests with AI', zh:'创建分发作业考试AI自动批改', de:'Hausaufgaben und Tests automatisch korrigieren', es:'Crea y corrige automáticamente tareas con IA', fr:'Créez et corrigez automatiquement devoirs et tests' },
+  feat_ppt_t:       { ar:'توليد PPT وصور', en:'PPT & Image Gen', zh:'PPT和图片生成', de:'PPT & Bilder', es:'Generación PPT', fr:'Génération PPT' },
+  feat_ppt_d:       { ar:'توليد عروض تقديمية وصور تعليمية بالذكاء الاصطناعي في ثوانٍ', en:'Generate presentations and educational images with AI in seconds', zh:'AI秒速生成演示文稿和教育图片', de:'Präsentationen mit KI in Sekunden erstellen', es:'Genera presentaciones con IA en segundos', fr:'Générez des présentations avec l\'IA en secondes' },
+  feat_langs_t:     { ar:'٦ لغات', en:'6 Languages', zh:'6种语言', de:'6 Sprachen', es:'6 idiomas', fr:'6 langues' },
+  feat_langs_d:     { ar:'دعم كامل للعربية والإنجليزية والصينية والألمانية والإسبانية والفرنسية', en:'Full support for Arabic, English, Chinese, German, Spanish & French', zh:'支持阿拉伯语英语中文德语西班牙语法语', de:'Arabisch, Englisch, Chinesisch, Deutsch, Spanisch & Französisch', es:'Árabe, inglés, chino, alemán, español y francés', fr:'Arabe, anglais, chinois, allemand, espagnol et français' },
+  feat_pomo_t:      { ar:'بومودورو ذكي', en:'Smart Pomodoro', zh:'智能番茄钟', de:'Pomodoro', es:'Pomodoro inteligente', fr:'Pomodoro intelligent' },
+  feat_pomo_d:      { ar:'مؤقت دراسة مدمج مع تتبع جلسات التركيز وتقنيات التعلم الفعّال', en:'Built-in study timer with focus tracking and effective learning techniques', zh:'内置学习计时器跟踪专注时段', de:'Lerntimer mit Fokus-Tracking', es:'Temporizador de estudio con seguimiento de enfoque', fr:'Minuteur avec suivi de concentration' },
+
+  // Roles section
+  roles_tag:        { ar:'👥 لمن نحن', en:'👥 Who We Serve', zh:'👥 服务对象', de:'👥 Für wen', es:'👥 ¿Para quién?', fr:'👥 Pour qui' },
+  roles_title:      { ar:'منصة لكل أدوار التعليم', en:'A Platform for Every Education Role', zh:'面向所有教育角色的平台', de:'Für alle Bildungsrollen', es:'Para todos los roles educativos', fr:'Pour tous les rôles éducatifs' },
+  role_mgr_t:       { ar:'مدير المدرسة', en:'School Manager', zh:'学校管理者', de:'Schulleiter', es:'Director', fr:"Directeur d'école" },
+  role_mgr_1:       { ar:'إنشاء وإدارة المدارس', en:'Create & manage schools', zh:'创建管理学校', de:'Schulen verwalten', es:'Crear y gestionar escuelas', fr:'Créer et gérer des écoles' },
+  role_mgr_2:       { ar:'رفع بيانات الطلاب Excel', en:'Upload student data via Excel', zh:'Excel上传学生数据', de:'Schülerdaten per Excel', es:'Subir datos vía Excel', fr:'Importer via Excel' },
+  role_mgr_3:       { ar:'المستشار الاستراتيجي AI', en:'AI Strategic Advisor', zh:'AI战略顾问', de:'KI-Strategieberater', es:'Asesor estratégico IA', fr:'Conseiller stratégique IA' },
+  role_mgr_4:       { ar:'إدارة الكتب والمحتوى', en:'Manage books & content', zh:'管理书籍内容', de:'Bücher verwalten', es:'Gestionar contenido', fr:'Gérer le contenu' },
+  role_adm_t:       { ar:'المشرف الإداري', en:'School Admin', zh:'学校管理员', de:'Verwalter', es:'Administrador', fr:'Administrateur' },
+  role_adm_1:       { ar:'متابعة الطلاب والأنشطة', en:'Monitor students & activities', zh:'监控学生活动', de:'Schüler überwachen', es:'Seguimiento de estudiantes', fr:'Suivi des étudiants' },
+  role_adm_2:       { ar:'إعلانات المدرسة', en:'School announcements', zh:'学校公告', de:'Schulankündigungen', es:'Anuncios escolares', fr:'Annonces scolaires' },
+  role_adm_3:       { ar:'تقارير الحوادث بالذكاء', en:'AI incident reports', zh:'AI事故报告', de:'KI-Vorfallsberichte', es:'Informes de incidentes IA', fr:"Rapports d'incidents IA" },
+  role_adm_4:       { ar:'لوحة صحة المدرسة', en:'School health dashboard', zh:'学校健康仪表板', de:'Schul-Dashboard', es:'Panel de salud escolar', fr:'Tableau de bord scolaire' },
+  role_tch_t:       { ar:'المعلم', en:'Teacher', zh:'教师', de:'Lehrer', es:'Profesor', fr:'Enseignant' },
+  role_tch_1:       { ar:'توليد خطط الدروس AI', en:'AI lesson plan generation', zh:'AI生成教案', de:'KI-Unterrichtsplanung', es:'Planes de lección con IA', fr:'Plans de cours IA' },
+  role_tch_2:       { ar:'إنشاء واجبات واختبارات', en:'Create homework & tests', zh:'创建作业考试', de:'Hausaufgaben erstellen', es:'Crear tareas y exámenes', fr:'Créer devoirs et tests' },
+  role_tch_3:       { ar:'دفتر ذكي لتحليل الملفات', en:'Smart notebook for file analysis', zh:'智能笔记本分析文件', de:'Intelligentes Notizbuch', es:'Cuaderno inteligente', fr:'Carnet intelligent' },
+  role_tch_4:       { ar:'تقارير أداء الطلاب', en:'Student performance reports', zh:'学生成绩报告', de:'Leistungsberichte', es:'Informes de rendimiento', fr:'Rapports de performance' },
+  role_std_t:       { ar:'الطالب', en:'Student', zh:'学生', de:'Schüler', es:'Estudiante', fr:'Étudiant' },
+  role_std_1:       { ar:'محادثات AI مخصصة', en:'Personalized AI chats', zh:'个性化AI对话', de:'Personalisierte KI-Chats', es:'Chats IA personalizados', fr:'Discussions IA personnalisées' },
+  role_std_2:       { ar:'ألعاب وتحديات يومية', en:'Games & daily challenges', zh:'游戏和每日挑战', de:'Spiele & Herausforderungen', es:'Juegos y desafíos diarios', fr:'Jeux et défis quotidiens' },
+  role_std_3:       { ar:'ملخصات الكتب التفاعلية', en:'Interactive book summaries', zh:'互动书籍摘要', de:'Interaktive Zusammenfassungen', es:'Resúmenes interactivos', fr:'Résumés interactifs' },
+  role_std_4:       { ar:'تتبع التقدم والنجوم', en:'Progress & star tracking', zh:'进度和星星追踪', de:'Fortschritts-Tracking', es:'Seguimiento de progreso', fr:'Suivi des progrès' },
+
+  // Login features list
+  lf_multilang:     { ar:'واجهة متعددة اللغات (٦ لغات)', en:'Multilingual interface (6 languages)', zh:'多语言界面（6种语言）', de:'Mehrsprachig (6 Sprachen)', es:'Multilingüe (6 idiomas)', fr:'Multilingue (6 langues)' },
+  lf_themes:        { ar:'نظام ثيمات متعدد (داكن / فاتح / مكتبة)', en:'Multiple themes (Dark / Light / Library)', zh:'多主题（深色/浅色/图书馆）', de:'Mehrere Themes (Dunkel/Hell/Bibliothek)', es:'Temas (Oscuro / Claro / Biblioteca)', fr:'Thèmes (Sombre / Clair / Bibliothèque)' },
+  lf_security:      { ar:'حماية كاملة للبيانات', en:'Complete data protection', zh:'完整的数据保护', de:'Datenschutz', es:'Protección de datos', fr:'Protection des données' },
+  lf_instant:       { ar:'وصول فوري بعد تسجيل الدخول', en:'Instant access after login', zh:'登录后即时访问', de:'Sofortiger Zugang', es:'Acceso instantáneo', fr:'Accès instantané' },
 }
 
 // ════════════════════════════════════════

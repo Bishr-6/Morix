@@ -34,37 +34,37 @@
 
     <!-- ======= HERO ======= -->
     <section class="hero">
-      <div class="hero-badge">🚀 منصة التعلم الذكي #1</div>
+      <div class="hero-badge">{{ t('hero_badge') }}</div>
       <h1 class="hero-title">
-        تعلّم بذكاء<br/>
-        <span class="gradient-text">مع الذكاء الاصطناعي</span>
+        {{ t('hero_title_1') }}<br/>
+        <span class="gradient-text">{{ t('hero_title_2') }}</span>
       </h1>
       <p class="hero-sub">
-        موريكس — منصة تعليمية متكاملة تجمع بين الذكاء الاصطناعي والتعليم الشخصي.
-        للطلاب، المعلمين، والمدارس.
+        {{ t('hero_sub') }}
+        {{ t('hero_for') }}
       </p>
       <div class="hero-actions">
-        <button class="btn-hero" @click="scrollToLogin">تسجيل الدخول</button>
-        <a href="#features" class="btn-ghost">اكتشف المزيد ↓</a>
+        <button class="btn-hero" @click="scrollToLogin">{{ t('login') }}</button>
+        <a href="#features" class="btn-ghost">{{ t('discover_more') }}</a>
       </div>
 
       <!-- Floating cards preview -->
       <div class="float-cards">
         <div class="float-card" style="animation-delay:0s">
           <span class="fc-icon">🤖</span>
-          <span class="fc-label">مساعد AI</span>
+          <span class="fc-label">{{ t('fc_ai') }}</span>
         </div>
         <div class="float-card" style="animation-delay:0.4s">
           <span class="fc-icon">🎮</span>
-          <span class="fc-label">ألعاب تعليمية</span>
+          <span class="fc-label">{{ t('fc_games') }}</span>
         </div>
         <div class="float-card" style="animation-delay:0.8s">
           <span class="fc-icon">📊</span>
-          <span class="fc-label">تحليل الأداء</span>
+          <span class="fc-label">{{ t('fc_analytics') }}</span>
         </div>
         <div class="float-card" style="animation-delay:1.2s">
           <span class="fc-icon">🏆</span>
-          <span class="fc-label">لوحة المتصدرين</span>
+          <span class="fc-label">{{ t('fc_leaderboard') }}</span>
         </div>
       </div>
     </section>
@@ -72,7 +72,7 @@
     <!-- ======= STATS ======= -->
     <section id="stats" class="stats-section">
       <div class="stats-grid">
-        <div class="stat-item" v-for="s in statsData" :key="s.label">
+        <div class="stat-item" v-for="s in translatedStats" :key="s.label">
           <div class="stat-num">{{ s.num }}</div>
           <div class="stat-label">{{ s.label }}</div>
         </div>
@@ -82,12 +82,12 @@
     <!-- ======= FEATURES ======= -->
     <section id="features" class="features-section">
       <div class="section-header">
-        <div class="section-tag">✨ المميزات</div>
-        <h2 class="section-title">كل ما تحتاجه في مكان واحد</h2>
-        <p class="section-sub">منصة شاملة مدعومة بأحدث تقنيات الذكاء الاصطناعي</p>
+        <div class="section-tag">{{ t('feat_tag') }}</div>
+        <h2 class="section-title">{{ t('feat_title') }}</h2>
+        <p class="section-sub">{{ t('feat_sub') }}</p>
       </div>
       <div class="features-grid">
-        <div v-for="f in features" :key="f.title" class="feature-card">
+        <div v-for="f in translatedFeatures" :key="f.tKey" class="feature-card">
           <div class="feat-icon">{{ f.icon }}</div>
           <h3 class="feat-title">{{ f.title }}</h3>
           <p class="feat-desc">{{ f.desc }}</p>
@@ -98,15 +98,15 @@
     <!-- ======= ROLES ======= -->
     <section id="roles" class="roles-section">
       <div class="section-header">
-        <div class="section-tag">👥 لمن نحن</div>
-        <h2 class="section-title">منصة لكل أدوار التعليم</h2>
+        <div class="section-tag">{{ t('roles_tag') }}</div>
+        <h2 class="section-title">{{ t('roles_title') }}</h2>
       </div>
       <div class="roles-grid">
-        <div v-for="r in roles" :key="r.title" class="role-card" :style="`--rc:${r.color}`">
+        <div v-for="r in translatedRoles" :key="r.key" class="role-card" :style="`--rc:${r.color}`">
           <div class="role-icon">{{ r.icon }}</div>
           <h3 class="role-title">{{ r.title }}</h3>
           <ul class="role-list">
-            <li v-for="item in r.items" :key="item">{{ item }}</li>
+            <li v-for="(item, i) in r.items" :key="i">{{ item }}</li>
           </ul>
         </div>
       </div>
@@ -116,10 +116,10 @@
     <section id="login-section" class="login-section">
       <div class="login-wrapper">
         <div class="login-info">
-          <h2 class="login-info-title">ابدأ رحلتك التعليمية</h2>
-          <p class="login-info-sub">سجّل دخولك وانضم إلى آلاف الطلاب والمعلمين على منصة موريكس</p>
+          <h2 class="login-info-title">{{ t('start_journey') }}</h2>
+          <p class="login-info-sub">{{ t('join_thousands') }}</p>
           <div class="login-features">
-            <div v-for="lf in loginFeatures" :key="lf" class="lf-item">
+            <div v-for="(lf, i) in translatedLoginFeatures" :key="i" class="lf-item">
               <span class="lf-check">✓</span> {{ lf }}
             </div>
           </div>
@@ -161,7 +161,7 @@
     <footer class="footer">
       <div class="footer-brand">
         <div class="brand-icon sm">M</div>
-        <span>Morix — منصة التعلم الذكي</span>
+        <span>Morix — {{ t('footer_tagline') }}</span>
       </div>
       <p class="footer-copy">© 2026 Morix. {{ t('all_rights') }}</p>
     </footer>
@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
@@ -268,51 +268,51 @@ onUnmounted(() => {
   window.removeEventListener('resize', initCanvas)
 })
 
-// ── Data ──
-const statsData = [
-  { num: '١٠٠٠+', label: 'طالب نشط' },
-  { num: '٥٠+', label: 'معلم محترف' },
-  { num: '٢٠+', label: 'مدرسة' },
-  { num: '٩٨٪', label: 'رضا المستخدمين' },
-]
+// ── Data (translated via computed) ──
+const translatedStats = computed(() => [
+  { num: '١٠٠٠+', label: t('stat_students') },
+  { num: '٥٠+',   label: t('stat_teachers') },
+  { num: '٢٠+',   label: t('stat_schools_lbl') },
+  { num: '٩٨٪',   label: t('stat_satisfaction') },
+])
 
-const features = [
-  { icon: '🤖', title: 'مساعد AI ذكي', desc: 'محادثات تعليمية مدعومة بـ Gemini AI مع إمكانية رفع الملفات والصور' },
-  { icon: '🎮', title: 'ألعاب تعليمية', desc: 'اختبارات MCQ وبطاقات تعليمية ومطابقة المفاهيم بشكل تفاعلي ممتع' },
-  { icon: '📊', title: 'تحليل الأداء', desc: 'رسوم بيانية وإحصاءات مفصلة لتتبع تقدم الطلاب وتحديد نقاط الضعف' },
-  { icon: '📚', title: 'ملخصات الكتب', desc: 'رفع الكتب وتوليد ملخصات ذكية وأسئلة تفاعلية بضغطة واحدة' },
-  { icon: '🏆', title: 'نظام النقاط', desc: 'نجوم ومتصدرون وتحديات يومية لتحفيز الطلاب على الاستمرار' },
-  { icon: '📋', title: 'واجبات واختبارات', desc: 'إنشاء وتوزيع الواجبات والاختبارات وتصحيحها تلقائياً بالذكاء الاصطناعي' },
-  { icon: '🎨', title: 'توليد PPT وصور', desc: 'توليد عروض تقديمية وصور تعليمية بالذكاء الاصطناعي في ثوانٍ' },
-  { icon: '🌐', title: '٦ لغات', desc: 'دعم كامل للعربية والإنجليزية والصينية والألمانية والإسبانية والفرنسية' },
-  { icon: '⏱️', title: 'بومودورو ذكي', desc: 'مؤقت دراسة مدمج مع تتبع جلسات التركيز وتقنيات التعلم الفعّال' },
-]
+const translatedFeatures = computed(() => [
+  { icon: '🤖', tKey: 'ai',    title: t('feat_ai_t'),    desc: t('feat_ai_d') },
+  { icon: '🎮', tKey: 'games', title: t('feat_games_t'), desc: t('feat_games_d') },
+  { icon: '📊', tKey: 'perf',  title: t('feat_perf_t'),  desc: t('feat_perf_d') },
+  { icon: '📚', tKey: 'books', title: t('feat_books_t'), desc: t('feat_books_d') },
+  { icon: '🏆', tKey: 'pts',   title: t('feat_points_t'),desc: t('feat_points_d') },
+  { icon: '📋', tKey: 'hw',    title: t('feat_hw_t'),    desc: t('feat_hw_d') },
+  { icon: '🎨', tKey: 'ppt',   title: t('feat_ppt_t'),   desc: t('feat_ppt_d') },
+  { icon: '🌐', tKey: 'langs', title: t('feat_langs_t'), desc: t('feat_langs_d') },
+  { icon: '⏱️', tKey: 'pomo',  title: t('feat_pomo_t'),  desc: t('feat_pomo_d') },
+])
 
-const roles = [
+const translatedRoles = computed(() => [
   {
-    icon: '🏫', title: 'مدير المدرسة', color: '#3b82f6',
-    items: ['إنشاء وإدارة المدارس', 'رفع بيانات الطلاب Excel', 'المستشار الاستراتيجي AI', 'إدارة الكتب والمحتوى'],
+    key: 'mgr', icon: '🏫', title: t('role_mgr_t'), color: '#3b82f6',
+    items: [t('role_mgr_1'), t('role_mgr_2'), t('role_mgr_3'), t('role_mgr_4')],
   },
   {
-    icon: '🛡️', title: 'المشرف الإداري', color: '#22c55e',
-    items: ['متابعة الطلاب والأنشطة', 'إعلانات المدرسة', 'تقارير الحوادث بالذكاء', 'لوحة صحة المدرسة'],
+    key: 'adm', icon: '🛡️', title: t('role_adm_t'), color: '#22c55e',
+    items: [t('role_adm_1'), t('role_adm_2'), t('role_adm_3'), t('role_adm_4')],
   },
   {
-    icon: '👨‍🏫', title: 'المعلم', color: '#f59e0b',
-    items: ['توليد خطط الدروس AI', 'إنشاء واجبات واختبارات', 'دفتر ذكي لتحليل الملفات', 'تقارير أداء الطلاب'],
+    key: 'tch', icon: '👨‍🏫', title: t('role_tch_t'), color: '#f59e0b',
+    items: [t('role_tch_1'), t('role_tch_2'), t('role_tch_3'), t('role_tch_4')],
   },
   {
-    icon: '👨‍🎓', title: 'الطالب', color: '#00ff9f',
-    items: ['محادثات AI مخصصة', 'ألعاب وتحديات يومية', 'ملخصات الكتب التفاعلية', 'تتبع التقدم والنجوم'],
+    key: 'std', icon: '👨‍🎓', title: t('role_std_t'), color: '#00ff9f',
+    items: [t('role_std_1'), t('role_std_2'), t('role_std_3'), t('role_std_4')],
   },
-]
+])
 
-const loginFeatures = [
-  'واجهة متعددة اللغات (٦ لغات)',
-  'نظام ثيمات متعدد (داكن / فاتح / مكتبة)',
-  'حماية كاملة للبيانات',
-  'وصول فوري بعد تسجيل الدخول',
-]
+const translatedLoginFeatures = computed(() => [
+  t('lf_multilang'),
+  t('lf_themes'),
+  t('lf_security'),
+  t('lf_instant'),
+])
 </script>
 
 <style scoped>
