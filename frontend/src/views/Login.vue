@@ -1,5 +1,5 @@
 <template>
-  <div class="landing">
+  <div class="landing" :dir="dir">
     <!-- Matrix Background Canvas -->
     <canvas ref="bgCanvas" class="bg-canvas" />
 
@@ -176,7 +176,7 @@ import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 
 const router = useRouter()
 const auth = useAuthStore()
-const { t, lang, setLang } = useI18n()
+const { t, lang, dir, setLang } = useI18n()
 const email = ref('')
 const password = ref('')
 const showPass = ref(false)
@@ -322,7 +322,6 @@ const translatedLoginFeatures = computed(() => [
   background: #00000e;
   color: #dff4ff;
   font-family: 'Segoe UI', 'Cairo', sans-serif;
-  direction: rtl;
   position: relative;
   overflow-x: hidden;
 }
@@ -632,7 +631,7 @@ nav, section, footer { position: relative; z-index: 1; }
   border: 1px solid rgba(0,255,159,0.2);
   border-radius: 12px; padding: 13px 16px;
   color: #dff4ff; font-size: 15px; width: 100%;
-  box-sizing: border-box; transition: border-color 0.2s; text-align: right;
+  box-sizing: border-box; transition: border-color 0.2s; text-align: inherit;
   font-family: inherit;
 }
 .field input:focus, .pass-wrap input:focus {
