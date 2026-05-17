@@ -26,7 +26,7 @@
                 class="lang-pill"
                 :class="{ active: lang === code }"
                 :title="L.name">
-          {{ L.flag }}
+          <img :src="L.flagImg" :alt="L.name" style="width:20px;height:14px;border-radius:2px;object-fit:cover" />
         </button>
       </div>
       <button class="nav-cta" @click="scrollToLogin">{{ t('start_now') }}</button>

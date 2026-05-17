@@ -428,9 +428,15 @@
 
             <!-- معلومات الكتاب -->
             <div class="grid md:grid-cols-3 gap-4 mb-4">
-              <input v-model="newBook.title" class="memorix-input" placeholder="عنوان الكتاب *" dir="rtl" />
-              <input v-model="newBook.subject" class="memorix-input" placeholder="المادة *" dir="rtl" />
-              <input v-model="newBook.grade" class="memorix-input" placeholder="الصف الدراسي" dir="rtl" />
+              <input v-model="newBook.title" class="memorix-input" :placeholder="t('book_title_ph')" dir="rtl" />
+              <select v-model="newBook.subject" class="memorix-input" dir="rtl">
+                <option value="" disabled>{{ t('select_subject') }}</option>
+                <option v-for="s in subjectOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
+              </select>
+              <select v-model="newBook.grade" class="memorix-input" dir="rtl">
+                <option value="" disabled>{{ t('select_grade') }}</option>
+                <option v-for="g in gradeOptions" :key="g.value" :value="g.value">{{ g.label }}</option>
+              </select>
             </div>
 
             <!-- رفع ملف الكتاب (PDF أو PowerPoint) -->
@@ -712,7 +718,7 @@ import NavBar from '../components/NavBar.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
-const { t, setLang } = useI18n()
+const { t, lang, setLang } = useI18n()
 const languages = LANGUAGES
 
 const activeTab = ref('stats')
@@ -831,6 +837,39 @@ const passwordsLoading = ref(false)
 const books = ref([])
 const bookLoading = ref(false)
 const newBook = ref({ title: '', subject: '', grade: '' })
+
+// قوائم المواد والصفوف
+const subjectOptions = computed(() => [
+  { value: 'arabic',   label: t('subj_arabic') },
+  { value: 'english',  label: t('subj_english') },
+  { value: 'math',     label: t('subj_math') },
+  { value: 'science',  label: t('subj_science') },
+  { value: 'physics',  label: t('subj_physics') },
+  { value: 'chemistry',label: t('subj_chemistry') },
+  { value: 'biology',  label: t('subj_biology') },
+  { value: 'history',  label: t('subj_history') },
+  { value: 'geography',label: t('subj_geography') },
+  { value: 'islamic',  label: t('subj_islamic') },
+  { value: 'computer', label: t('subj_computer') },
+  { value: 'art',      label: t('subj_art') },
+  { value: 'pe',       label: t('subj_pe') },
+  { value: 'other',    label: t('subj_other') },
+])
+
+const gradeOptions = computed(() => [
+  { value: '1',  label: t('grade_1') },
+  { value: '2',  label: t('grade_2') },
+  { value: '3',  label: t('grade_3') },
+  { value: '4',  label: t('grade_4') },
+  { value: '5',  label: t('grade_5') },
+  { value: '6',  label: t('grade_6') },
+  { value: '7',  label: t('grade_7') },
+  { value: '8',  label: t('grade_8') },
+  { value: '9',  label: t('grade_9') },
+  { value: '10', label: t('grade_10') },
+  { value: '11', label: t('grade_11') },
+  { value: '12', label: t('grade_12') },
+])
 const bookFileText = ref('')
 const bookFileName = ref('')
 const bookExtractLoading = ref(false)
@@ -872,6 +911,11 @@ async function extractBookFile(file) {
   bookFileText.value = ''
   bookExtractError.value = ''
   bookExtractLoading.value = true
+
+  // auto-fill title from filename if empty
+  if (!newBook.value.title.trim()) {
+    newBook.value.title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ').trim()
+  }
 
   // TXT / MD — نقرأها مباشرة في المتصفح
   if (ext === '.txt' || ext === '.md') {

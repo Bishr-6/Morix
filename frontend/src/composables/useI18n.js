@@ -2,12 +2,12 @@
 import { ref, computed, watch } from 'vue'
 
 export const LANGUAGES = {
-  ar: { code: 'ar', name: 'العربية',  flag: '🇸🇦', dir: 'rtl' },
-  en: { code: 'en', name: 'English',  flag: '🇬🇧', dir: 'ltr' },
-  zh: { code: 'zh', name: '中文',      flag: '🇨🇳', dir: 'ltr' },
-  de: { code: 'de', name: 'Deutsch',  flag: '🇩🇪', dir: 'ltr' },
-  es: { code: 'es', name: 'Español',  flag: '🇪🇸', dir: 'ltr' },
-  fr: { code: 'fr', name: 'Français', flag: '🇫🇷', dir: 'ltr' },
+  ar: { code: 'ar', name: 'العربية',  flag: '🇸🇦', flagImg: 'https://flagcdn.com/w40/sa.png', dir: 'rtl' },
+  en: { code: 'en', name: 'English',  flag: '🇬🇧', flagImg: 'https://flagcdn.com/w40/gb.png', dir: 'ltr' },
+  zh: { code: 'zh', name: '中文',      flag: '🇨🇳', flagImg: 'https://flagcdn.com/w40/cn.png', dir: 'ltr' },
+  de: { code: 'de', name: 'Deutsch',  flag: '🇩🇪', flagImg: 'https://flagcdn.com/w40/de.png', dir: 'ltr' },
+  es: { code: 'es', name: 'Español',  flag: '🇪🇸', flagImg: 'https://flagcdn.com/w40/es.png', dir: 'ltr' },
+  fr: { code: 'fr', name: 'Français', flag: '🇫🇷', flagImg: 'https://flagcdn.com/w40/fr.png', dir: 'ltr' },
 }
 
 // ════════════════════════════════════════
@@ -335,6 +335,39 @@ const STATIC = {
   lf_themes:        { ar:'نظام ثيمات متعدد (داكن / فاتح / مكتبة)', en:'Multiple themes (Dark / Light / Library)', zh:'多主题（深色/浅色/图书馆）', de:'Mehrere Themes (Dunkel/Hell/Bibliothek)', es:'Temas (Oscuro / Claro / Biblioteca)', fr:'Thèmes (Sombre / Clair / Bibliothèque)' },
   lf_security:      { ar:'حماية كاملة للبيانات', en:'Complete data protection', zh:'完整的数据保护', de:'Datenschutz', es:'Protección de datos', fr:'Protection des données' },
   lf_instant:       { ar:'وصول فوري بعد تسجيل الدخول', en:'Instant access after login', zh:'登录后即时访问', de:'Sofortiger Zugang', es:'Acceso instantáneo', fr:'Accès instantané' },
+
+  // ── Subjects ──────────────────────────
+  select_subject:   { ar:'اختر المادة *', en:'Select Subject *', zh:'选择科目 *', de:'Fach wählen *', es:'Seleccionar materia *', fr:'Choisir la matière *' },
+  book_title_ph:    { ar:'عنوان الكتاب *', en:'Book Title *', zh:'书名 *', de:'Buchtitel *', es:'Título del libro *', fr:'Titre du livre *' },
+  subj_arabic:      { ar:'اللغة العربية', en:'Arabic', zh:'阿拉伯语', de:'Arabisch', es:'Árabe', fr:'Arabe' },
+  subj_english:     { ar:'اللغة الإنجليزية', en:'English', zh:'英语', de:'Englisch', es:'Inglés', fr:'Anglais' },
+  subj_math:        { ar:'الرياضيات', en:'Mathematics', zh:'数学', de:'Mathematik', es:'Matemáticas', fr:'Mathématiques' },
+  subj_science:     { ar:'العلوم', en:'Science', zh:'科学', de:'Naturwissenschaft', es:'Ciencias', fr:'Sciences' },
+  subj_physics:     { ar:'الفيزياء', en:'Physics', zh:'物理', de:'Physik', es:'Física', fr:'Physique' },
+  subj_chemistry:   { ar:'الكيمياء', en:'Chemistry', zh:'化学', de:'Chemie', es:'Química', fr:'Chimie' },
+  subj_biology:     { ar:'الأحياء', en:'Biology', zh:'生物', de:'Biologie', es:'Biología', fr:'Biologie' },
+  subj_history:     { ar:'التاريخ', en:'History', zh:'历史', de:'Geschichte', es:'Historia', fr:'Histoire' },
+  subj_geography:   { ar:'الجغرافيا', en:'Geography', zh:'地理', de:'Geografie', es:'Geografía', fr:'Géographie' },
+  subj_islamic:     { ar:'التربية الإسلامية', en:'Islamic Studies', zh:'伊斯兰教育', de:'Islamkunde', es:'Estudios islámicos', fr:'Études islamiques' },
+  subj_computer:    { ar:'الحاسب الآلي', en:'Computer Science', zh:'计算机', de:'Informatik', es:'Informática', fr:'Informatique' },
+  subj_art:         { ar:'التربية الفنية', en:'Art', zh:'艺术', de:'Kunst', es:'Arte', fr:'Art' },
+  subj_pe:          { ar:'التربية البدنية', en:'Physical Education', zh:'体育', de:'Sport', es:'Educación física', fr:'Éducation physique' },
+  subj_other:       { ar:'أخرى', en:'Other', zh:'其他', de:'Sonstige', es:'Otro', fr:'Autre' },
+
+  // ── Grades ────────────────────────────
+  select_grade:     { ar:'اختر الصف', en:'Select Grade', zh:'选择年级', de:'Klasse wählen', es:'Seleccionar grado', fr:'Choisir la classe' },
+  grade_1:          { ar:'الصف الأول', en:'Grade 1', zh:'一年级', de:'1. Klasse', es:'1.° Grado', fr:'1ère année' },
+  grade_2:          { ar:'الصف الثاني', en:'Grade 2', zh:'二年级', de:'2. Klasse', es:'2.° Grado', fr:'2ème année' },
+  grade_3:          { ar:'الصف الثالث', en:'Grade 3', zh:'三年级', de:'3. Klasse', es:'3.° Grado', fr:'3ème année' },
+  grade_4:          { ar:'الصف الرابع', en:'Grade 4', zh:'四年级', de:'4. Klasse', es:'4.° Grado', fr:'4ème année' },
+  grade_5:          { ar:'الصف الخامس', en:'Grade 5', zh:'五年级', de:'5. Klasse', es:'5.° Grado', fr:'5ème année' },
+  grade_6:          { ar:'الصف السادس', en:'Grade 6', zh:'六年级', de:'6. Klasse', es:'6.° Grado', fr:'6ème année' },
+  grade_7:          { ar:'الصف السابع', en:'Grade 7', zh:'七年级', de:'7. Klasse', es:'7.° Grado', fr:'7ème année' },
+  grade_8:          { ar:'الصف الثامن', en:'Grade 8', zh:'八年级', de:'8. Klasse', es:'8.° Grado', fr:'8ème année' },
+  grade_9:          { ar:'الصف التاسع', en:'Grade 9', zh:'九年级', de:'9. Klasse', es:'9.° Grado', fr:'9ème année' },
+  grade_10:         { ar:'الصف العاشر', en:'Grade 10', zh:'十年级', de:'10. Klasse', es:'10.° Grado', fr:'10ème année' },
+  grade_11:         { ar:'الصف الحادي عشر', en:'Grade 11', zh:'十一年级', de:'11. Klasse', es:'11.° Grado', fr:'11ème année' },
+  grade_12:         { ar:'الصف الثاني عشر', en:'Grade 12', zh:'十二年级', de:'12. Klasse', es:'12.° Grado', fr:'12ème année' },
 }
 
 // ════════════════════════════════════════

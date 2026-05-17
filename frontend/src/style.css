@@ -155,6 +155,47 @@ body {
 }
 
 /* ============================================
+   Light Theme — visibility fixes
+   ============================================ */
+:root[data-theme="light"] h1,
+:root[data-theme="light"] h2,
+:root[data-theme="light"] h3,
+:root[data-theme="light"] h4 {
+  color: var(--text) !important;
+}
+
+:root[data-theme="light"] .memorix-card,
+:root[data-theme="light"] .card {
+  color: var(--text);
+}
+
+:root[data-theme="light"] .memorix-card h2,
+:root[data-theme="light"] .memorix-card h3,
+:root[data-theme="light"] .memorix-card p,
+:root[data-theme="light"] .memorix-card span,
+:root[data-theme="light"] .memorix-card label,
+:root[data-theme="light"] .memorix-card li,
+:root[data-theme="light"] .memorix-card td,
+:root[data-theme="light"] .memorix-card th {
+  color: inherit;
+}
+
+:root[data-theme="light"] .hub-side {
+  background: var(--sidebar-bg);
+  border-color: var(--border);
+}
+
+:root[data-theme="light"] .text-xs,
+:root[data-theme="light"] .text-sm {
+  color: var(--t2);
+}
+
+:root[data-theme="light"] select.memorix-input {
+  color: var(--text);
+  background: var(--input-bg);
+}
+
+/* ============================================
    شريط التمرير
    ============================================ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

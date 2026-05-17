@@ -19,19 +19,19 @@
       <div class="mn-pills" title="الثيم">
         <button v-for="th in themeList" :key="th.k"
           :class="['mn-pill', { active: currentTheme === th.k }]"
-          @click="$emit('theme', th.k)" :title="th.label">
-          {{ th.icon }}
+          @click="$emit('theme', th.k)" :title="th.label"
+          v-html="th.svg">
         </button>
       </div>
 
       <div class="mn-sep" />
 
-      <!-- Language pills -->
+      <!-- Language flags -->
       <div class="mn-pills mn-langs">
         <button v-for="(L, code) in LANGUAGES" :key="code"
           :class="['mn-pill', 'lang-pill', { active: currentLang === code }]"
           @click="$emit('lang', code)" :title="L.name">
-          {{ L.flag }}
+          <img :src="L.flagImg" :alt="L.name" class="mn-flag-img" />
         </button>
       </div>
 
@@ -62,10 +62,10 @@ const props = defineProps({
 defineEmits(['theme', 'lang'])
 
 const themeList = [
-  { k: 'dark',    icon: '🌙', label: 'داكن' },
-  { k: 'light',   icon: '☀️', label: 'فاتح' },
-  { k: 'library', icon: '📚', label: 'مكتبة' },
-  { k: 'neon',    icon: '💜', label: 'نيون' },
+  { k: 'dark',    svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>`, label: 'Dark' },
+  { k: 'light',   svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><circle cx="10" cy="10" r="4"/><path d="M10 1v2m0 14v2m-7-9H1m18 0h-2m-2.05-5.95l-1.41 1.41m-7.08 7.08l-1.41 1.41m0-9.9l1.41 1.41m7.08 7.08l1.41 1.41"/></svg>`, label: 'Light' },
+  { k: 'library', svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>`, label: 'Library' },
+  { k: 'neon',    svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.3 1.05a1 1 0 00-1.1.45L5.7 9H2a1 1 0 00-.8 1.6l7.5 10a1 1 0 001.8-.6L9.7 13H18a1 1 0 00.8-1.6l-7.5-10.35z"/></svg>`, label: 'Neon' },
 ]
 </script>
 
@@ -129,7 +129,8 @@ const themeList = [
   box-shadow: var(--nav-active-shadow), 0 0 8px rgba(var(--accent-rgb, 79,158,255), 0.2);
   color: var(--accent);
 }
-.lang-pill { font-size: 16px; width: 28px; height: 28px; }
+.lang-pill { font-size: 16px; width: 28px; height: 28px; padding: 2px; }
+.mn-flag-img { width: 20px; height: 14px; border-radius: 2px; object-fit: cover; display: block; }
 
 /* User chip */
 .mn-user { display: flex; align-items: center; gap: 8px; cursor: default; }
