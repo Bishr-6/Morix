@@ -519,7 +519,22 @@
         </div>
 
         <!-- ============ تبويب مساعد AI ============ -->
-        <div v-if="activeTab === 'chat'" class="animate-fade-in" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
+        <div v-if="activeTab === 'chat'" class="animate-fade-in" style="height: calc(100vh - 200px); display: flex; gap: 0;">
+          <!-- Chat history sidebar -->
+          <div class="chat-hist-panel">
+            <button class="chat-hist-new" @click="startNewChat">+ {{ t('new_chat') || 'محادثة جديدة' }}</button>
+            <div class="chat-hist-list">
+              <div v-for="c in chatConversations" :key="c.id"
+                :class="['chat-hist-item', { active: chatConvId === c.id }]"
+                @click="loadChatConv(c.id)">
+                <span class="chat-hist-title">{{ c.title }}</span>
+                <button class="chat-hist-del" @click.stop="deleteChatConv(c.id)">&times;</button>
+              </div>
+              <p v-if="!chatConversations.length" class="text-xs mgr-muted" style="padding:12px;text-align:center">{{ t('no_conversations') || 'لا توجد محادثات' }}</p>
+            </div>
+          </div>
+          <!-- Chat main area -->
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
           <div ref="chatEl" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
             <div v-if="!chatMsgs.length" class="memorix-card p-10 text-center">
               <div style="margin-bottom:12px">
@@ -571,6 +586,7 @@
             <button @click="sendMgrMsg()" :disabled="!chatInput.trim()||chatThinking"
               class="btn-primary px-4 py-3" style="border-radius:10px;font-size:18px;flex-shrink:0">➤</button>
           </div>
+          </div><!-- close chat main area -->
         </div>
 
         <!-- ============ 💪 صحة المدارس ============ -->
@@ -714,7 +730,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
-import { managerAPI, teacherAPI } from '../api.js'
+import { managerAPI, teacherAPI, aiAPI } from '../api.js'
 import Stars from '../components/Stars.vue'
 import MatrixBackground from '../components/MatrixBackground.vue'
 import { useTheme } from '../composables/useTheme.js'
@@ -790,11 +806,13 @@ const selectedSchoolForAccounts = ref('')
 const accounts = ref([])
 const accountsLoading = ref(false)
 
-// AI Chat
+// AI Chat with history
 const chatMsgs = ref([])
 const chatInput = ref('')
 const chatThinking = ref(false)
 const chatEl = ref(null)
+const chatConversations = ref([])
+const chatConvId = ref(null)
 const mgrQuickQs = [
   'كيف أحسن أداء المدرسة؟',
   'اقترح خطة تطوير للمعلمين',
@@ -1112,13 +1130,34 @@ function roleStyle(role) {
   return map[role] || ''
 }
 
+async function loadChatHistory() {
+  try { chatConversations.value = (await aiAPI.getConversations()).data } catch {}
+}
+function startNewChat() { chatConvId.value = null; chatMsgs.value = [] }
+async function loadChatConv(id) {
+  chatConvId.value = id
+  try {
+    const r = await aiAPI.getMessages(id)
+    chatMsgs.value = r.data.messages || []
+    nextTick(() => { if(chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight })
+  } catch {}
+}
+async function deleteChatConv(id) {
+  try {
+    await aiAPI.deleteConversation(id)
+    chatConversations.value = chatConversations.value.filter(c => c.id !== id)
+    if (chatConvId.value === id) { chatConvId.value = null; chatMsgs.value = [] }
+  } catch {}
+}
 async function sendMgrMsg(text) {
   const m = text || chatInput.value.trim(); if(!m) return
   chatInput.value = ''; chatMsgs.value.push({ role: 'user', content: m }); chatThinking.value = true
   nextTick(() => { if(chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight })
   try {
-    const r = await teacherAPI.chat(m)
+    const r = await aiAPI.chat(m, chatConvId.value)
+    chatConvId.value = r.data.conversation_id
     chatMsgs.value.push({ role: 'assistant', content: r.data.reply })
+    loadChatHistory()
   } catch {
     chatMsgs.value.push({ role: 'assistant', content: 'حدث خطأ في الاتصال.' })
   } finally {
@@ -1278,6 +1317,7 @@ async function confirmDeleteAccount(acc) {
 onMounted(async () => {
   await loadMgrSettings()
   await loadStats()
+  loadChatHistory()
   try {
     const res = await managerAPI.getSchools()
     schools.value = res.data
@@ -1309,4 +1349,38 @@ onMounted(async () => {
 .avatar-option { cursor: pointer; border-radius: 50%; padding: 4px; border: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
 .avatar-option:hover { border-color: var(--accent, #4a7eff); transform: scale(1.1); }
 .avatar-option.selected { border-color: var(--accent, #4a7eff); box-shadow: 0 0 12px rgba(74,126,255,0.4); }
+
+/* Chat history sidebar */
+.chat-hist-panel {
+  width: 220px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: var(--card, rgba(26,31,58,0.6)); border-right: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-radius: 12px 0 0 12px; overflow: hidden;
+}
+.chat-hist-new {
+  padding: 12px; text-align: center; font-size: 13px; font-weight: 600;
+  background: rgba(74,126,255,0.12); color: var(--accent, #4a7eff);
+  border: none; border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+  cursor: pointer; transition: background 0.15s;
+}
+.chat-hist-new:hover { background: rgba(74,126,255,0.2); }
+.chat-hist-list { flex: 1; overflow-y: auto; padding: 6px; }
+.chat-hist-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 12px;
+  color: var(--text2, #94a3b8); transition: all 0.15s; margin-bottom: 2px;
+}
+.chat-hist-item:hover { background: rgba(74,126,255,0.08); }
+.chat-hist-item.active { background: rgba(74,126,255,0.15); color: var(--accent, #4a7eff); font-weight: 600; }
+.chat-hist-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.chat-hist-del {
+  width: 20px; height: 20px; border-radius: 4px; border: none; cursor: pointer;
+  background: transparent; color: var(--text2); font-size: 14px; opacity: 0;
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.chat-hist-item:hover .chat-hist-del { opacity: 0.6; }
+.chat-hist-del:hover { opacity: 1; background: rgba(239,68,68,0.15); color: #ef4444; }
+
+@media (max-width: 768px) {
+  .chat-hist-panel { display: none; }
+}
 </style>
