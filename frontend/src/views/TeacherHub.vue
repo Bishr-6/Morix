@@ -12,7 +12,7 @@
       </div>
       <nav class="sb-nav">
         <button v-for="s in sections" :key="s.id" :class="['nav-item',{active:cur===s.id}]" @click="cur=s.id; mobileOpen=false" :title="s.label">
-          <span>{{ s.icon }}</span><span v-if="!sb" class="nav-label">{{ s.label }}</span>
+          <span class="nav-icon" v-html="s.svg"></span><span v-if="!sb" class="nav-label">{{ s.label }}</span>
         </button>
       </nav>
       <div class="sb-footer">
@@ -758,29 +758,29 @@ function changeTeacherLang(code) {
 const settingsMsg = ref('')
 
 const sections = computed(() => [
-  { id:'overview',     icon:'🏠', label: t('overview') },
-  { id:'homework',     icon:'📚', label: t('homework') },
-  { id:'tests',        icon:'📝', label: t('tests') },
-  { id:'worksheets',   icon:'📋', label: t('worksheets') },
-  { id:'students',     icon:'👨‍🎓',label: t('students') },
-  { id:'ppt',          icon:'📊', label: t('ppt_generator') },
-  { id:'video',        icon:'🎬', label: t('video_script') },
-  { id:'chat',         icon:'💬', label: t('ai_assistant') },
-  { id:'image',        icon:'🎨', label: t('image_gen') },
-  { id:'lesson_plan',  icon:'📋', label: t('lesson_plan') },
-  { id:'multimedia',   icon:'🔄', label: t('multimedia') },
-  { id:'activity',     icon:'🎯', label: t('activity') },
-  { id:'compose',      icon:'✉️', label: t('compose') },
-  { id:'feedback',     icon:'📝', label: t('smart_feedback') },
-  { id:'insights',     icon:'📊', label: t('insights') },
-  { id:'simplify',     icon:'🔍', label: t('simplify') },
-  { id:'differentiate',icon:'🌈', label: t('differentiate') },
-  { id:'coach',        icon:'🧠', label: t('coach') },
-  { id:'research',     icon:'📰', label: t('research') },
-  { id:'prompts',      icon:'📚', label: t('prompt_library') },
-  { id:'library',      icon:'📚', label: t('digital_library') },
-  { id:'notebook',     icon:'📓', label: t('notebook') },
-  { id:'settings',     icon:'⚙️', label: t('settings') },
+  { id:'overview',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7A1 1 0 003 11h1v6a1 1 0 001 1h4v-5h2v5h4a1 1 0 001-1v-6h1a1 1 0 00.707-1.707l-7-7z"/></svg>', label: t('overview') },
+  { id:'homework',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>', label: t('homework') },
+  { id:'tests',        svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M9 2a1 1 0 00-1 1v1H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H9zm0 2h2v1H9V4zM7 8h6v1H7V8zm0 3h6v1H7v-1zm0 3h4v1H7v-1z"/></svg>', label: t('tests') },
+  { id:'worksheets',   svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M9 2a1 1 0 00-1 1v1H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H9zm0 2h2v1H9V4zM7 8h6v1H7V8zm0 3h6v1H7v-1zm0 3h4v1H7v-1z"/></svg>', label: t('worksheets') },
+  { id:'students',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M7 8a4 4 0 108 0 4 4 0 00-8 0zm0 2a6 6 0 00-6 6v1h20v-1a6 6 0 00-6-6H7z"/></svg>', label: t('students') },
+  { id:'ppt',          svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 11h3v6H2zm5-4h3v10H7zm5-5h3v15h-3z"/></svg>', label: t('ppt_generator') },
+  { id:'video',        svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.55 1.17l3.78-2.52A1 1 0 0120 5.5v9a1 1 0 01-1.67.75l-3.78-2.52V7.17z"/></svg>', label: t('video_script') },
+  { id:'chat',         svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M18 10c0 3.87-3.58 7-8 7a8.8 8.8 0 01-3.8-.85L2 18l1.3-3.5A6.6 6.6 0 012 10c0-3.87 3.58-7 8-7s8 3.13 8 7zM7 9H5v2h2V9zm4 0H9v2h2V9zm4 0h-2v2h2V9z"/></svg>', label: t('ai_assistant') },
+  { id:'image',        svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"/><circle cx="13.5" cy="7.5" r="1.5"/></svg>', label: t('image_gen') },
+  { id:'lesson_plan',  svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M9 2a1 1 0 00-1 1v1H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H9zm0 2h2v1H9V4zM7 8h6v1H7V8zm0 3h6v1H7v-1zm0 3h4v1H7v-1z"/></svg>', label: t('lesson_plan') },
+  { id:'multimedia',   svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"/><circle cx="13.5" cy="7.5" r="1.5"/></svg>', label: t('multimedia') },
+  { id:'activity',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.3 1.05a1 1 0 00-1.1.45L5.7 9H2a1 1 0 00-.8 1.6l7.5 10a1 1 0 001.8-.6L9.7 13H18a1 1 0 00.8-1.6l-7.5-10.35z"/></svg>', label: t('activity') },
+  { id:'compose',      svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884zM18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>', label: t('compose') },
+  { id:'feedback',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M9 2a1 1 0 00-1 1v1H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H9zm0 2h2v1H9V4zM7 8h6v1H7V8zm0 3h6v1H7v-1zm0 3h4v1H7v-1z"/></svg>', label: t('smart_feedback') },
+  { id:'insights',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 11h3v6H2zm5-4h3v10H7zm5-5h3v15h-3z"/></svg>', label: t('insights') },
+  { id:'simplify',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>', label: t('simplify') },
+  { id:'differentiate',svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-14a1 1 0 00-1 1v1.4l7.92 4.03a1 1 0 01.08 1.7L10 14.3V17a1 1 0 002 0v-1.9l5.58-3.57a3 3 0 00-.24-5.1L10 2.87V3z"/></svg>', label: t('differentiate') },
+  { id:'coach',        svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 2a6 6 0 00-6 6c0 2.2 1.2 4.2 3 5.2V15a1 1 0 001 1h4a1 1 0 001-1v-1.8c1.8-1 3-3 3-5.2a6 6 0 00-6-6zm-1 15h2v1a1 1 0 01-2 0v-1z"/></svg>', label: t('coach') },
+  { id:'research',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3 1h6v2H5V6zm0 3h6v1H5V9zm0 2h4v1H5v-1z"/></svg>', label: t('research') },
+  { id:'prompts',      svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>', label: t('prompt_library') },
+  { id:'library',      svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>', label: t('digital_library') },
+  { id:'notebook',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 2h6v1H7V4zm0 3h6v1H7V7zm0 3h4v1H7v-1z"/></svg>', label: t('notebook') },
+  { id:'settings',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.5 2.6l.8 1.5a1 1 0 001 .5l1.6-.2a8 8 0 011.5 1.5l-.2 1.6a1 1 0 00.5 1l1.5.8v2.1l-1.5.8a1 1 0 00-.5 1l.2 1.6a8 8 0 01-1.5 1.5l-1.6-.2a1 1 0 00-1 .5l-.8 1.5H8.5l-.8-1.5a1 1 0 00-1-.5l-1.6.2a8 8 0 01-1.5-1.5l.2-1.6a1 1 0 00-.5-1L1.8 11V8.9l1.5-.8a1 1 0 00.5-1l-.2-1.6a8 8 0 011.5-1.5l1.6.2a1 1 0 001-.5l.8-1.5h3zM10 7a3 3 0 100 6 3 3 0 000-6z"/></svg>', label: t('settings') },
 ])
 
 const cur = ref('overview')

@@ -11,7 +11,7 @@
       </div>
       <nav class="sb-nav">
         <button v-for="s in sections" :key="s.id" :class="['nav-item',{active:cur===s.id}]" @click="cur=s.id; mobileOpen=false" :title="s.label">
-          <span>{{ s.icon }}</span><span v-if="!sb" class="nav-label">{{ s.label }}</span>
+          <span v-html="s.svg"></span><span v-if="!sb" class="nav-label">{{ s.label }}</span>
         </button>
       </nav>
       <div class="sb-footer">
@@ -292,13 +292,13 @@ function changeAdminLang(code) {
 }
 
 const sections = computed(() => [
-  { id:'overview', icon:'🏠', label: t('overview') },
-  { id:'students', icon:'👨‍🎓',label: t('students') },
-  { id:'upload',   icon:'📊', label: t('upload_excel') },
-  { id:'pulse',    icon:'💓', label: t('school_pulse') },
-  { id:'announce', icon:'📢', label: t('announcements') },
-  { id:'incident', icon:'📋', label: t('incident_report') },
-  { id:'settings', icon:'⚙️', label: t('settings') },
+  { id:'overview', svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7A1 1 0 003 11h1v6a1 1 0 001 1h4v-5h2v5h4a1 1 0 001-1v-6h1a1 1 0 00.707-1.707l-7-7z"/></svg>', label: t('overview') },
+  { id:'students', svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M7 8a4 4 0 108 0 4 4 0 00-8 0zm0 2a6 6 0 00-6 6v1h20v-1a6 6 0 00-6-6H7z"/></svg>', label: t('students') },
+  { id:'upload',   svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 11h3v6H2zm5-4h3v10H7zm5-5h3v15h-3z"/></svg>', label: t('upload_excel') },
+  { id:'pulse',    svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/></svg>', label: t('school_pulse') },
+  { id:'announce', svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M18 10c0 3.87-3.58 7-8 7a8.8 8.8 0 01-3.8-.85L2 18l1.3-3.5A6.6 6.6 0 012 10c0-3.87 3.58-7 8-7s8 3.13 8 7zM7 9H5v2h2V9zm4 0H9v2h2V9zm4 0h-2v2h2V9z"/></svg>', label: t('announcements') },
+  { id:'incident', svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884zM18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>', label: t('incident_report') },
+  { id:'settings', svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.5 2.6l.8 1.5a1 1 0 001 .5l1.6-.2a8 8 0 011.5 1.5l-.2 1.6a1 1 0 00.5 1l1.5.8v2.1l-1.5.8a1 1 0 00-.5 1l.2 1.6a8 8 0 01-1.5 1.5l-1.6-.2a1 1 0 00-1 .5l-.8 1.5H8.5l-.8-1.5a1 1 0 00-1-.5l-1.6.2a8 8 0 01-1.5-1.5l.2-1.6a1 1 0 00-.5-1L1.8 11V8.9l1.5-.8a1 1 0 00.5-1l-.2-1.6a8 8 0 011.5-1.5l1.6.2a1 1 0 001-.5l.8-1.5h3zM10 7a3 3 0 100 6 3 3 0 000-6z"/></svg>', label: t('settings') },
 ])
 
 const cur = ref('overview')

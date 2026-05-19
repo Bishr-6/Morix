@@ -19,18 +19,18 @@
         <!-- التبويبات (تمرير أفقي على الموبايل) -->
         <div class="mgr-tabs flex gap-2 mb-4 md:mb-6 p-1 rounded-xl overflow-x-auto" style="-webkit-overflow-scrolling: touch">
           <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
-                  class="flex-shrink-0 py-2 md:py-2.5 px-3 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap"
+                  class="flex-shrink-0 py-2 md:py-2.5 px-3 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
                   :style="activeTab === tab.id
                     ? { background: 'var(--btn-gradient)', color: 'var(--btn-text)' }
                     : { color: 'var(--t2)' }">
-            {{ tab.icon }} {{ tab.label }}
+            <span v-html="tab.svg" style="display:inline-flex;align-items:center"></span> {{ tab.label }}
           </button>
         </div>
 
         <!-- ============ تبويب الإحصائيات ============ -->
         <div v-if="activeTab === 'stats'" class="animate-fade-in">
           <div class="flex items-center justify-between mb-6 flex-wrap gap-2">
-            <h2 class="text-2xl font-bold gradient-text">📊 نظرة عامة شاملة</h2>
+            <h2 class="text-2xl font-bold gradient-text">{{ t('overview') || 'نظرة عامة شاملة' }}</h2>
             <button @click="loadStats" :disabled="statsLoading"
                     class="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1"
                     style="background: rgba(74,126,255,0.15); color: #4a7eff; border: 1px solid rgba(74,126,255,0.3)">
@@ -219,7 +219,7 @@
         <!-- ============ تبويب إعداد المدرسة ============ -->
         <!-- ============ 🏫 المدارس (إضافة + قائمة) ============ -->
         <div v-if="activeTab === 'schools'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">🏫 إدارة المدارس</h2>
+          <h2 class="text-2xl font-bold mb-6 gradient-text">{{ t('schools') }}</h2>
 
           <!-- إضافة مدرسة جديدة -->
           <div class="memorix-card p-6 mb-6">
@@ -270,7 +270,7 @@
 
         <!-- ============ 📤 إعداد + رفع Excel ============ -->
         <div v-if="activeTab === 'setup'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">📤 إعداد المدرسة برفع ملف Excel</h2>
+          <h2 class="text-2xl font-bold mb-6 gradient-text">{{ t('upload_excel') }}</h2>
 
           <!-- اختيار المدرسة -->
           <div class="memorix-card p-6 mb-6">
@@ -328,7 +328,7 @@
         <!-- ============ تبويب الحسابات ============ -->
         <div v-if="activeTab === 'accounts'" class="animate-fade-in">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-bold gradient-text">👥 الحسابات المُولَّدة</h2>
+            <h2 class="text-2xl font-bold gradient-text">{{ t('accounts') }}</h2>
             <button v-if="accounts.length && selectedSchoolForAccounts"
                     @click="downloadCSV"
                     class="btn-primary text-sm py-2 flex items-center gap-2">
@@ -420,7 +420,7 @@
 
         <!-- ============ تبويب الكتب ============ -->
         <div v-if="activeTab === 'books'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">📚 كتب المنهج</h2>
+          <h2 class="text-2xl font-bold mb-6 gradient-text">{{ t('books') }}</h2>
 
           <!-- إضافة كتاب -->
           <div class="memorix-card p-6 mb-6">
@@ -522,8 +522,10 @@
         <div v-if="activeTab === 'chat'" class="animate-fade-in" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
           <div ref="chatEl" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
             <div v-if="!chatMsgs.length" class="memorix-card p-10 text-center">
-              <div style="font-size:48px;margin-bottom:12px">🤖</div>
-              <h3 class="font-bold text-xl mb-2">مساعد المدير الذكي</h3>
+              <div style="margin-bottom:12px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="display:inline-block;color:var(--accent,#4a7eff)"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.42-4.03 8-9 8a9.9 9.9 0 01-4.25-.96L3 20l1.28-3.56A7.4 7.4 0 013 12c0-4.42 4.03-8 9-8s9 3.58 9 8z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <h3 class="font-bold text-xl mb-2">{{ t('ai_assistant') }}</h3>
               <p style="color: #94a3b8; margin-bottom: 16px">اسأل بأي لغة أو لهجة — الـ AI يرد بنفس الأسلوب</p>
               <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
                 <button v-for="q in mgrQuickQs" :key="q"
@@ -536,7 +538,11 @@
               :style="msg.role==='user' ? 'display:flex;justify-content:flex-start' : 'display:flex;justify-content:flex-end'">
               <div style="max-width:75%;display:flex;align-items:flex-start;gap:10px"
                 :style="msg.role==='user' ? '' : 'flex-direction:row-reverse'">
-                <span style="font-size:20px;flex-shrink:0;margin-top:4px">{{ msg.role==='user' ? '👤' : '🤖' }}</span>
+                <span style="flex-shrink:0;margin-top:4px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:var(--text2)"
+                  v-html="msg.role==='user'
+                    ? '<svg viewBox=\'0 0 20 20\' fill=\'currentColor\' width=\'18\' height=\'18\'><path d=\'M10 10a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0H3z\'/></svg>'
+                    : '<svg viewBox=\'0 0 20 20\' fill=\'currentColor\' width=\'18\' height=\'18\'><path d=\'M2 5a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2h-2l-4 4-4-4H4a2 2 0 01-2-2V5zm4 3a1 1 0 100 2h.01a1 1 0 100-2H6zm4 0a1 1 0 100 2h.01a1 1 0 100-2H10zm4 0a1 1 0 100 2h.01a1 1 0 100-2H14z\'/></svg>'
+                  "></span>
                 <div class="text-sm p-3 rounded-xl" style="line-height:1.6"
                   :style="msg.role==='user'
                     ? 'background:rgba(74,126,255,0.15);border:1px solid rgba(74,126,255,0.3);color:#e2e8f0'
@@ -546,7 +552,9 @@
             </div>
             <div v-if="chatThinking" style="display:flex;justify-content:flex-end">
               <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
-                <span style="font-size:20px">🤖</span>
+                <span style="width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2)">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2h-2l-4 4-4-4H4a2 2 0 01-2-2V5zm4 3a1 1 0 100 2h.01a1 1 0 100-2H6zm4 0a1 1 0 100 2h.01a1 1 0 100-2H10zm4 0a1 1 0 100 2h.01a1 1 0 100-2H14z"/></svg>
+                </span>
                 <div class="p-3 rounded-xl mgr-textarea">
                   <div style="display:flex;gap:4px;align-items:center">
                     <span v-for="n in 3" :key="n" class="mgr-muted" style="width:8px;height:8px;border-radius:50%;display:inline-block;animation:bounce 1s infinite;background:currentColor" :style="`animation-delay:${(n-1)*0.15}s`"></span>
@@ -567,7 +575,7 @@
 
         <!-- ============ 💪 صحة المدارس ============ -->
         <div v-if="activeTab === 'health'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">💪 صحة المدارس</h2>
+          <h2 class="text-2xl font-bold mb-6 gradient-text">{{ t('school_health') || 'صحة المدارس' }}</h2>
           <button @click="loadHealth" :disabled="hlLoading" class="btn-primary px-6 py-3 mb-4" style="border-radius:10px">
             {{ hlLoading ? '⏳' : '🔄 ' + t('refresh_btn') }}
           </button>
@@ -585,26 +593,10 @@
           </div>
         </div>
 
-        <!-- ============ 🧠 مستشار استراتيجي ============ -->
-        <div v-if="activeTab === 'advisor'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">🧠 المستشار الاستراتيجي</h2>
-          <div class="memorix-card p-6">
-            <textarea v-model="adQuestion" rows="3" placeholder="مثال: كيف أحسّن نسبة الاحتفاظ بالطلاب في مدرسة الرياض؟"
-                      class="w-full p-3 rounded-lg mb-3 mgr-textarea"></textarea>
-            <textarea v-model="adContext" rows="2" placeholder="سياق إضافي (اختياري): البيانات/التحديات الحالية..."
-                      class="w-full p-3 rounded-lg mb-3 mgr-textarea"></textarea>
-            <button @click="askAdvisor" :disabled="adLoading" class="btn-primary px-6 py-3" style="border-radius:10px">
-              {{ adLoading ? '⏳ ' + t('analyze_btn') : '🚀 ' + t('get_consultation') }}
-            </button>
-            <div v-if="adAnswer" class="mt-4 p-4 rounded-lg mgr-textarea" style="white-space:pre-wrap;line-height:1.8">
-              {{ adAnswer }}
-            </div>
-          </div>
-        </div>
 
         <!-- ============ تبويب الإعدادات ============ -->
         <div v-if="activeTab === 'settings'" class="animate-fade-in">
-          <h2 class="text-2xl font-bold mb-6 gradient-text">⚙️ {{ t('settings') }}</h2>
+          <h2 class="text-2xl font-bold mb-6 gradient-text">{{ t('settings') }}</h2>
           <div class="grid md:grid-cols-2 gap-6">
 
             <!-- معلومات الحساب + Avatar -->
@@ -735,16 +727,25 @@ const { t, lang, setLang } = useI18n()
 const languages = LANGUAGES
 
 const activeTab = ref('stats')
+const tabIcons = {
+  stats: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 11h3v6H2zm5-4h3v10H7zm5-5h3v15h-3zm-10 9h2v4H2z"/></svg>`,
+  schools: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 2L2 7v2h16V7L10 2zM3 10v6h4v-4h6v4h4v-6H3z"/></svg>`,
+  setup: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3 17a1 1 0 01-1-1V4a1 1 0 011-1h4l2 2h6a1 1 0 011 1v2H9l-2-2H4v9l2-6h12l-2.6 7.8A1 1 0 0114.5 17H3z"/></svg>`,
+  accounts: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M7 8a4 4 0 108 0 4 4 0 00-8 0zm0 2a6 6 0 00-6 6v1h20v-1a6 6 0 00-6-6H7z"/></svg>`,
+  books: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>`,
+  health: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3.17 5.17a4.5 4.5 0 016.36 0L10 5.64l.47-.47a4.5 4.5 0 016.36 6.36L10 18.36l-6.83-6.83a4.5 4.5 0 010-6.36z"/></svg>`,
+  chat: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M18 10c0 3.87-3.58 7-8 7a8.8 8.8 0 01-3.8-.85L2 18l1.3-3.5A6.6 6.6 0 012 10c0-3.87 3.58-7 8-7s8 3.13 8 7zM7 9H5v2h2V9zm4 0H9v2h2V9zm4 0h-2v2h2V9z"/></svg>`,
+  settings: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.5 2.6l.8 1.5a1 1 0 001 .5l1.6-.2a8 8 0 011.5 1.5l-.2 1.6a1 1 0 00.5 1l1.5.8v2.1l-1.5.8a1 1 0 00-.5 1l.2 1.6a8 8 0 01-1.5 1.5l-1.6-.2a1 1 0 00-1 .5l-.8 1.5H8.5l-.8-1.5a1 1 0 00-1-.5l-1.6.2a8 8 0 01-1.5-1.5l.2-1.6a1 1 0 00-.5-1L1.8 11V8.9l1.5-.8a1 1 0 00.5-1l-.2-1.6a8 8 0 011.5-1.5l1.6.2a1 1 0 001-.5l.8-1.5h3zM10 7a3 3 0 100 6 3 3 0 000-6z"/></svg>`,
+}
 const tabs = computed(() => [
-  { id: 'stats', label: t('statistics'), icon: '📊' },
-  { id: 'schools', label: t('schools'), icon: '🏫' },
-  { id: 'setup', label: t('upload_excel'), icon: '📤' },
-  { id: 'accounts', label: t('accounts'), icon: '👥' },
-  { id: 'books', label: t('books'), icon: '📚' },
-  { id: 'health', label: 'صحة المدارس', icon: '💪' },
-  { id: 'advisor', label: 'مستشار استراتيجي', icon: '🧠' },
-  { id: 'chat', label: t('ai_assistant'), icon: '💬' },
-  { id: 'settings', label: t('settings'), icon: '⚙️' },
+  { id: 'stats', label: t('statistics'), svg: tabIcons.stats },
+  { id: 'schools', label: t('schools'), svg: tabIcons.schools },
+  { id: 'setup', label: t('upload_excel'), svg: tabIcons.setup },
+  { id: 'accounts', label: t('accounts'), svg: tabIcons.accounts },
+  { id: 'books', label: t('books'), svg: tabIcons.books },
+  { id: 'health', label: t('school_health') || 'صحة المدارس', svg: tabIcons.health },
+  { id: 'chat', label: t('ai_assistant'), svg: tabIcons.chat },
+  { id: 'settings', label: t('settings'), svg: tabIcons.settings },
 ])
 
 // الإحصائيات
@@ -794,7 +795,14 @@ const chatMsgs = ref([])
 const chatInput = ref('')
 const chatThinking = ref(false)
 const chatEl = ref(null)
-const mgrQuickQs = ['كيف أحسن أداء المدرسة؟', 'اقترح خطة تطوير للمعلمين', 'كيف أتابع الطلاب المتأخرين؟', 'أفضل استراتيجيات الإدارة']
+const mgrQuickQs = [
+  'كيف أحسن أداء المدرسة؟',
+  'اقترح خطة تطوير للمعلمين',
+  'كيف أتابع الطلاب المتأخرين؟',
+  'أفضل استراتيجيات الإدارة',
+  'كيف أحسّن نسبة الاحتفاظ بالطلاب؟',
+  'اقترح خطة استراتيجية للفصل القادم',
+]
 
 // Settings
 const mgrSettings = ref({

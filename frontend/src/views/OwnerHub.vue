@@ -38,7 +38,7 @@
         <button v-for="s in sections" :key="s.id"
           :class="['intel-nav-btn', { active: cur === s.id }]"
           @click="cur = s.id; mobileOpen = false">
-          <span class="nav-icon">{{ s.icon }}</span>
+          <span class="nav-icon" v-html="s.svg"></span>
           <span v-if="!sb" class="nav-label">{{ s.label }}</span>
           <span v-if="!sb && s.id === 'complaints' && pendingComplaints > 0"
             class="nav-badge">{{ pendingComplaints }}</span>
@@ -48,7 +48,7 @@
         <button v-for="s in otherSections" :key="s.path"
           class="intel-nav-btn linked"
           @click="router.push(s.path); mobileOpen = false">
-          <span class="nav-icon">{{ s.icon }}</span>
+          <span class="nav-icon" v-html="s.svg"></span>
           <span v-if="!sb" class="nav-label">{{ s.label }}</span>
           <span v-if="!sb" class="nav-arrow">↗</span>
         </button>
@@ -584,20 +584,20 @@ tickClock()
 
 // ─── Sections ────────────────────────────────────────────────────────────────
 const sections = computed(() => [
-  { id: 'overview',   icon: '📊', label: 'OVERVIEW' },
-  { id: 'pulse',      icon: '📡', label: 'LIVE PULSE' },
-  { id: 'aicost',     icon: '💰', label: 'AI BUDGET' },
-  { id: 'churn',      icon: '⚠️', label: 'CHURN RISK' },
-  { id: 'broadcast',  icon: '📡', label: 'BROADCAST' },
-  { id: 'complaints', icon: '📋', label: 'FIELD REPORTS' },
-  { id: 'users',      icon: '👥', label: 'USER REGISTRY' },
-  { id: 'settings',   icon: '⚙️', label: 'SETTINGS' },
+  { id: 'overview',   svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 11h3v6H2zm5-4h3v10H7zm5-5h3v15h-3z"/></svg>', label: 'OVERVIEW' },
+  { id: 'pulse',      svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3.17 5.17a4.5 4.5 0 016.36 0L10 5.64l.47-.47a4.5 4.5 0 016.36 6.36L10 18.36l-6.83-6.83a4.5 4.5 0 010-6.36z"/></svg>', label: 'LIVE PULSE' },
+  { id: 'aicost',     svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2h-2l-4 4-4-4H4a2 2 0 01-2-2V5zm4 3a1 1 0 100 2h.01a1 1 0 100-2H6zm4 0a1 1 0 100 2h.01a1 1 0 100-2H10zm4 0a1 1 0 100 2h.01a1 1 0 100-2H14z"/></svg>', label: 'AI BUDGET' },
+  { id: 'churn',      svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3.17 5.17a4.5 4.5 0 016.36 0L10 5.64l.47-.47a4.5 4.5 0 016.36 6.36L10 18.36l-6.83-6.83a4.5 4.5 0 010-6.36z"/></svg>', label: 'CHURN RISK' },
+  { id: 'broadcast',  svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M18 3v14a1 1 0 01-1.6.8L12 14H5a2 2 0 01-2-2V8a2 2 0 012-2h7l4.4-3.8A1 1 0 0118 3zM5 15h4v2a1 1 0 01-1 1H6a1 1 0 01-1-1v-2z"/></svg>', label: 'BROADCAST' },
+  { id: 'complaints', svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884zM18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>', label: 'FIELD REPORTS' },
+  { id: 'users',      svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M7 8a4 4 0 108 0 4 4 0 00-8 0zm0 2a6 6 0 00-6 6v1h20v-1a6 6 0 00-6-6H7z"/></svg>', label: 'USER REGISTRY' },
+  { id: 'settings',   svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.5 2.6l.8 1.5a1 1 0 001 .5l1.6-.2a8 8 0 011.5 1.5l-.2 1.6a1 1 0 00.5 1l1.5.8v2.1l-1.5.8a1 1 0 00-.5 1l.2 1.6a8 8 0 01-1.5 1.5l-1.6-.2a1 1 0 00-1 .5l-.8 1.5H8.5l-.8-1.5a1 1 0 00-1-.5l-1.6.2a8 8 0 01-1.5-1.5l.2-1.6a1 1 0 00-.5-1L1.8 11V8.9l1.5-.8a1 1 0 00.5-1l-.2-1.6a8 8 0 011.5-1.5l1.6.2a1 1 0 001-.5l.8-1.5h3zM10 7a3 3 0 100 6 3 3 0 000-6z"/></svg>', label: 'SETTINGS' },
 ])
 const otherSections = computed(() => [
-  { path: '/manager', icon: '🏫',  label: 'MANAGER HUB' },
-  { path: '/admin',   icon: '🛡️', label: 'ADMIN HUB' },
-  { path: '/teacher', icon: '👨‍🏫', label: 'TEACHER HUB' },
-  { path: '/student', icon: '👨‍🎓', label: 'STUDENT HUB' },
+  { path: '/manager', svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 2L2 7v2h16V7L10 2zM3 10v6h4v-4h6v4h4v-6H3z"/></svg>',  label: 'MANAGER HUB' },
+  { path: '/admin',   svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 2L2 7v2h16V7L10 2zM3 10v6h4v-4h6v4h4v-6H3z"/></svg>', label: 'ADMIN HUB' },
+  { path: '/teacher', svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.5 2a6 6 0 00-6 6c0 2.2 1.2 4.2 3 5.2V15a1 1 0 001 1h4a1 1 0 001-1v-1.8c1.8-1 3-3 3-5.2a6 6 0 00-6-6zm-1 15h2v1a1 1 0 01-2 0v-1z"/></svg>', label: 'TEACHER HUB' },
+  { path: '/student', svg: '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.39 2.2a1 1 0 00-.78 0l-8 3.5a1 1 0 000 1.82L4 8.5V13a1 1 0 00.55.89C5.95 14.6 7.8 15.5 10 15.5s4.05-.9 5.45-1.61A1 1 0 0016 13V8.5l2-1v5a1 1 0 102 0V7.2l-9.61-5z"/></svg>', label: 'STUDENT HUB' },
 ])
 
 const cur = ref('overview')
@@ -996,7 +996,8 @@ onUnmounted(() => clearInterval(clockTimer))
 }
 .intel-nav-btn.linked { color: rgba(0,200,255,0.5); }
 .intel-nav-btn.linked:hover { color: #00c8ff; border-color: rgba(0,200,255,0.2); }
-.nav-icon { font-size: 14px; flex-shrink: 0; }
+.nav-icon { font-size: 14px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; }
+.nav-icon :deep(svg) { width: 16px; height: 16px; flex-shrink: 0; }
 .nav-label { flex: 1; }
 .nav-badge {
   background: #ef4444;

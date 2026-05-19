@@ -20,7 +20,7 @@
         <button v-for="sec in sections" :key="sec.id"
           :class="['nav-item', { active: currentSection === sec.id }]"
           @click="switchSection(sec.id)" :title="sec.label">
-          <span class="nav-icon">{{ sec.icon }}</span>
+          <span class="nav-icon" v-html="sec.svg"></span>
           <span v-if="!sidebarCollapsed" class="nav-label">{{ sec.label }}</span>
         </button>
       </nav>
@@ -773,23 +773,23 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const sections = computed(() => [
-  { id:'chat',      icon:'💬', label: t('student_chat') },
-  { id:'books',     icon:'📖', label: t('books') },
-  { id:'games',     icon:'🎮', label: t('games') },
-  { id:'homework',  icon:'📚', label: t('homework') },
-  { id:'tests',     icon:'📝', label: t('tests') },
-  { id:'worksheets',icon:'📋', label: t('worksheets') },
-  { id:'image',     icon:'🎨', label: t('image_gen') },
-  { id:'video',     icon:'🎬', label: t('video_script') },
-  { id:'leaderboard',icon:'🏆',label: t('leaderboard') },
-  { id:'daily',     icon:'🎯', label: t('daily_challenge') },
-  { id:'pomodoro',  icon:'⏱️', label: t('pomodoro') },
-  { id:'mood',      icon:'😊', label: t('mood') },
-  { id:'reflection',icon:'🌅', label: t('reflection') },
-  { id:'library',   icon:'📚', label: t('digital_library') },
-  { id:'notebook',  icon:'📓', label: t('notebook') },
-  { id:'progress',  icon:'📊', label: t('progress') },
-  { id:'settings',  icon:'⚙️', label: t('settings') },
+  { id:'chat',      svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M18 10c0 3.87-3.58 7-8 7a8.8 8.8 0 01-3.8-.85L2 18l1.3-3.5A6.6 6.6 0 012 10c0-3.87 3.58-7 8-7s8 3.13 8 7zM7 9H5v2h2V9zm4 0H9v2h2V9zm4 0h-2v2h2V9z"/></svg>', label: t('student_chat') },
+  { id:'books',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3 4a1 1 0 011-1h3a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm6 0a1 1 0 011-1h3a1 1 0 011 1v12a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm7-1a1 1 0 00-1 .8l1 12.4a1 1 0 001 .8h1a1 1 0 001-.8l-1-12.4a1 1 0 00-1-.8h-1z"/></svg>', label: t('books') },
+  { id:'games',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.5 6a.5.5 0 01-.5-.5V14a1 1 0 10-2 0v1.5a.5.5 0 01-1 0V14a1 1 0 10-2 0v1.5a.5.5 0 01-1 0V14a3 3 0 016 0v1.5a.5.5 0 01-.5.5z"/></svg>', label: t('games') },
+  { id:'homework',  svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>', label: t('homework') },
+  { id:'tests',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M9 2a1 1 0 00-1 1v1H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H9zm0 2h2v1H9V4zM7 8h6v1H7V8zm0 3h6v1H7v-1zm0 3h4v1H7v-1z"/></svg>', label: t('tests') },
+  { id:'worksheets',svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm2 4h8v1H6V7zm0 3h8v1H6v-1zm0 3h5v1H6v-1z"/></svg>', label: t('worksheets') },
+  { id:'image',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"/><circle cx="13.5" cy="7.5" r="1.5"/></svg>', label: t('image_gen') },
+  { id:'video',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2l4 3V5l-4 3V5a2 2 0 00-2-2H4zm4 5l4 2.5L8 13V8z"/></svg>', label: t('video_script') },
+  { id:'leaderboard',svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M9.05 3.69a1 1 0 011.9 0l1.28 3.94h4.15a1 1 0 01.59 1.81l-3.36 2.44 1.28 3.94a1 1 0 01-1.54 1.12L10 14.5l-3.35 2.44a1 1 0 01-1.54-1.12l1.28-3.94L3.03 9.44a1 1 0 01.59-1.81h4.15L9.05 3.69z"/></svg>', label: t('leaderboard') },
+  { id:'daily',     svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.3 1.05a1 1 0 00-1.1.45L5.7 9H2a1 1 0 00-.8 1.6l7.5 10a1 1 0 001.8-.6L9.7 13H18a1 1 0 00.8-1.6l-7.5-10.35z"/></svg>', label: t('daily_challenge') },
+  { id:'pomodoro',  svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.3.7l2.8 2.8a1 1 0 001.4-1.4L11 9.6V6z"/></svg>', label: t('pomodoro') },
+  { id:'mood',      svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zm-7.5 3a5.5 5.5 0 009 0h-9z"/></svg>', label: t('mood') },
+  { id:'reflection',svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M9 4.8a.5.5 0 01.5-.8h1a.5.5 0 01.5.8L10 6l-1-1.2zM10 18a8 8 0 100-16 8 8 0 000 16zm-1-6a1 1 0 112 0v2a1 1 0 11-2 0v-2zm1-6a1 1 0 100 2 1 1 0 000-2z"/></svg>', label: t('reflection') },
+  { id:'library',   svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>', label: t('digital_library') },
+  { id:'notebook',  svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 3h6v1H7V5zm0 3h6v1H7V8zm0 3h4v1H7v-1z"/></svg>', label: t('notebook') },
+  { id:'progress',  svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 11h3v6H2zm5-4h3v10H7zm5-5h3v15h-3z"/></svg>', label: t('progress') },
+  { id:'settings',  svg:'<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.5 2.6l.8 1.5a1 1 0 001 .5l1.6-.2a8 8 0 011.5 1.5l-.2 1.6a1 1 0 00.5 1l1.5.8v2.1l-1.5.8a1 1 0 00-.5 1l.2 1.6a8 8 0 01-1.5 1.5l-1.6-.2a1 1 0 00-1 .5l-.8 1.5H8.5l-.8-1.5a1 1 0 00-1-.5l-1.6.2a8 8 0 01-1.5-1.5l.2-1.6a1 1 0 00-.5-1L1.8 11V8.9l1.5-.8a1 1 0 00.5-1l-.2-1.6a8 8 0 011.5-1.5l1.6.2a1 1 0 001-.5l.8-1.5h3zM10 7a3 3 0 100 6 3 3 0 000-6z"/></svg>', label: t('settings') },
 ])
 
 const currentSection = ref('chat')
