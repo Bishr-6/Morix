@@ -120,7 +120,6 @@ class StatsResponse(BaseModel):
 class UserSettingsUpdate(BaseModel):
     theme: Optional[str] = Field(None, max_length=30)
     notifications_enabled: Optional[bool] = None
-    brightness: Optional[int] = None
     difficulty: Optional[str] = Field(None, max_length=20)
     hobbies: Optional[List[str]] = None
     language: Optional[str] = Field(None, max_length=10)

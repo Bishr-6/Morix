@@ -216,8 +216,8 @@ export const THEMES = {
 }
 
 /**
- * تطبيق الثيم والسطوع تلقائياً على document.documentElement
- * @param {Ref} settings - ref يحتوي على { theme, brightness }
+ * تطبيق الثيم تلقائياً على document.documentElement
+ * @param {Ref} settings - ref يحتوي على { theme }
  */
 export function useTheme(settings) {
   watchEffect(() => {
@@ -231,9 +231,5 @@ export function useTheme(settings) {
 
     // data-theme للـ CSS selectors
     root.setAttribute('data-theme', theme)
-
-    const br = settings.value?.brightness ?? 100
-    root.style.setProperty('--brightness', br + '%')
-    document.body.style.filter = br < 100 ? `brightness(${br}%)` : ''
   })
 }

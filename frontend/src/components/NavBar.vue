@@ -39,7 +39,7 @@
 
       <!-- User chip -->
       <div class="mn-user">
-        <img v-if="avatarUrl" :src="avatarUrl" class="mn-av-img" />
+        <img v-if="avatarUrl && (avatarUrl.startsWith('data:') || avatarUrl.startsWith('http'))" :src="avatarUrl" class="mn-av-img" />
         <div v-else class="mn-av">{{ name?.[0] || '?' }}</div>
         <span class="mn-name">{{ name }}</span>
       </div>

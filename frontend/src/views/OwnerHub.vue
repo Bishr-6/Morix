@@ -90,7 +90,12 @@
             <span>{{ stats?.total_schools ?? '—' }} SCHOOLS</span>
           </div>
           <div class="intel-avatar" :title="ownerSettings.full_name">
-            <img v-if="ownerSettings.avatar_url" :src="ownerSettings.avatar_url" class="av-img" />
+            <svg v-if="ownerSettings.avatar_url && avatarMap[ownerSettings.avatar_url]" viewBox="0 0 80 80" width="32" height="32">
+              <circle cx="40" cy="40" r="38" :fill="avatarMap[ownerSettings.avatar_url].bg"/>
+              <circle cx="40" cy="32" r="16" :fill="avatarMap[ownerSettings.avatar_url].skin"/>
+              <ellipse cx="40" cy="62" rx="22" ry="16" :fill="avatarMap[ownerSettings.avatar_url].outfit"/>
+              <path :d="avatarMap[ownerSettings.avatar_url].hair" :fill="avatarMap[ownerSettings.avatar_url].hairColor"/>
+            </svg>
             <span v-else>👑</span>
           </div>
         </div>
@@ -449,16 +454,31 @@
               <span class="panel-title">👤 OPERATOR PROFILE</span>
             </div>
             <div class="profile-card">
-              <div class="profile-avatar-wrap" @click="$refs.ownerAvatarInput?.click()">
-                <img v-if="ownerSettings.avatar_url" :src="ownerSettings.avatar_url" class="profile-av-img" />
+              <div class="profile-avatar-wrap">
+                <svg v-if="ownerSettings.avatar_url && avatarMap[ownerSettings.avatar_url]" viewBox="0 0 80 80" width="64" height="64">
+                  <circle cx="40" cy="40" r="38" :fill="avatarMap[ownerSettings.avatar_url].bg"/>
+                  <circle cx="40" cy="32" r="16" :fill="avatarMap[ownerSettings.avatar_url].skin"/>
+                  <ellipse cx="40" cy="62" rx="22" ry="16" :fill="avatarMap[ownerSettings.avatar_url].outfit"/>
+                  <path :d="avatarMap[ownerSettings.avatar_url].hair" :fill="avatarMap[ownerSettings.avatar_url].hairColor"/>
+                </svg>
                 <div v-else class="profile-av-placeholder">👑</div>
-                <div class="av-overlay">📷</div>
               </div>
-              <input ref="ownerAvatarInput" type="file" accept="image/*" style="display:none" @change="onOwnerAvatarUpload" />
               <div class="profile-info">
                 <div class="pi-name">{{ ownerSettings.full_name }}</div>
                 <div class="pi-email">{{ ownerSettings.email }}</div>
                 <div class="pi-role">👑 OWNER — FULL CLEARANCE</div>
+              </div>
+            </div>
+            <div class="avatar-grid">
+              <div v-for="av in avatarOptions" :key="av.id"
+                   class="avatar-option" :class="{ selected: ownerSettings.avatar_url === av.id }"
+                   @click="selectAvatar(av.id)">
+                <svg viewBox="0 0 80 80" width="56" height="56">
+                  <circle cx="40" cy="40" r="38" :fill="av.bg"/>
+                  <circle cx="40" cy="32" r="16" :fill="av.skin"/>
+                  <ellipse cx="40" cy="62" rx="22" ry="16" :fill="av.outfit"/>
+                  <path :d="av.hair" :fill="av.hairColor"/>
+                </svg>
               </div>
             </div>
           </div>
@@ -474,9 +494,6 @@
                 <span class="theme-label">{{ th.l }}</span>
               </button>
             </div>
-            <label class="settings-label">DISPLAY INTENSITY: {{ ownerSettings.brightness }}%</label>
-            <input type="range" v-model.number="ownerSettings.brightness" @change="saveOwnerSettings"
-              min="20" max="100" class="intel-range" />
           </div>
 
           <!-- اللغة -->
@@ -526,10 +543,26 @@ const { t, setLang } = useI18n()
 const languages = LANGUAGES
 
 const ownerSettings = ref({
-  theme: 'dark', brightness: 100, language: 'ar',
+  theme: 'dark', language: 'ar',
   notifications_enabled: true, avatar_url: '',
   email: auth.user?.email || '', full_name: auth.user?.full_name || ''
 })
+
+const avatarOptions = [
+  { id: 'av1', bg: '#E3F2FD', skin: '#FDBCB4', hairColor: '#3E2723', outfit: '#1976D2', hair: 'M24,24 Q40,8 56,24 Q56,16 40,12 Q24,16 24,24Z' },
+  { id: 'av2', bg: '#FFF3E0', skin: '#8D5524', hairColor: '#1B1B1B', outfit: '#E65100', hair: 'M24,26 Q40,10 56,26 L56,20 Q40,6 24,20Z' },
+  { id: 'av3', bg: '#E8F5E9', skin: '#F1C27D', hairColor: '#6D4C41', outfit: '#2E7D32', hair: 'M22,28 Q40,6 58,28 Q58,18 40,10 Q22,18 22,28Z' },
+  { id: 'av4', bg: '#FCE4EC', skin: '#FDBCB4', hairColor: '#D32F2F', outfit: '#AD1457', hair: 'M20,30 Q30,10 40,16 Q50,10 60,30 Q60,20 40,8 Q20,20 20,30Z' },
+  { id: 'av5', bg: '#F3E5F5', skin: '#C68642', hairColor: '#4E342E', outfit: '#6A1B9A', hair: 'M24,24 Q40,12 56,24 Q54,16 40,10 Q26,16 24,24Z' },
+  { id: 'av6', bg: '#E0F7FA', skin: '#FFE0BD', hairColor: '#BF360C', outfit: '#00838F', hair: 'M24,28 Q32,12 40,16 Q48,12 56,28 L54,20 Q40,8 26,20Z' },
+  { id: 'av7', bg: '#FFF8E1', skin: '#8D5524', hairColor: '#212121', outfit: '#F57F17', hair: 'M26,22 Q40,14 54,22 Q52,18 40,14 Q28,18 26,22Z' },
+  { id: 'av8', bg: '#E8EAF6', skin: '#FDBCB4', hairColor: '#1A237E', outfit: '#283593', hair: 'M22,26 Q40,4 58,26 Q56,14 40,6 Q24,14 22,26Z' },
+  { id: 'av9', bg: '#EFEBE9', skin: '#F1C27D', hairColor: '#3E2723', outfit: '#4E342E', hair: 'M24,24 Q40,10 56,24 L54,18 Q40,8 26,18Z' },
+  { id: 'av10', bg: '#E0F2F1', skin: '#D1A36C', hairColor: '#1B5E20', outfit: '#00695C', hair: 'M20,28 Q40,8 60,28 Q58,16 40,6 Q22,16 20,28Z' },
+  { id: 'av11', bg: '#FBE9E7', skin: '#FFE0BD', hairColor: '#4A148C', outfit: '#BF360C', hair: 'M24,26 Q34,14 40,18 Q46,14 56,26 L54,18 Q40,8 26,18Z' },
+  { id: 'av12', bg: '#F1F8E9', skin: '#C68642', hairColor: '#33691E', outfit: '#558B2F', hair: 'M26,24 Q40,12 54,24 Q52,16 40,10 Q28,16 26,24Z' },
+]
+const avatarMap = Object.fromEntries(avatarOptions.map(a => [a.id, a]))
 useTheme(ownerSettings)
 const settingsMsg = ref('')
 
@@ -689,12 +722,9 @@ function changeLang(code) {
   setLang(code)
   saveOwnerSettings()
 }
-function onOwnerAvatarUpload(e) {
-  const file = e.target.files?.[0]; if (!file) return
-  if (file.size > 500 * 1024) { alert('الصورة أكبر من 500 KB'); return }
-  const r = new FileReader()
-  r.onload = (ev) => { ownerSettings.value.avatar_url = ev.target.result; saveOwnerSettings() }
-  r.readAsDataURL(file)
+function selectAvatar(id) {
+  ownerSettings.value.avatar_url = id
+  saveOwnerSettings()
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -1552,20 +1582,6 @@ onUnmounted(() => clearInterval(clockTimer))
 .theme-icon { font-size: 16px; }
 .theme-label { font-size: 11px; letter-spacing: 1px; }
 
-.settings-label {
-  display: block;
-  font-size: 10px;
-  color: rgba(0,255,65,0.4);
-  letter-spacing: 1.5px;
-  padding: 4px 16px;
-}
-.intel-range {
-  width: calc(100% - 32px);
-  margin: 4px 16px 16px;
-  accent-color: #00ff41;
-  cursor: pointer;
-}
-
 .lang-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1629,6 +1645,11 @@ onUnmounted(() => clearInterval(clockTimer))
   box-shadow: 0 0 6px #00ff41;
 }
 .toggle-label { font-size: 12px; letter-spacing: 1px; color: rgba(255,255,255,0.6); }
+
+.avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 12px 16px; }
+.avatar-option { cursor: pointer; border-radius: 50%; padding: 4px; border: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+.avatar-option:hover { border-color: #00ff41; transform: scale(1.1); }
+.avatar-option.selected { border-color: #00ff41; box-shadow: 0 0 12px #00ff41; }
 
 .settings-saved {
   text-align: center;

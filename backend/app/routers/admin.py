@@ -237,7 +237,6 @@ async def get_settings(current_user: dict = Depends(_require_admin), db=Depends(
     settings = result.data[0] if result.data else {}
     return {
         "theme": settings.get("theme", "dark"),
-        "brightness": settings.get("brightness", 100),
         "language": settings.get("language", "ar"),
         "notifications_enabled": settings.get("notifications_enabled", True),
         "avatar_url": current_user.get("avatar_url", ""),
@@ -255,15 +254,9 @@ async def update_settings(body: dict, current_user: dict = Depends(_require_admi
     if theme not in valid_themes: theme = "dark"
     lang = body.get("language", "ar")
     if lang not in valid_langs: lang = "ar"
-    try:
-        brightness = max(20, min(100, int(body.get("brightness", 100))))
-    except Exception:
-        brightness = 100
-
     data = {
         "user_id": current_user["id"],
         "theme": theme,
-        "brightness": brightness,
         "language": lang,
         "notifications_enabled": bool(body.get("notifications_enabled", True)),
     }

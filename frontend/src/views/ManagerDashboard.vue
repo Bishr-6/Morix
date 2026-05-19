@@ -611,16 +611,31 @@
             <div class="memorix-card p-6">
               <h3 class="font-bold mb-4" style="color: #00d4ff">👤 {{ t('account_info') }}</h3>
               <div class="flex items-center gap-4 mb-4">
-                <div style="position:relative;cursor:pointer" @click="$refs.mgrAvatarInput?.click()">
-                  <img v-if="mgrSettings.avatar_url" :src="mgrSettings.avatar_url"
-                    style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #6366f1" />
+                <div>
+                  <svg v-if="mgrSettings.avatar_url && avatarMap[mgrSettings.avatar_url]" viewBox="0 0 80 80" width="64" height="64">
+                    <circle cx="40" cy="40" r="38" :fill="avatarMap[mgrSettings.avatar_url].bg"/>
+                    <circle cx="40" cy="32" r="16" :fill="avatarMap[mgrSettings.avatar_url].skin"/>
+                    <ellipse cx="40" cy="62" rx="22" ry="16" :fill="avatarMap[mgrSettings.avatar_url].outfit"/>
+                    <path :d="avatarMap[mgrSettings.avatar_url].hair" :fill="avatarMap[mgrSettings.avatar_url].hairColor"/>
+                  </svg>
                   <div v-else style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#4a7eff,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff">
                     {{ auth.user?.full_name?.[0] || 'م' }}
                   </div>
                 </div>
                 <div style="flex:1">
-                  <input ref="mgrAvatarInput" type="file" accept="image/*" style="display:none" @change="onMgrAvatarUpload" />
-                  <button @click="$refs.mgrAvatarInput?.click()" class="btn-primary text-sm" style="width:100%">📷 {{ t('upload_avatar') }}</button>
+                  <p class="text-xs mgr-muted mb-1">{{ t('choose_avatar') || 'اختر صورتك الرمزية' }}</p>
+                </div>
+              </div>
+              <div class="avatar-grid">
+                <div v-for="av in avatarOptions" :key="av.id"
+                     class="avatar-option" :class="{ selected: mgrSettings.avatar_url === av.id }"
+                     @click="selectAvatar(av.id)">
+                  <svg viewBox="0 0 80 80" width="48" height="48">
+                    <circle cx="40" cy="40" r="38" :fill="av.bg"/>
+                    <circle cx="40" cy="32" r="16" :fill="av.skin"/>
+                    <ellipse cx="40" cy="62" rx="22" ry="16" :fill="av.outfit"/>
+                    <path :d="av.hair" :fill="av.hairColor"/>
+                  </svg>
                 </div>
               </div>
               <div class="flex justify-between py-2 text-sm mgr-label mgr-section-divider" style="border-bottom-width:1px;border-bottom-style:solid"><span>{{ t('full_name') }}</span><b class="mgr-value">{{ auth.user?.full_name }}</b></div>
@@ -640,8 +655,6 @@
                   {{ th.i }} {{ th.l }}
                 </button>
               </div>
-              <p class="text-xs mb-2 mgr-muted">☀️ {{ t('brightness') }}: {{ mgrSettings.brightness }}%</p>
-              <input type="range" v-model.number="mgrSettings.brightness" @change="saveMgrSettings" min="20" max="100" style="width:100%" />
             </div>
 
             <!-- اللغة -->
@@ -650,9 +663,9 @@
               <div class="grid grid-cols-2 gap-2">
                 <button v-for="(L, code) in languages" :key="code"
                         @click="changeMgrLang(code)"
-                        class="py-3 rounded-xl font-medium transition-all mgr-select-btn"
+                        class="py-3 rounded-xl font-medium transition-all mgr-select-btn flex items-center justify-center gap-2"
                         :class="{ active: mgrSettings.language === code }">
-                  {{ L.flag }} {{ L.name }}
+                  <img :src="L.flagImg" :alt="L.name" style="width:20px;height:14px;border-radius:2px;object-fit:cover" /> {{ L.name }}
                 </button>
               </div>
             </div>
@@ -786,7 +799,7 @@ const mgrQuickQs = ['كيف أحسن أداء المدرسة؟', 'اقترح خ�
 // Settings
 const mgrSettings = ref({
   avatar_url: '', theme: 'dark', language: 'ar',
-  brightness: 100, notifications_enabled: true
+  notifications_enabled: true
 })
 useTheme(mgrSettings)
 function changeMgrLang(code) {
@@ -794,12 +807,24 @@ function changeMgrLang(code) {
   setLang(code)
   saveMgrSettings()
 }
-function onMgrAvatarUpload(e) {
-  const file = e.target.files?.[0]; if (!file) return
-  if (file.size > 500 * 1024) { alert('الصورة أكبر من 500 KB'); return }
-  const r = new FileReader()
-  r.onload = (ev) => { mgrSettings.value.avatar_url = ev.target.result; saveMgrSettings() }
-  r.readAsDataURL(file)
+const avatarOptions = [
+  { id: 'av1', bg: '#E3F2FD', skin: '#FDBCB4', hairColor: '#3E2723', outfit: '#1976D2', hair: 'M24,24 Q40,8 56,24 Q56,16 40,12 Q24,16 24,24Z' },
+  { id: 'av2', bg: '#FFF3E0', skin: '#8D5524', hairColor: '#1B1B1B', outfit: '#E65100', hair: 'M24,26 Q40,10 56,26 L56,20 Q40,6 24,20Z' },
+  { id: 'av3', bg: '#E8F5E9', skin: '#FDBCB4', hairColor: '#5D4037', outfit: '#2E7D32', hair: 'M22,28 Q32,12 40,14 Q48,12 58,28 Q56,18 40,8 Q24,18 22,28Z' },
+  { id: 'av4', bg: '#FCE4EC', skin: '#D4A574', hairColor: '#4E342E', outfit: '#C2185B', hair: 'M22,30 Q28,14 40,12 Q52,14 58,30 L58,22 Q50,10 40,8 Q30,10 22,22Z' },
+  { id: 'av5', bg: '#EDE7F6', skin: '#FDBCB4', hairColor: '#F9A825', outfit: '#512DA8', hair: 'M26,24 Q40,10 54,24 Q52,14 40,8 Q28,14 26,24Z' },
+  { id: 'av6', bg: '#E0F7FA', skin: '#8D5524', hairColor: '#212121', outfit: '#00838F', hair: 'M24,26 Q40,14 56,26 Q54,18 40,10 Q26,18 24,26Z' },
+  { id: 'av7', bg: '#FFF8E1', skin: '#C68642', hairColor: '#3E2723', outfit: '#FF8F00', hair: 'M20,28 Q30,10 40,12 Q50,10 60,28 Q58,16 40,6 Q22,16 20,28Z' },
+  { id: 'av8', bg: '#F3E5F5', skin: '#FDBCB4', hairColor: '#1B1B1B', outfit: '#7B1FA2', hair: 'M24,28 Q32,12 48,12 Q56,16 56,28 L56,22 Q54,14 40,10 Q26,14 24,22Z' },
+  { id: 'av9', bg: '#E8EAF6', skin: '#D4A574', hairColor: '#BF360C', outfit: '#283593', hair: 'M26,26 Q34,12 46,12 Q54,16 54,26 Q52,18 40,10 Q28,18 26,26Z' },
+  { id: 'av10', bg: '#EFEBE9', skin: '#8D5524', hairColor: '#1B1B1B', outfit: '#4E342E', hair: 'M24,24 Q40,8 56,24 Q54,14 40,6 Q26,14 24,24Z' },
+  { id: 'av11', bg: '#E0F2F1', skin: '#FDBCB4', hairColor: '#4E342E', outfit: '#00695C', hair: 'M22,28 Q32,14 48,14 Q58,20 58,28 L56,22 Q48,12 32,12 Q22,20 22,28Z' },
+  { id: 'av12', bg: '#F1F8E9', skin: '#C68642', hairColor: '#33691E', outfit: '#558B2F', hair: 'M26,24 Q40,12 54,24 Q52,16 40,10 Q28,16 26,24Z' },
+]
+const avatarMap = Object.fromEntries(avatarOptions.map(a => [a.id, a]))
+function selectAvatar(id) {
+  mgrSettings.value.avatar_url = id
+  saveMgrSettings()
 }
 const settingsMsg = ref('')
 
@@ -1270,4 +1295,10 @@ onMounted(async () => {
   transform: translateY(-3px);
   box-shadow: 0 0 24px var(--glow-c, rgba(74,126,255,0.25));
 }
+
+/* Avatar grid */
+.avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
+.avatar-option { cursor: pointer; border-radius: 50%; padding: 4px; border: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+.avatar-option:hover { border-color: var(--accent, #4a7eff); transform: scale(1.1); }
+.avatar-option.selected { border-color: var(--accent, #4a7eff); box-shadow: 0 0 12px rgba(74,126,255,0.4); }
 </style>

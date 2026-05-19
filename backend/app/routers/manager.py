@@ -843,7 +843,7 @@ async def delete_account(
 async def get_manager_settings(current_user: dict = Depends(require_manager), db=Depends(get_db)):
     result = db.table("user_settings").select("*").eq("user_id", current_user["id"]).execute()
     base = {
-        "theme": "dark", "brightness": 100, "language": "ar",
+        "theme": "dark", "language": "ar",
         "notifications_enabled": True,
         "avatar_url": current_user.get("avatar_url", ""),
         "email": current_user.get("email", ""),
@@ -862,10 +862,8 @@ async def update_manager_settings(body: dict, current_user: dict = Depends(requi
     if theme not in valid_themes: theme = "dark"
     lang = body.get("language", "ar")
     if lang not in valid_langs: lang = "ar"
-    try: brightness = max(20, min(100, int(body.get("brightness", 100))))
-    except: brightness = 100
     data = {
-        "user_id": current_user["id"], "theme": theme, "brightness": brightness,
+        "user_id": current_user["id"], "theme": theme,
         "language": lang, "notifications_enabled": bool(body.get("notifications_enabled", True)),
     }
     try:

@@ -133,7 +133,7 @@ async def get_student_profile(current_user: dict = Depends(get_current_user), db
 @router.get("/settings")
 async def get_settings(current_user: dict = Depends(get_current_user), db=Depends(get_db)):
     result = db.table("user_settings").select("*").eq("user_id", current_user["id"]).execute()
-    base = {"theme": "dark", "notifications_enabled": True, "brightness": 100,
+    base = {"theme": "dark", "notifications_enabled": True,
             "difficulty": "medium", "hobbies": [], "language": "ar",
             "avatar_url": current_user.get("avatar_url", "")}
     if not result.data:
@@ -176,13 +176,8 @@ async def update_settings(
         if all_data["theme"] not in {"dark", "light", "library", "neon"}:
             all_data["theme"] = "dark"
 
-    # تطبيع brightness
-    if "brightness" in all_data:
-        try:
-            b = int(all_data["brightness"])
-            all_data["brightness"] = max(20, min(100, b))
-        except Exception:
-            all_data.pop("brightness", None)
+    # حذف brightness لو موجود (لم يعد مستخدماً)
+    all_data.pop("brightness", None)
 
     if not all_data:
         return {"message": "تم الحفظ"}

@@ -77,7 +77,7 @@ const STATIC = {
   theme_dark:    { ar:'داكن',         en:'Dark',        zh:'深色',   de:'Dunkel',         es:'Oscuro',     fr:'Sombre' },
   theme_light:   { ar:'فاتح',         en:'Light',       zh:'浅色',   de:'Hell',           es:'Claro',      fr:'Clair' },
   theme_library: { ar:'مكتبة',        en:'Library',     zh:'图书馆', de:'Bibliothek',     es:'Biblioteca', fr:'Bibliothèque' },
-  brightness:    { ar:'السطوع',       en:'Brightness',  zh:'亮度',   de:'Helligkeit',     es:'Brillo',     fr:'Luminosité' },
+  choose_avatar: { ar:'اختر صورتك الرمزية', en:'Choose your avatar', zh:'选择头像', de:'Avatar auswählen', es:'Elige tu avatar', fr:'Choisissez votre avatar' },
   language:      { ar:'اللغة',        en:'Language',    zh:'语言',   de:'Sprache',        es:'Idioma',     fr:'Langue' },
   notifications: { ar:'الإشعارات',   en:'Notifications',zh:'通知',  de:'Benachrichtigungen', es:'Notificaciones', fr:'Notifications' },
   notifications_enabled: { ar:'تفعيل الإشعارات', en:'Enable notifications', zh:'启用通知', de:'Benachrichtigungen aktivieren', es:'Activar notificaciones', fr:'Activer les notifications' },
