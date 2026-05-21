@@ -212,6 +212,15 @@ async def update_settings(
 # ============================================
 # الواجبات
 # ============================================
+def _filter_by_section(rows, student_section):
+    """يُرجع للطالب محتوى شعبته فقط + المحتوى العام (بدون شعبة محددة).
+    لو الطالب ملوش شعبة (حسابات قديمة) يرى كل محتوى صفّه."""
+    sec = (student_section or "").strip()
+    if not sec:
+        return rows
+    return [r for r in rows if str(r.get("section") or "").strip() in ("", sec)]
+
+
 @router.get("/homework")
 async def get_homework(current_user: dict = Depends(_require_student), db=Depends(get_db)):
     school_id = current_user.get("school_id")
@@ -224,7 +233,7 @@ async def get_homework(current_user: dict = Depends(_require_student), db=Depend
         query = query.eq("grade", grade)
 
     result = query.order("created_at", desc=True).execute()
-    return result.data
+    return _filter_by_section(result.data or [], current_user.get("section"))
 
 
 @router.post("/homework/{homework_id}/submit")
@@ -257,14 +266,20 @@ async def get_tests(current_user: dict = Depends(_require_student), db=Depends(g
     school_id = current_user.get("school_id")
     grade = current_user.get("grade")
 
-    query = db.table("tests").select("id, title, subject, grade, duration_minutes, created_at").eq("is_active", True)
-    if school_id:
-        query = query.eq("school_id", school_id)
-    if grade:
-        query = query.eq("grade", grade)
+    def _run(cols):
+        q = db.table("tests").select(cols).eq("is_active", True)
+        if school_id:
+            q = q.eq("school_id", school_id)
+        if grade:
+            q = q.eq("grade", grade)
+        return q.order("created_at", desc=True).execute().data or []
 
-    result = query.order("created_at", desc=True).execute()
-    return result.data
+    try:
+        rows = _run("id, title, subject, grade, section, duration_minutes, created_at")
+    except Exception:
+        rows = _run("id, title, subject, grade, duration_minutes, created_at")  # section لسه مش موجود
+
+    return _filter_by_section(rows, current_user.get("section"))
 
 
 @router.get("/tests/{test_id}")

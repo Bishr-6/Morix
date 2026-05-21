@@ -14,6 +14,37 @@ def _require_teacher(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
+def _get_assignments(db, teacher_id: str):
+    """تكليفات المعلم (صف + شعبة + مادة). ترجع [] لو الجدول مش موجود بعد."""
+    try:
+        res = db.table("teacher_assignments").select("grade, section, subject") \
+            .eq("teacher_id", teacher_id).execute()
+        return res.data or []
+    except Exception:
+        return []
+
+
+def _assignment_allows(assignments, grade, section) -> bool:
+    """هل المعلم مكلّف بهذا (الصف + الشعبة)؟
+    لو المعلم ملوش أي تكليفات (حسابات قديمة) نسمح — حتى لا نكسر التدفّق الحالي."""
+    if not assignments:
+        return True
+    g = (grade or "").strip()
+    s = (section or "").strip()
+    for a in assignments:
+        ag = (a.get("grade") or "").strip()
+        as_ = (a.get("section") or "").strip()
+        if ag == g and (as_ == s or as_ == "" or s == ""):
+            return True
+    return False
+
+
+@router.get("/my-classes")
+async def get_my_classes(current_user: dict = Depends(_require_teacher), db=Depends(get_db)):
+    """الصفوف والشُّعب المكلّف بها المعلم — لملء القوائم المنسدلة عند إنشاء المحتوى."""
+    return _get_assignments(db, current_user["id"])
+
+
 # ============================================
 # الواجبات
 # ============================================
@@ -53,15 +84,27 @@ async def create_homework(body: dict, current_user: dict = Depends(_require_teac
         if not description:
             description = reply
 
-    result = db.table("homework").insert({
+    section = (body.get("section") or "").strip()
+    # التحقق إن المعلم مكلّف بهذا الصف/الشعبة
+    if not _assignment_allows(_get_assignments(db, current_user["id"]), grade, section):
+        raise HTTPException(status_code=403, detail="غير مسموح: أنت غير مكلّف بهذا الصف/الشعبة")
+
+    payload = {
         "teacher_id": current_user["id"],
         "school_id": current_user.get("school_id"),
         "title": title or f"واجب {subject}",
         "description": description,
         "subject": subject,
         "grade": grade,
+        "section": section,
         "due_date": body.get("due_date"),
-    }).execute()
+    }
+    try:
+        result = db.table("homework").insert(payload).execute()
+    except Exception:
+        # عمود section لسه مش موجود (migration_v6 لم يُشغّل) — نحاول بدونه
+        payload.pop("section", None)
+        result = db.table("homework").insert(payload).execute()
     return result.data[0] if result.data else {"message": "تم إنشاء الواجب"}
 
 
@@ -113,16 +156,27 @@ async def create_test(body: dict, current_user: dict = Depends(_require_teacher)
                 for i, item in enumerate(content["items"])
             ]
 
-    result = db.table("tests").insert({
+    grade = body.get("grade", "")
+    section = (body.get("section") or "").strip()
+    if not _assignment_allows(_get_assignments(db, current_user["id"]), grade, section):
+        raise HTTPException(status_code=403, detail="غير مسموح: أنت غير مكلّف بهذا الصف/الشعبة")
+
+    payload = {
         "teacher_id": current_user["id"],
         "school_id": current_user.get("school_id"),
         "title": body.get("title", "اختبار جديد"),
         "subject": body.get("subject", current_user.get("subject", "")),
-        "grade": body.get("grade", ""),
+        "grade": grade,
+        "section": section,
         "questions": questions,
         "duration_minutes": body.get("duration_minutes", 60),
         "is_active": True,
-    }).execute()
+    }
+    try:
+        result = db.table("tests").insert(payload).execute()
+    except Exception:
+        payload.pop("section", None)
+        result = db.table("tests").insert(payload).execute()
     return result.data[0] if result.data else {"message": "تم إنشاء الاختبار"}
 
 
@@ -169,15 +223,21 @@ async def create_worksheet(body: dict, current_user: dict = Depends(_require_tea
         content = reply
         ai_generated = True
 
-    result = db.table("worksheets").insert({
+    payload = {
         "teacher_id": current_user["id"],
         "school_id": current_user.get("school_id"),
         "title": body.get("title", "ورقة عمل"),
         "subject": body.get("subject", current_user.get("subject", "")),
         "grade": body.get("grade", ""),
+        "section": (body.get("section") or "").strip(),
         "content": content,
         "ai_generated": ai_generated,
-    }).execute()
+    }
+    try:
+        result = db.table("worksheets").insert(payload).execute()
+    except Exception:
+        payload.pop("section", None)
+        result = db.table("worksheets").insert(payload).execute()
     return result.data[0] if result.data else {"message": "تم إنشاء ورقة العمل", "content": content}
 
 
@@ -193,13 +253,32 @@ async def delete_worksheet(worksheet_id: str, current_user: dict = Depends(_requ
 @router.get("/students")
 async def get_students(current_user: dict = Depends(_require_teacher), db=Depends(get_db)):
     school_id = current_user.get("school_id")
-    query = db.table("users").select(
-        "id, full_name, grade, learning_style, stars_count, streak_count, created_at"
-    ).eq("role", "student")
-    if school_id:
-        query = query.eq("school_id", school_id)
-    result = query.order("full_name").execute()
-    return result.data
+    cols_with_section = "id, full_name, grade, section, learning_style, stars_count, streak_count, created_at"
+    cols_no_section = "id, full_name, grade, learning_style, stars_count, streak_count, created_at"
+
+    def _run(cols):
+        q = db.table("users").select(cols).eq("role", "student")
+        if school_id:
+            q = q.eq("school_id", school_id)
+        return q.order("full_name").execute().data or []
+
+    try:
+        students = _run(cols_with_section)
+    except Exception:
+        students = _run(cols_no_section)  # عمود section لسه مش موجود
+
+    # فلترة حسب تكليفات المعلم (صف + شعبة). المدير/الإداري ملوش تكليفات => يشوف الكل.
+    assignments = _get_assignments(db, current_user["id"])
+    if assignments and current_user.get("role") == "teacher":
+        allowed = {((a.get("grade") or "").strip(), (a.get("section") or "").strip()) for a in assignments}
+
+        def _match(s):
+            sg = (s.get("grade") or "").strip()
+            ss = (s.get("section") or "").strip()
+            return any(g == sg and (sec == "" or sec == ss) for (g, sec) in allowed)
+
+        students = [s for s in students if _match(s)]
+    return students
 
 
 @router.get("/students/{student_id}/progress")

@@ -87,13 +87,15 @@ async def get_accounts(
     db=Depends(get_db)
 ):
     """جلب جميع حسابات مدرسة"""
-    result = db.table("users") \
-        .select("id, email, role, full_name, grade, subject, ministry_id, is_active, created_at") \
-        .eq("school_id", school_id) \
-        .neq("role", "manager") \
-        .execute()
+    def _run(cols):
+        return db.table("users").select(cols) \
+            .eq("school_id", school_id).neq("role", "manager").execute().data
 
-    return result.data
+    try:
+        data = _run("id, email, role, full_name, grade, section, subject, ministry_id, is_active, created_at")
+    except Exception:
+        data = _run("id, email, role, full_name, grade, subject, ministry_id, is_active, created_at")  # section قبل migration_v6
+    return data
 
 
 @router.get("/export/{school_id}")
@@ -616,6 +618,7 @@ async def upload_excel_setup(
     col_name = find_col("اسم", "name", "full_name")
     col_role = find_col("دور", "role")
     col_grade = find_col("صف", "grade", "صفّ")
+    col_section = find_col("شعبة", "شعبه", "section", "فصل")
     col_subject = find_col("مادة", "subject")
     col_ministry = find_col("وزاري", "ministry", "id")
 
@@ -638,6 +641,7 @@ async def upload_excel_setup(
         raw_role = str(row[col_role] or "").strip().lower()
         role = role_map.get(raw_role, "student")
         grade = str(row[col_grade] or "").strip() if col_grade != -1 else ""
+        section = str(row[col_section] or "").strip() if col_section != -1 else ""
         subject = str(row[col_subject] or "").strip() if col_subject != -1 else ""
         ministry_id = str(row[col_ministry] or "").strip() if col_ministry != -1 else ""
 
@@ -647,9 +651,13 @@ async def upload_excel_setup(
 
         if role == "student":
             entry["grade"] = grade or "غير محدد"
+            entry["section"] = section
             students.append(entry)
         elif role == "teacher":
+            # كل صف للمعلم = تكليف (مادة + صف + شعبة). معلم بأكثر من شعبة = أكثر من صف بنفس الاسم/الرقم الوزاري.
             entry["subject"] = subject or "عام"
+            entry["grade"] = grade
+            entry["section"] = section
             teachers.append(entry)
         elif role == "admin":
             admins_count += 1

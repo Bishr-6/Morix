@@ -53,10 +53,21 @@
             <p style="color:var(--t2);font-size:13px;margin:0 0 8px">🤖 AI يولّد العنوان والتعليمات تلقائياً — فقط أدخل الموضوع والمادة.</p>
             <input v-model="hwNew.topic" class="inp" placeholder="الموضوع / ما تريد الطلاب يدرسونه *" />
             <div class="row-gap">
-              <input v-model="hwNew.subject" class="inp" placeholder="المادة *" />
-              <input v-model="hwNew.grade" class="inp" placeholder="الصف" />
+              <select v-if="myClasses.length" class="inp" v-model="hwClassIdx" @change="onClassPick('hw')">
+                <option value="">اختر الصف / الشعبة *</option>
+                <option v-for="(c,i) in myClasses" :key="i" :value="i">
+                  {{ c.subject || 'مادة' }} — {{ c.grade }}{{ c.section ? ' / ' + c.section : '' }}
+                </option>
+              </select>
+              <template v-else>
+                <input v-model="hwNew.subject" class="inp" placeholder="المادة *" />
+                <input v-model="hwNew.grade" class="inp" placeholder="الصف" />
+              </template>
               <input v-model="hwNew.due_date" class="inp" type="datetime-local" />
             </div>
+            <p v-if="myClasses.length && hwNew.grade" class="text-xs" style="color:#10b981;margin:0 0 6px">
+              📌 سيصل الواجب لطلاب: {{ hwNew.grade }}{{ hwNew.section ? ' / شعبة ' + hwNew.section : '' }}
+            </p>
             <div class="row-gap"><button class="btn-p" @click="createHw" :disabled="hwLoading||!hwNew.topic||!hwNew.subject">{{ hwLoading?'⏳ AI يولّد...':'✨ ' + t('create_ai') }}</button><button class="btn-o" @click="hwForm=false">{{ t('cancel') }}</button></div>
           </div>
           <div v-if="!homework.length" class="empty">{{ t('no_homework') }}</div>
@@ -94,8 +105,16 @@
             <!-- معلومات الاختبار -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
               <input v-model="testNew.title" class="inp" placeholder="عنوان الاختبار *" />
-              <input v-model="testNew.subject" class="inp" placeholder="المادة *" />
-              <input v-model="testNew.grade" class="inp" placeholder="الصف" />
+              <select v-if="myClasses.length" class="inp" v-model="testClassIdx" @change="onClassPick('test')">
+                <option value="">اختر الصف / الشعبة *</option>
+                <option v-for="(c,i) in myClasses" :key="i" :value="i">
+                  {{ c.subject || 'مادة' }} — {{ c.grade }}{{ c.section ? ' / ' + c.section : '' }}
+                </option>
+              </select>
+              <template v-else>
+                <input v-model="testNew.subject" class="inp" placeholder="المادة *" />
+                <input v-model="testNew.grade" class="inp" placeholder="الصف" />
+              </template>
               <input v-model.number="testNew.duration_minutes" class="inp" type="number" placeholder="المدة (دقيقة)" min="5" max="180" />
             </div>
 
@@ -172,8 +191,16 @@
             <p style="color:var(--t2);font-size:13px;margin:0 0 8px">🤖 AI يولّد ورقة العمل الكاملة — فقط أدخل الموضوع والمادة.</p>
             <input v-model="wsNew.topic" class="inp" placeholder="الموضوع المحدد *" />
             <div class="row-gap">
-              <input v-model="wsNew.subject" class="inp" placeholder="المادة *" />
-              <input v-model="wsNew.grade" class="inp" placeholder="الصف" />
+              <select v-if="myClasses.length" class="inp" v-model="wsClassIdx" @change="onClassPick('ws')">
+                <option value="">اختر الصف / الشعبة *</option>
+                <option v-for="(c,i) in myClasses" :key="i" :value="i">
+                  {{ c.subject || 'مادة' }} — {{ c.grade }}{{ c.section ? ' / ' + c.section : '' }}
+                </option>
+              </select>
+              <template v-else>
+                <input v-model="wsNew.subject" class="inp" placeholder="المادة *" />
+                <input v-model="wsNew.grade" class="inp" placeholder="الصف" />
+              </template>
             </div>
             <div class="row-gap"><button class="btn-p" @click="createWs" :disabled="wsLoading||!wsNew.topic||!wsNew.subject">{{ wsLoading?'⏳ AI يولّد ورقة العمل...':'✨ ' + t('create_ai') }}</button><button class="btn-o" @click="wsForm=false">{{ t('cancel') }}</button></div>
           </div>
@@ -787,17 +814,35 @@ const cur = ref('overview')
 const sb = ref(false)
 const mobileOpen = ref(false)
 
+// الصفوف والشُّعب المكلّف بها المعلم
+const myClasses = ref([])
+const hwClassIdx = ref('')
+async function loadMyClasses() {
+  try { myClasses.value = (await teacherAPI.getMyClasses()).data || [] } catch { myClasses.value = [] }
+}
+function onClassPick(which) {
+  const idx = which === 'hw' ? hwClassIdx.value : (which === 'test' ? testClassIdx.value : wsClassIdx.value)
+  if (idx === '' || idx == null) return
+  const c = myClasses.value[idx]
+  if (!c) return
+  const target = which === 'hw' ? hwNew : (which === 'test' ? testNew : wsNew)
+  target.value.subject = c.subject || ''
+  target.value.grade = c.grade || ''
+  target.value.section = c.section || ''
+}
+
 const homework = ref([])
 const hwForm = ref(false)
 const hwLoading = ref(false)
-const hwNew = ref({topic:'',subject:'',grade:'',due_date:''})
+const hwNew = ref({topic:'',subject:'',grade:'',section:'',due_date:''})
 const submissions = ref([])
 
 const myTests = ref([])
 const testForm = ref(false)
 const testLoading = ref(false)
 const testSaveError = ref('')
-const testNew = ref({title:'',subject:'',grade:'',duration_minutes:60})
+const testNew = ref({title:'',subject:'',grade:'',section:'',duration_minutes:60})
+const testClassIdx = ref('')
 
 // بانية الأسئلة اليدوية
 const testQuestions = ref([])
@@ -811,7 +856,8 @@ function removeQuestion(i) { testQuestions.value.splice(i,1) }
 const worksheets = ref([])
 const wsForm = ref(false)
 const wsLoading = ref(false)
-const wsNew = ref({topic:'',subject:'',grade:''})
+const wsNew = ref({topic:'',subject:'',grade:'',section:''})
+const wsClassIdx = ref('')
 
 // Video
 const vidTopic = ref('')
@@ -852,7 +898,7 @@ const genImage = ref(null)
 const imgError = ref('')
 
 onMounted(async () => {
-  await Promise.all([loadHomework(), loadTests(), loadWorksheets(), loadStudents(), loadTeacherSettings()])
+  await Promise.all([loadHomework(), loadTests(), loadWorksheets(), loadStudents(), loadTeacherSettings(), loadMyClasses()])
 })
 
 async function loadTeacherSettings() {
@@ -897,7 +943,7 @@ async function createHw() {
   hwLoading.value=true
   try {
     await teacherAPI.createHomework({ ...hwNew.value, ai_generate: true })
-    hwForm.value=false; hwNew.value={topic:'',subject:'',grade:'',due_date:''}; await loadHomework()
+    hwForm.value=false; hwNew.value={topic:'',subject:'',grade:'',section:'',due_date:''}; hwClassIdx.value=''; await loadHomework()
   } catch {} finally { hwLoading.value=false }
 }
 async function deleteHw(id) { try { await teacherAPI.deleteHomework(id); await loadHomework() } catch {} }
@@ -925,12 +971,14 @@ async function createTest() {
       title: testNew.value.title,
       subject: testNew.value.subject,
       grade: testNew.value.grade,
+      section: testNew.value.section,
       duration_minutes: testNew.value.duration_minutes || 60,
       questions,
       ai_generate: false
     })
     testForm.value=false
-    testNew.value={title:'',subject:'',grade:'',duration_minutes:60}
+    testNew.value={title:'',subject:'',grade:'',section:'',duration_minutes:60}
+    testClassIdx.value=''
     testQuestions.value=[]
     await loadTests()
   } catch(e) {
@@ -943,7 +991,7 @@ async function createWs() {
   wsLoading.value=true
   try {
     await teacherAPI.createWorksheet({ ...wsNew.value, ai_generate: true, title: `ورقة عمل — ${wsNew.value.topic}` })
-    wsForm.value=false; wsNew.value={topic:'',subject:'',grade:''}; await loadWorksheets()
+    wsForm.value=false; wsNew.value={topic:'',subject:'',grade:'',section:''}; wsClassIdx.value=''; await loadWorksheets()
   } catch {} finally { wsLoading.value=false }
 }
 

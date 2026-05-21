@@ -292,17 +292,20 @@
                   <th class="p-2">الاسم</th>
                   <th class="p-2">الدور</th>
                   <th class="p-2">الصف</th>
+                  <th class="p-2">الشعبة</th>
                   <th class="p-2">المادة</th>
                   <th class="p-2">الرقم الوزاري</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td class="p-2">محمد أحمد</td><td class="p-2">طالب</td><td class="p-2">الصف الخامس</td><td class="p-2">-</td><td class="p-2">12345</td></tr>
-                <tr><td class="p-2">سارة علي</td><td class="p-2">معلم</td><td class="p-2">-</td><td class="p-2">رياضيات</td><td class="p-2">T001</td></tr>
-                <tr><td class="p-2">خالد سعد</td><td class="p-2">إداري</td><td class="p-2">-</td><td class="p-2">-</td><td class="p-2">A01</td></tr>
+                <tr><td class="p-2">محمد أحمد</td><td class="p-2">طالب</td><td class="p-2">الصف الخامس</td><td class="p-2">أ</td><td class="p-2">-</td><td class="p-2">12345</td></tr>
+                <tr><td class="p-2">سارة علي</td><td class="p-2">معلم</td><td class="p-2">الصف الخامس</td><td class="p-2">أ</td><td class="p-2">رياضيات</td><td class="p-2">T001</td></tr>
+                <tr><td class="p-2">سارة علي</td><td class="p-2">معلم</td><td class="p-2">الصف الخامس</td><td class="p-2">ب</td><td class="p-2">رياضيات</td><td class="p-2">T001</td></tr>
+                <tr><td class="p-2">خالد سعد</td><td class="p-2">إداري</td><td class="p-2">-</td><td class="p-2">-</td><td class="p-2">-</td><td class="p-2">A01</td></tr>
               </tbody>
             </table>
             <p class="text-xs mt-3" style="color:#10b981">✅ يقبل: طالب/معلم/إداري أو student/teacher/admin</p>
+            <p class="text-xs mt-2" style="color:#fbbf24">💡 الطالب: اكتب صفّه وشعبته. المعلم: اكتب الصف والشعبة والمادة اللي بيدرّسها — ولو بيدرّس أكثر من شعبة كرّر اسمه في سطر لكل شعبة (بنفس الرقم الوزاري).</p>
           </div>
 
           <!-- رفع الملف -->
@@ -359,6 +362,7 @@
                     <th class="p-3 text-right mgr-th">الإيميل</th>
                     <th class="p-3 text-right mgr-th">الدور</th>
                     <th class="p-3 text-right mgr-th">الصف</th>
+                    <th class="p-3 text-right mgr-th">الشعبة</th>
                     <th class="p-3 text-right mgr-th">المادة</th>
                     <th class="p-3 text-right mgr-th">كلمة السر</th>
                     <th class="p-3 text-right mgr-th">{{ t('actions_label') }}</th>
@@ -376,6 +380,7 @@
                       </span>
                     </td>
                     <td class="p-3 mgr-td-muted">{{ acc.grade || '-' }}</td>
+                    <td class="p-3 mgr-td-muted">{{ acc.section || '-' }}</td>
                     <td class="p-3 mgr-td-muted">{{ acc.subject || '-' }}</td>
                     <td class="p-3">
                       <button v-if="!revealedPasswords[acc.id]"
@@ -865,17 +870,19 @@ const parsedStudents = computed(() => {
   return studentsText.value.split('\n')
     .map(l => l.trim()).filter(Boolean)
     .map(line => {
-      const [name, ministry_id, grade] = line.split(',').map(s => s.trim())
-      return { name: name || '', ministry_id: ministry_id || '', grade: grade || '' }
+      const [name, ministry_id, grade, section] = line.split(',').map(s => s.trim())
+      return { name: name || '', ministry_id: ministry_id || '', grade: grade || '', section: section || '' }
     })
 })
 
 const parsedTeachers = computed(() => {
+  // كل سطر = تكليف: الاسم، الرقم الوزاري، المادة، الصف، الشعبة
+  // المعلم اللي بيدرّس أكتر من شعبة = سطر لكل شعبة بنفس الاسم/الرقم الوزاري
   return teachersText.value.split('\n')
     .map(l => l.trim()).filter(Boolean)
     .map(line => {
-      const [name, subject] = line.split(',').map(s => s.trim())
-      return { name: name || '', subject: subject || '' }
+      const [name, ministry_id, subject, grade, section] = line.split(',').map(s => s.trim())
+      return { name: name || '', ministry_id: ministry_id || '', subject: subject || '', grade: grade || '', section: section || '' }
     })
 })
 

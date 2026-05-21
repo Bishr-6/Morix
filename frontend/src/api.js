@@ -165,6 +165,9 @@ export const aiAPI = {
 // المعلم
 // ============================================
 export const teacherAPI = {
+  // الصفوف والشُّعب المكلّف بها المعلم
+  getMyClasses: () => api.get('/teacher/my-classes'),
+
   // الواجبات
   getHomework: () => api.get('/teacher/homework'),
   createHomework: (data) => api.post('/teacher/homework', data),
