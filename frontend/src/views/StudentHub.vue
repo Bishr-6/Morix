@@ -574,7 +574,7 @@
             </button>
           </div>
           <div style="background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
-            <iframe :src="'/api/v1/proxy?url=' + encodeURIComponent(libUrl)"
+            <iframe :src="proxiedLibUrl"
                     style="width:100%;height:80vh;border:none;background:#fff"
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     referrerpolicy="no-referrer"
@@ -1077,6 +1077,11 @@ const libSources = [
   { label:'Project Gutenberg', icon:'📚', url:'https://www.gutenberg.org/' },
 ]
 const libUrl = ref(libSources[0].url)
+// نمرّر التوكن في الـ URL لأن الـ iframe لا يستطيع إرسال هيدر Authorization
+const proxiedLibUrl = computed(() => {
+  const tok = localStorage.getItem('memorix_token') || ''
+  return '/api/v1/proxy?url=' + encodeURIComponent(libUrl.value) + '&token=' + encodeURIComponent(tok)
+})
 
 // ========== 📓 Morix Notebook (NotebookLM-like) ==========
 const nbTab = ref('upload')

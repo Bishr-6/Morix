@@ -1,13 +1,34 @@
-// نظام الترجمة - Morix Platform (Google Translate powered)
+// نظام الترجمة - Morix Platform (قاموس ثابت + أعلام SVG مُضمَّنة — بدون موارد خارجية)
 import { ref, computed, watch } from 'vue'
 
+// أعلام SVG مدمجة كـ data-URI — لا تعتمد على أي CDN خارجي (تعمل بدون VPN)
+const _flag = (inner) =>
+  'data:image/svg+xml;utf8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40">${inner}</svg>`
+  )
+
+const FLAGS = {
+  // السعودية — أخضر (يمثّل العربية)
+  sa: _flag('<rect width="60" height="40" fill="#006C35"/>'),
+  // بريطانيا — Union Jack مبسّط
+  gb: _flag('<rect width="60" height="40" fill="#012169"/><path d="M0 0 60 40M60 0 0 40" stroke="#fff" stroke-width="8"/><path d="M0 0 60 40M60 0 0 40" stroke="#C8102E" stroke-width="4"/><path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="13"/><path d="M30 0V40M0 20H60" stroke="#C8102E" stroke-width="8"/>'),
+  // الصين — أحمر بنجمة صفراء
+  cn: _flag('<rect width="60" height="40" fill="#DE2910"/><path d="M12 6l2.2 6.8H21l-5.5 4 2.1 6.8L12 19.6 6.4 23.6l2.1-6.8L3 12.8h6.8z" fill="#FFDE00"/>'),
+  // ألمانيا — أسود/أحمر/ذهبي
+  de: _flag('<rect width="60" height="40" fill="#000"/><rect width="60" height="26.7" y="13.3" fill="#D00"/><rect width="60" height="13.3" y="26.7" fill="#FFCE00"/>'),
+  // إسبانيا — أحمر/أصفر/أحمر
+  es: _flag('<rect width="60" height="40" fill="#AA151B"/><rect width="60" height="20" y="10" fill="#F1BF00"/>'),
+  // فرنسا — أزرق/أبيض/أحمر
+  fr: _flag('<rect width="20" height="40" fill="#0055A4"/><rect width="20" height="40" x="20" fill="#fff"/><rect width="20" height="40" x="40" fill="#EF4135"/>'),
+}
+
 export const LANGUAGES = {
-  ar: { code: 'ar', name: 'العربية',  flag: '🇸🇦', flagImg: 'https://flagcdn.com/w40/sa.png', dir: 'rtl' },
-  en: { code: 'en', name: 'English',  flag: '🇬🇧', flagImg: 'https://flagcdn.com/w40/gb.png', dir: 'ltr' },
-  zh: { code: 'zh', name: '中文',      flag: '🇨🇳', flagImg: 'https://flagcdn.com/w40/cn.png', dir: 'ltr' },
-  de: { code: 'de', name: 'Deutsch',  flag: '🇩🇪', flagImg: 'https://flagcdn.com/w40/de.png', dir: 'ltr' },
-  es: { code: 'es', name: 'Español',  flag: '🇪🇸', flagImg: 'https://flagcdn.com/w40/es.png', dir: 'ltr' },
-  fr: { code: 'fr', name: 'Français', flag: '🇫🇷', flagImg: 'https://flagcdn.com/w40/fr.png', dir: 'ltr' },
+  ar: { code: 'ar', name: 'العربية',  flag: '🇸🇦', flagImg: FLAGS.sa, dir: 'rtl' },
+  en: { code: 'en', name: 'English',  flag: '🇬🇧', flagImg: FLAGS.gb, dir: 'ltr' },
+  zh: { code: 'zh', name: '中文',      flag: '🇨🇳', flagImg: FLAGS.cn, dir: 'ltr' },
+  de: { code: 'de', name: 'Deutsch',  flag: '🇩🇪', flagImg: FLAGS.de, dir: 'ltr' },
+  es: { code: 'es', name: 'Español',  flag: '🇪🇸', flagImg: FLAGS.es, dir: 'ltr' },
+  fr: { code: 'fr', name: 'Français', flag: '🇫🇷', flagImg: FLAGS.fr, dir: 'ltr' },
 }
 
 // ════════════════════════════════════════
@@ -422,35 +443,7 @@ applyDir(currentLang.value)
 watch(currentLang, (val) => {
   localStorage.setItem('morix_lang', val)
   applyDir(val)
-  // تطبيق Google Translate للمحتوى الديناميكي
-  _triggerTranslate(val)
 })
-
-function _triggerTranslate(lang) {
-  if (typeof window === 'undefined') return
-  if (lang === 'ar') {
-    // إعادة الصفحة للعربية الأصلية
-    if (window.__morixTranslate) setTimeout(() => window.__morixTranslate('ar'), 300)
-    return
-  }
-  // أولوية: widget جوجل
-  if (window.__morixTranslate) {
-    setTimeout(() => window.__morixTranslate(lang), 300)
-  }
-}
-
-// تطبيق اللغة المحفوظة عند بدء التطبيق (لو مش عربي)
-if (typeof window !== 'undefined' && currentLang.value !== 'ar') {
-  // انتظر تحميل Google Translate widget
-  const _initTranslate = () => {
-    if (window.__morixTranslate) {
-      window.__morixTranslate(currentLang.value)
-    } else {
-      setTimeout(_initTranslate, 500)
-    }
-  }
-  setTimeout(_initTranslate, 800)
-}
 
 // ════════════════════════════════════════
 //  Public composable

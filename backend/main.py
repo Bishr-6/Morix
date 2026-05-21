@@ -48,7 +48,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
+        # بروكسي المكتبة يحتاج عرض محتوى خارجي داخل iframe — لا نفرض X-Frame-Options: DENY عليه
+        if not request.url.path.startswith("/api/v1/proxy"):
+            response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
@@ -171,7 +173,7 @@ async def root():
 from fastapi import Request, Query
 from fastapi.responses import Response, StreamingResponse
 import httpx
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, quote
 
 ALLOWED_HOSTS = {
     "hindawi.org", "www.hindawi.org",
@@ -196,18 +198,25 @@ STRIP_HEADERS = {
 
 
 @app.get("/api/v1/proxy")
-async def iframe_proxy(url: str = Query(...), request: Request = None):
-    """يجيب صفحة خارجية ويحذف headers اللي بتمنع التضمين في iframe — يتطلب تسجيل دخول"""
+async def iframe_proxy(url: str = Query(...), token: str = Query(None), request: Request = None):
+    """يجيب صفحة خارجية ويحذف headers اللي بتمنع التضمين في iframe — يتطلب تسجيل دخول.
+    التوكن يأتي إما من هيدر Authorization أو من باراميتر token في الـ URL
+    (لأن الـ iframe لا يستطيع إرسال هيدرز مخصّصة)."""
     # ─── التحقق من الـ JWT ────────────────────────────────────────────
     from app.auth import decode_token
     auth_header = (request.headers.get("Authorization") or "") if request else ""
-    if not auth_header.startswith("Bearer "):
+    jwt_token = None
+    if auth_header.startswith("Bearer "):
+        jwt_token = auth_header.split(" ", 1)[1]
+    elif token:
+        jwt_token = token
+    if not jwt_token:
         return Response(
             content="<html dir='rtl'><body style='font-family:sans-serif;padding:24px;background:#0f172a;color:#fff'><h2>🔒 يجب تسجيل الدخول لاستخدام هذه الميزة</h2></body></html>",
             media_type="text/html; charset=utf-8", status_code=401
         )
     try:
-        decode_token(auth_header.split(" ", 1)[1])
+        decode_token(jwt_token)
     except Exception:
         return Response(
             content="<html dir='rtl'><body style='font-family:sans-serif;padding:24px;background:#0f172a;color:#fff'><h2>🔒 رمز وصول غير صالح</h2></body></html>",
@@ -245,12 +254,14 @@ async def iframe_proxy(url: str = Query(...), request: Request = None):
                 text = re.sub(r'(?i)<meta[^>]*http-equiv\s*=\s*["\']content-security-policy["\'][^>]*>', "", text)
                 text = re.sub(r'(?i)<meta[^>]*http-equiv\s*=\s*["\']x-frame-options["\'][^>]*>', "", text)
                 # نحوّل الـ <a href> اللي يفتح في نفس الموقع لتمشي عبر الـ proxy
+                # ونحتفظ بالتوكن في الروابط حتى يبقى التنقّل داخل المكتبة مُصرَّحاً به
+                token_suffix = f"&token={jwt_token}" if jwt_token else ""
                 def rewrite_link(m):
                     href = m.group(2)
                     if href.startswith("#") or href.startswith("javascript:") or href.startswith("mailto:"):
                         return m.group(0)
                     full = urljoin(url, href)
-                    return f'{m.group(1)}href="{proxy_base}{full}"'
+                    return f'{m.group(1)}href="{proxy_base}{quote(full, safe="")}{token_suffix}"'
                 text = re.sub(r'(<a\s[^>]*?)href="([^"]+)"', rewrite_link, text)
                 body = text.encode("utf-8")
                 ctype = "text/html; charset=utf-8"

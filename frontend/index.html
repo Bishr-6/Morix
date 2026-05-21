@@ -10,13 +10,7 @@
     <meta name="theme-color" content="#0a0f2c" />
     <meta name="format-detection" content="telephone=no" />
     <title>Morix - منصة التعلم الذكي</title>
-    <!-- خط Tajawal العربي -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap"
-      rel="stylesheet"
-    />
+    <!-- خط Tajawal مُضمَّن محلياً عبر @fontsource (يُستورد في main.js) — لا اعتماد على Google Fonts -->
     <!-- ═══ Global Glow CSS ═══ -->
     <style>
       :root {
@@ -173,74 +167,10 @@
         0%, 100% { box-shadow: var(--btn-glow); }
         50% { box-shadow: var(--glow-accent, var(--btn-glow)); }
       }
-
-      /* Google Translate widget — visually hidden but functional */
-      /* نخفيه بصريًا بدون إزالته من الـ DOM حتى يعمل الـ widget */
-      #google_translate_element {
-        position: fixed;
-        top: -9999px;
-        left: -9999px;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        opacity: 0;
-        pointer-events: none;
-      }
-      .goog-te-banner-frame { display: none !important; }
-      .skiptranslate > font, .skiptranslate iframe { display: none !important; }
-      body { top: 0 !important; }
-      /* إخفاء شريط Google Translate العلوي */
-      .goog-te-gadget-simple { display: none !important; }
-      .VIpgJd-ZVi9od-aZ2wEe-wOHMyf-ti6hGc { display: none !important; }
     </style>
   </head>
   <body>
     <div id="app"></div>
-    <div id="google_translate_element"></div>
     <script type="module" src="/src/main.js"></script>
-    <!-- Google Translate — hidden widget for programmatic use -->
-    <script>
-      function googleTranslateElementInit() {
-        try {
-          new google.translate.TranslateElement({
-            pageLanguage: 'ar',
-            includedLanguages: 'ar,en,zh-CN,de,es,fr',
-            autoDisplay: false,
-            layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-          }, 'google_translate_element')
-        } catch(e) {}
-      }
-
-      // ترجمة الصفحة — يُستدعى من useI18n.js
-      window.__morixTranslate = function(langCode) {
-        try {
-          const map = { ar:'ar', en:'en', zh:'zh-CN', de:'de', es:'es', fr:'fr' }
-          const code = map[langCode] || langCode
-
-          if (langCode === 'ar') {
-            // العودة للعربية: أزل كوكيز جوجل وأعد تحميل
-            var restore = document.querySelector('.goog-te-menu-value span')
-            if (restore) restore.click()
-            // أو نستخدم الـ combo box
-            var sel = document.querySelector('.goog-te-combo')
-            if (sel) { sel.value = 'ar'; sel.dispatchEvent(new Event('change')) }
-            // خيار آخر: إزالة googtrans cookie وإعادة load
-            document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-            document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + location.hostname
-            return
-          }
-
-          var sel = document.querySelector('.goog-te-combo')
-          if (sel) {
-            sel.value = code
-            sel.dispatchEvent(new Event('change'))
-          } else {
-            // widget لم يُحمَّل بعد — أعد المحاولة
-            setTimeout(function() { window.__morixTranslate(langCode) }, 600)
-          }
-        } catch(e) {}
-      }
-    </script>
-    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
   </body>
 </html>
