@@ -45,6 +45,12 @@ export const authAPI = {
 export const managerAPI = {
   getSchools: () => api.get('/manager/schools'),
   createSchool: (data) => api.post('/manager/schools', data),
+  uploadSchoolsExcel: (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/manager/schools/upload-excel', fd)
+  },
+  getSchoolClasses: (id) => api.get(`/manager/schools/${id}/classes`),
   deleteSchool: (id) => api.delete(`/manager/schools/${id}`),
   setupSchool: (data) => api.post('/manager/setup', data),
   uploadExcel: (schoolId, file) => {

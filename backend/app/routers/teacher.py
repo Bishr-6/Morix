@@ -548,8 +548,8 @@ async def extract_file_text(
     """استخراج النص من ملف PDF أو TXT أو MD أو PPTX للمعلم"""
     filename = (file.filename or "").lower()
     content = await file.read()
-    if len(content) > 15 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="الملف أكبر من 15MB — اختر ملفاً أصغر")
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="الملف أكبر من 50MB — اختر ملفاً أصغر")
     text = ""
 
     # ───── TXT / MD ─────

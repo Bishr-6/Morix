@@ -1271,7 +1271,7 @@ const nbGenResult = ref('')
 
 async function onNbFileUpload(e) {
   const file = e.target.files?.[0]; if (!file) return
-  if (file.size > 10 * 1024 * 1024) { alert('الملف أكبر من 10MB'); return }
+  if (file.size > 50 * 1024 * 1024) { alert('الملف أكبر من 50MB'); return }
   const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
   nbFileName.value = file.name
   nbFileText.value = ''

@@ -235,6 +235,22 @@
               💾 {{ t('save') }}
             </button>
             <p v-if="newSchoolMsg" class="mt-3 text-sm" :style="{color: newSchoolMsg.startsWith('✅')?'#10b981':'#ef4444'}">{{ newSchoolMsg }}</p>
+
+            <!-- أو رفع ملف Excel: مدرسة + صفوف + شُعب -->
+            <div class="mt-5 pt-5 mgr-section-divider" style="border-top-width:1px;border-top-style:solid">
+              <h4 class="font-bold text-sm mb-2" style="color:#a78bfa">📤 أو ارفع ملف Excel (مدرسة + صفوفها وشُعبها)</h4>
+              <p class="text-xs mb-3 mgr-muted">
+                الأعمدة: <b>اسم المدرسة | الفرع (اختياري) | الرقم الوزاري (اختياري) | الصف | الشعبة</b>.
+                كل سطر = شعبة واحدة. كرّر اسم المدرسة في سطر لكل شعبة. تقدر تضيف أكثر من مدرسة في نفس الملف.
+              </p>
+              <input ref="schoolExcelInput" type="file" accept=".xlsx,.xls" @change="onSchoolExcelChange" class="memorix-input" />
+              <button @click="uploadSchoolsExcelFile" :disabled="!schoolExcelFile || schoolExcelLoading"
+                      class="btn-primary text-sm mt-3 flex items-center gap-2">
+                <span v-if="schoolExcelLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ⚡ ارفع وأنشئ المدارس
+              </button>
+              <p v-if="schoolExcelMsg" class="mt-2 text-sm" :style="{color: schoolExcelMsg.startsWith('✅')?'#10b981':'#ef4444'}">{{ schoolExcelMsg }}</p>
+            </div>
           </div>
 
           <!-- قائمة المدارس -->
@@ -954,8 +970,8 @@ function clearBookFile() {
 }
 
 async function extractBookFile(file) {
-  if (file.size > 15 * 1024 * 1024) {
-    bookExtractError.value = 'الملف أكبر من 15MB — اختر ملفاً أصغر'
+  if (file.size > 50 * 1024 * 1024) {
+    bookExtractError.value = 'الملف أكبر من 50MB — اختر ملفاً أصغر'
     return
   }
   const allowed = ['.pdf', '.pptx', '.txt', '.md']
@@ -1231,6 +1247,28 @@ async function createNewSchool() {
     newSchoolMsg.value = '❌ ' + (e.response?.data?.detail || e.message)
   }
   newSchoolLoading.value = false
+}
+
+// رفع ملف Excel لإنشاء مدرسة/مدارس مع صفوفها وشُعبها
+const schoolExcelFile = ref(null)
+const schoolExcelLoading = ref(false)
+const schoolExcelMsg = ref('')
+function onSchoolExcelChange(e) {
+  schoolExcelFile.value = e.target.files?.[0] || null
+}
+async function uploadSchoolsExcelFile() {
+  if (!schoolExcelFile.value) return
+  schoolExcelLoading.value = true; schoolExcelMsg.value = ''
+  try {
+    const res = await managerAPI.uploadSchoolsExcel(schoolExcelFile.value)
+    const n = res.data?.total_schools || 0
+    schoolExcelMsg.value = `✅ تم إنشاء/تحديث ${n} مدرسة بصفوفها وشُعبها`
+    schoolExcelFile.value = null
+    schools.value = (await managerAPI.getSchools()).data
+  } catch (e) {
+    schoolExcelMsg.value = '❌ ' + (e.response?.data?.detail || e.message)
+  }
+  schoolExcelLoading.value = false
 }
 async function confirmDeleteSchool(s) {
   if (!confirm(`⚠️ هل أنت متأكد من حذف مدرسة "${s.name}"؟\nسيتم حذف كل الحسابات المرتبطة بها نهائياً!`)) return

@@ -1119,7 +1119,7 @@ function _compressImage(file, maxW, maxH, quality) {
 async function onNbFileUpload(e) {
   const file = e.target.files?.[0]
   if (!file) return
-  if (file.size > 15 * 1024 * 1024) { alert('الملف أكبر من 15MB — اختر ملفاً أصغر'); return }
+  if (file.size > 50 * 1024 * 1024) { alert('الملف أكبر من 50MB — اختر ملفاً أصغر'); return }
   nbFileName.value = file.name
   const fname = file.name.toLowerCase()
   if (fname.endsWith('.txt') || fname.endsWith('.md')) {
@@ -1231,7 +1231,7 @@ async function sendMsg(text) {
 
 async function onFileAttach(e) {
   const file = e.target.files[0]; if (!file) return
-  if (file.size > 15 * 1024 * 1024) { alert('الملف أكبر من 15MB'); e.target.value = ''; return }
+  if (file.size > 50 * 1024 * 1024) { alert('الملف أكبر من 50MB'); e.target.value = ''; return }
   attachedFile.value = file
   attachedBase64.value = null; attachedFileText.value = null
   const fname = file.name.toLowerCase()

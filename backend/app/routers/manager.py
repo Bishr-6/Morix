@@ -413,8 +413,8 @@ async def extract_book_text(
     filename = (file.filename or "").lower()
     content = await file.read()
 
-    if len(content) > 15 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="الملف أكبر من 15MB")
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="الملف أكبر من 50MB")
 
     text = ""
 
@@ -551,6 +551,126 @@ async def create_school(
             continue
 
     raise HTTPException(500, f"تعذرت إضافة المدرسة: {last_error}")
+
+
+@router.post("/schools/upload-excel")
+async def upload_schools_excel(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """رفع ملف Excel لإضافة مدرسة (أو أكثر) مع صفوفها وشُعبها.
+    الأعمدة المتوقعة (مرنة): اسم المدرسة، الفرع (اختياري)، الرقم الوزاري (اختياري)، الصف، الشعبة.
+    كل صف في الملف = (صف + شعبة) في المدرسة. المدرسة الواحدة تتكرر في عدة صفوف."""
+    import uuid as _uuid
+    from openpyxl import load_workbook
+
+    content = await file.read()
+    try:
+        wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+        ws = wb.active
+    except Exception as e:
+        raise HTTPException(400, f"تعذرت قراءة ملف Excel: {e}")
+
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows or len(rows) < 2:
+        raise HTTPException(400, "الملف فارغ")
+
+    headers = [str(h or "").strip().lower() for h in rows[0]]
+
+    def find_col(*cands):
+        for c in cands:
+            for i, h in enumerate(headers):
+                if c in h:
+                    return i
+        return -1
+
+    col_school = find_col("اسم المدرسة", "مدرسة", "school")
+    col_branch = find_col("فرع", "branch")
+    col_ministry = find_col("وزاري", "ministry", "كود")
+    col_grade = find_col("صف", "grade", "صفّ")
+    col_section = find_col("شعبة", "شعبه", "section", "فصل")
+
+    if col_school == -1 or col_grade == -1:
+        raise HTTPException(400, "الملف لازم يحتوي على عمودين على الأقل: اسم المدرسة والصف")
+
+    # تجميع الصفوف حسب المدرسة (الاسم + الفرع)
+    schools_map = {}
+    order = []
+    for row in rows[1:]:
+        if not row or all(c is None for c in row):
+            continue
+        sname = str(row[col_school] or "").strip()
+        if not sname:
+            continue
+        branch = str(row[col_branch] or "").strip() if col_branch != -1 else ""
+        ministry = str(row[col_ministry] or "").strip() if col_ministry != -1 else ""
+        grade = str(row[col_grade] or "").strip() if col_grade != -1 else ""
+        section = str(row[col_section] or "").strip() if col_section != -1 else ""
+        key = f"{sname}||{branch}"
+        if key not in schools_map:
+            schools_map[key] = {"name": sname, "branch": branch, "ministry": ministry, "classes": []}
+            order.append(key)
+        if ministry and not schools_map[key]["ministry"]:
+            schools_map[key]["ministry"] = ministry
+        if grade and (grade, section) not in schools_map[key]["classes"]:
+            schools_map[key]["classes"].append((grade, section))
+
+    created = []
+    for key in order:
+        info = schools_map[key]
+        full_name = f"{info['name']} - فرع {info['branch']}" if info["branch"] else info["name"]
+
+        existing = db.table("schools").select("id").eq("name", full_name).execute()
+        if existing.data:
+            school_id = existing.data[0]["id"]
+        else:
+            ministry_code = info["ministry"] or f"MX-{_uuid.uuid4().hex[:8].upper()}"
+            attempts = [
+                {"name": full_name, "ministry_code": ministry_code, "branch": info["branch"] or None, "setup_completed": False},
+                {"name": full_name, "ministry_code": ministry_code, "setup_completed": False},
+                {"name": full_name, "ministry_code": ministry_code},
+            ]
+            school_id = None
+            for p in attempts:
+                try:
+                    r = db.table("schools").insert(p).execute()
+                    if r.data:
+                        school_id = r.data[0]["id"]
+                        break
+                except Exception:
+                    continue
+            if not school_id:
+                continue
+
+        # إدراج الصفوف والشُّعب (دفاعياً لو الجدول لسه مش موجود)
+        for (grade, section) in info["classes"]:
+            try:
+                db.table("school_classes").insert({
+                    "school_id": school_id, "grade": grade, "section": section,
+                }).execute()
+            except Exception:
+                pass
+        created.append({"school": full_name, "classes": len(info["classes"])})
+
+    if not created:
+        raise HTTPException(400, "لم يتم إنشاء أي مدرسة — تحقق من بيانات الملف")
+    return {"created": created, "total_schools": len(created)}
+
+
+@router.get("/schools/{school_id}/classes")
+async def get_school_classes(
+    school_id: str,
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """صفوف وشُعب المدرسة (لاستخدامها في القوائم المنسدلة)."""
+    try:
+        res = db.table("school_classes").select("grade, section") \
+            .eq("school_id", school_id).execute()
+        return res.data or []
+    except Exception:
+        return []
 
 
 @router.delete("/schools/{school_id}")

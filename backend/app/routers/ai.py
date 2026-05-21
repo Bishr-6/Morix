@@ -165,8 +165,8 @@ async def extract_file_for_chat(
     """استخراج النص من ملف PDF أو PPTX أو DOCX أو TXT لاستخدامه في الشات"""
     filename = (file.filename or "").lower()
     content = await file.read()
-    if len(content) > 15 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="الملف أكبر من 15MB — اختر ملفاً أصغر")
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="الملف أكبر من 50MB — اختر ملفاً أصغر")
     text = ""
 
     if filename.endswith((".txt", ".md")):
