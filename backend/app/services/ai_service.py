@@ -235,7 +235,7 @@ async def chat_with_gemini(
         )
 
         reply = None
-        for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
+        for model_name in ("models/gemini-2.0-flash-lite", "models/gemini-2.0-flash", "models/gemini-2.5-flash"):
             try:
                 response = await _call_with_retry(
                     client.models.generate_content,
@@ -380,7 +380,7 @@ async def generate_game_content(game_type: str, subject: str, topic: str = "") -
         config = types.GenerateContentConfig(temperature=0.4, max_output_tokens=2000)
 
         text = None
-        for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
+        for model_name in ("models/gemini-2.0-flash-lite", "models/gemini-2.0-flash", "models/gemini-2.5-flash"):
             try:
                 response = await _call_with_retry(
                     client.models.generate_content,
@@ -463,7 +463,7 @@ async def generate_ppt_outline(title: str, subject: str, content: str = "") -> O
         client = genai.Client(api_key=settings.gemini_api_key)
         config = types.GenerateContentConfig(temperature=0.5, max_output_tokens=3000)
 
-        for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
+        for model_name in ("models/gemini-2.0-flash-lite", "models/gemini-2.0-flash", "models/gemini-2.5-flash"):
             try:
                 response = await _call_with_retry(
                     client.models.generate_content,
@@ -538,7 +538,7 @@ async def generate_video_script(topic: str, subject: str, duration_seconds: int 
         client = genai.Client(api_key=settings.gemini_api_key)
         config = types.GenerateContentConfig(temperature=0.6, max_output_tokens=2500)
 
-        for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
+        for model_name in ("models/gemini-2.0-flash-lite", "models/gemini-2.0-flash", "models/gemini-2.5-flash"):
             try:
                 response = await _call_with_retry(
                     client.models.generate_content,

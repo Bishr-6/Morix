@@ -18,9 +18,10 @@ logging.basicConfig(
 
 # ── تحذير أمني عند استخدام JWT secret ضعيف ────────────────────────────
 _WEAK_JWT_SECRETS = {
+    "",
     "memorix-default-secret",
     "memorix-super-secret-jwt-key-2024-change-in-production",
-    "secret", "changeme", "password", "",
+    "secret", "changeme", "password",
 }
 if settings.jwt_secret_key in _WEAK_JWT_SECRETS:
     logging.warning("⚠️  JWT_SECRET_KEY يستخدم قيمة افتراضية غير آمنة! غيّرها في .env قبل النشر للإنتاج.")

@@ -43,7 +43,7 @@ async def summarize_book(title: str, subject: str, raw_text: str) -> Optional[st
         config = types.GenerateContentConfig(temperature=0.3, max_output_tokens=1500)
 
         summary = None
-        for model_name in ("models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.0-flash-lite"):
+        for model_name in ("models/gemini-2.0-flash-lite", "models/gemini-2.0-flash", "models/gemini-2.5-flash"):
             try:
                 response = await _call_with_retry(
                     client.models.generate_content,

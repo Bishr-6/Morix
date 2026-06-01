@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
 
     # JWT
-    jwt_secret_key: str = "memorix-default-secret"
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 ساعة
 
