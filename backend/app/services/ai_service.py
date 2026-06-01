@@ -95,6 +95,13 @@ def _build_system_prompt(
             f"NEVER switch language unless the user switches first.\n\n"
         )
 
+    file_handling_rule = (
+        "\n\n## CRITICAL RULE ABOUT FILES:\n"
+        "If the user asks you to analyze, summarize, or read a file, DO NOT apologize and DO NOT say you cannot read files. "
+        "The system has already extracted the file content and provided it to you as text in the user's message. "
+        "Just read the provided text and fulfill the user's request directly."
+    )
+
     if role == "teacher":
         return (
             f"You are an intelligent teaching assistant for Morix educational platform.\n"
@@ -113,6 +120,7 @@ def _build_system_prompt(
             f"- Suggest appropriate teaching strategies.\n"
             f"- Format output clearly with headings and bullet points.\n"
             f"- NEVER hallucinate exam questions, dates, or curriculum facts."
+            f"{file_handling_rule}"
         )
 
     style = LEARNING_STYLE_PROMPTS.get(learning_style or "visual", LEARNING_STYLE_PROMPTS["visual"])
@@ -167,6 +175,7 @@ def _build_system_prompt(
         f"- For summaries: structure clearly with headings and bullet points.\n"
         f"- Adapt explanation style to the learning style above.\n"
         f"- NEVER make up curriculum content — if unsure, say so clearly."
+        f"{file_handling_rule}"
     )
 
 
@@ -216,7 +225,7 @@ async def chat_with_gemini(
         # بناء رسالة المستخدم مع المرفقات
         user_parts = []
         if file_text:
-            user_parts.append(types.Part(text=f"[Attached file content]:\n{file_text[:4000]}\n\n[User message]: {message}"))
+            user_parts.append(types.Part(text=f"[Attached file content]:\n{file_text[:80000]}\n\n[User message]: {message}"))
         elif image_base64:
             try:
                 img_bytes = base64.b64decode(image_base64)
