@@ -48,7 +48,7 @@ export const managerAPI = {
   uploadSchoolsExcel: (file) => {
     const fd = new FormData()
     fd.append('file', file)
-    return api.post('/manager/schools/upload-excel', fd)
+    return api.post('/manager/schools/upload-excel', fd, { headers: { 'Content-Type': undefined } })
   },
   getSchoolClasses: (id) => api.get(`/manager/schools/${id}/classes`),
   deleteSchool: (id) => api.delete(`/manager/schools/${id}`),
@@ -57,8 +57,8 @@ export const managerAPI = {
     const fd = new FormData()
     fd.append('school_id', schoolId)
     fd.append('file', file)
-    // لا تضع Content-Type يدوياً — axios يضيف boundary تلقائياً مع multipart
-    return api.post('/manager/upload-excel', fd)
+    // Content-Type: undefined يحذف الـ instance header ويسمح لـ axios بضبط multipart/form-data + boundary تلقائياً
+    return api.post('/manager/upload-excel', fd, { headers: { 'Content-Type': undefined } })
   },
   getAccounts: (schoolId) => api.get(`/manager/accounts/${schoolId}`),
   getAccountPassword: (userId) => api.get(`/manager/account-password/${userId}`),
@@ -71,7 +71,7 @@ export const managerAPI = {
   extractBookText: (file) => {
     const fd = new FormData()
     fd.append('file', file)
-    return api.post('/manager/extract-book-text', fd)
+    return api.post('/manager/extract-book-text', fd, { headers: { 'Content-Type': undefined } })
   },
   getSavedPasswords: (schoolId) => api.get(`/manager/passwords/${schoolId}`),
   // 👔 ميزات المدير المتقدمة
@@ -163,7 +163,7 @@ export const aiAPI = {
   extractFile: (file) => {
     const fd = new FormData()
     fd.append('file', file)
-    return api.post('/ai/extract-file', fd)
+    return api.post('/ai/extract-file', fd, { headers: { 'Content-Type': undefined } })
   },
 }
 
@@ -212,7 +212,7 @@ export const teacherAPI = {
   extractFile: (file) => {
     const fd = new FormData()
     fd.append('file', file)
-    return api.post('/teacher/extract-file', fd)
+    return api.post('/teacher/extract-file', fd, { headers: { 'Content-Type': undefined } })
   },
 
   // الإعدادات
@@ -241,7 +241,7 @@ export const adminAPI = {
   getStudents: () => api.get('/admin/students'),
   resetPassword: (id, password) => api.put(`/admin/students/${id}/reset-password`, { new_password: password }),
   toggleStudent: (id) => api.put(`/admin/students/${id}/toggle`),
-  uploadExcel: (formData) => api.post('/admin/upload-excel', formData),
+  uploadExcel: (formData) => api.post('/admin/upload-excel', formData, { headers: { 'Content-Type': undefined } }),
   getSettings: () => api.get('/admin/settings'),
   updateSettings: (data) => api.put('/admin/settings', data),
   // 🏫 ميزات إداري متقدمة
