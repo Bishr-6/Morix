@@ -537,8 +537,8 @@
             <div style="display:flex;flex-direction:column;gap:8px">
               <div v-for="entry in moodHistory" :key="entry.created_at"
                    style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg2);border-radius:10px">
-                <span style="font-size:22px">{{ moods.find(m=>m.key===entry.event_data?.mood)?.emoji || '😐' }}</span>
-                <span style="flex:1;color:var(--text)">{{ moods.find(m=>m.key===entry.event_data?.mood)?.label || entry.event_data?.mood }}</span>
+                <span style="font-size:22px">{{ getMoodInfo(entry.event_data?.mood).emoji }}</span>
+                <span style="flex:1;color:var(--text)">{{ getMoodInfo(entry.event_data?.mood).label }}</span>
                 <span style="color:var(--text2);font-size:12px">{{ new Date(entry.created_at).toLocaleDateString('ar-EG') }}</span>
               </div>
             </div>
@@ -1053,6 +1053,11 @@ const moods = [
   { key:'bored', emoji:'😐', label:'ممل' },
   { key:'neutral', emoji:'🙂', label:'عادي' },
 ]
+
+function getMoodInfo(key) {
+  return moods.find(m => m.key === key) || { emoji: '😐', label: key || 'عادي' }
+}
+
 const moodSuggestion = ref('')
 const moodHistory = ref([])
 async function logMood(key) {
@@ -1119,7 +1124,7 @@ function _compressImage(file, maxW, maxH, quality) {
 async function onNbFileUpload(e) {
   const file = e.target.files?.[0]
   if (!file) return
-  if (file.size > 50 * 1024 * 1024) { alert('الملف أكبر من 50MB — اختر ملفاً أصغر'); return }
+  if (file.size > 4 * 1024 * 1024) { alert('الملف أكبر من 4MB — اختر ملفاً أصغر لأن خوادم الاستضافة تسمح بـ 4 ميجابايت كحد أقصى للتحليل'); return }
   nbFileName.value = file.name
   const fname = file.name.toLowerCase()
   if (fname.endsWith('.txt') || fname.endsWith('.md')) {
@@ -1231,7 +1236,7 @@ async function sendMsg(text) {
 
 async function onFileAttach(e) {
   const file = e.target.files[0]; if (!file) return
-  if (file.size > 50 * 1024 * 1024) { alert('الملف أكبر من 50MB'); e.target.value = ''; return }
+  if (file.size > 4 * 1024 * 1024) { alert('الملف أكبر من 4MB — اختر ملفاً أصغر لأن خوادم الاستضافة تسمح بـ 4 ميجابايت كحد أقصى للتحليل'); e.target.value = ''; return }
   attachedFile.value = file
   attachedBase64.value = null; attachedFileText.value = null
   const fname = file.name.toLowerCase()
