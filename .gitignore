@@ -39,3 +39,6 @@ yarn-error.log*
 build/
 *.tsbuildinfo
 backend/.env
+
+# Claude Code
+.claude/
