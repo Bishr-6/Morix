@@ -29,12 +29,12 @@ def _uri_encode(s: str, encode_slash: bool = True) -> str:
 
 
 def _host() -> str:
-    ep = settings.b2_endpoint.replace("https://", "").replace("http://", "").rstrip("/")
+    ep = (settings.b2_endpoint or "").strip().replace("https://", "").replace("http://", "").rstrip("/")
     return ep
 
 
 def _region() -> str:
-    return getattr(settings, "b2_region", "") or "us-east-005"
+    return (getattr(settings, "b2_region", "") or "").strip() or "us-east-005"
 
 
 def _hmac(key: bytes, msg: str) -> bytes:
@@ -56,9 +56,10 @@ def presign(method: str, key: str, expires: int = 3600) -> str | None:
 
     region = _region()
     host = _host()
-    bucket = settings.b2_bucket
-    access_key = settings.b2_key_id
-    secret_key = settings.b2_app_key
+    # .strip() يحمي من أي مسافات/أسطر زيادة وقت لصق المفاتيح في Vercel
+    bucket = (settings.b2_bucket or "").strip()
+    access_key = (settings.b2_key_id or "").strip()
+    secret_key = (settings.b2_app_key or "").strip()
 
     now = datetime.now(timezone.utc)
     amzdate = now.strftime("%Y%m%dT%H%M%SZ")
