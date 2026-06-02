@@ -120,7 +120,9 @@ def attach_download_urls(books: list, key_field: str = "file_path", url_field: s
     for b in books:
         try:
             k = b.get(key_field)
-            if k:
+            # نولّد رابط B2 فقط للكتب اللي مالهاش رابط محفوظ (كتب B2 بتُخزَّن بدون file_url).
+            # كتب Supabase القديمة لها file_url عام محفوظ — نسيبه زي ما هو حتى لا تتكسر.
+            if k and not b.get(url_field):
                 url = presign_get(k)
                 if url:
                     b[url_field] = url
