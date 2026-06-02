@@ -490,8 +490,8 @@ async def get_book_upload_url(
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", filename)[-80:] or "book"
     path = f"{uuid.uuid4().hex}_{safe}"
 
-    # 1) Backblaze B2 (التخزين المفضّل — يدعم الملفات الكبيرة بدون حد 50MB)
-    if b2.is_configured():
+    # 1) Backblaze B2 (التخزين المفضّل — فقط لو المفاتيح سليمة فعلاً)
+    if b2.is_configured() and b2.b2_healthy():
         url = b2.presign_put(path)
         if url:
             return {"upload_url": url, "path": path, "public_url": None}

@@ -23,6 +23,32 @@ def is_configured() -> bool:
     )
 
 
+_b2_healthy = None
+
+
+def b2_healthy() -> bool:
+    """تحقق مُخزَّن مؤقتاً (مرة واحدة لكل عملية) أن مفاتيح B2 تُنتج توقيعاً صالحاً.
+    يستخدم GET موقّع لمفتاح غير موجود: 404 = التوقيع صحيح، 403 = مفتاح/توقيع غلط.
+    لو B2 غير سليم، يرجع False ليتحوّل الكود تلقائياً لـ Supabase."""
+    global _b2_healthy
+    if _b2_healthy is not None:
+        return _b2_healthy
+    if not is_configured():
+        _b2_healthy = False
+        return _b2_healthy
+    try:
+        import httpx
+        url = presign_get("__morix_healthcheck__/nope.txt", expires=120)
+        r = httpx.get(url, timeout=15)
+        _b2_healthy = r.status_code != 403
+        if not _b2_healthy:
+            logger.warning(f"B2 healthcheck: bad signature/key (HTTP {r.status_code}) — using Supabase fallback")
+    except Exception as e:
+        logger.warning(f"B2 healthcheck error: {e} — using Supabase fallback")
+        _b2_healthy = False
+    return _b2_healthy
+
+
 def _uri_encode(s: str, encode_slash: bool = True) -> str:
     safe = "-_.~" + ("" if encode_slash else "/")
     return quote(str(s), safe=safe)
@@ -115,8 +141,8 @@ def presign_get(key: str, expires: int = 86400) -> str | None:
 
 def attach_download_urls(books: list, key_field: str = "file_path", url_field: str = "file_url") -> list:
     """يولّد رابط تحميل موقّع لكل كتاب له ملف مخزّن في B2 (يُجدَّد في كل طلب).
-    لو B2 غير مضبوط، يترك القيم كما هي (روابط Supabase العامة القديمة)."""
-    if not is_configured():
+    لو B2 غير مضبوط أو غير سليم، يترك القيم كما هي (روابط Supabase العامة)."""
+    if not is_configured() or not b2_healthy():
         return books
     for b in books:
         try:
