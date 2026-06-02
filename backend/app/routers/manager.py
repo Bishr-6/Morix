@@ -527,19 +527,25 @@ async def add_book(
     if raw_text:
         summary = await summarize_book(title, subject, raw_text)
 
-    result = db.table("curriculum_books").insert({
+    record = {
         "title": title,
         "subject": subject,
         "grade": book_data.get("grade", ""),
         "summary": summary,
         "key_concepts": book_data.get("key_concepts", []),
-        "file_path": book_data.get("file_path"),
-        "file_url": book_data.get("file_url"),
-        "file_name": book_data.get("file_name"),
-        "file_size": book_data.get("file_size"),
-        "mime_type": book_data.get("mime_type"),
-        "is_active": True
-    }).execute()
+        "is_active": True,
+    }
+    # نضيف حقول الملف فقط عند وجود ملف (الأعمدة تتطلب migration_v8) — يمنع 500 للكتب النصية
+    if book_data.get("file_path"):
+        record.update({
+            "file_path": book_data.get("file_path"),
+            "file_url": book_data.get("file_url"),
+            "file_name": book_data.get("file_name"),
+            "file_size": book_data.get("file_size"),
+            "mime_type": book_data.get("mime_type"),
+        })
+
+    result = db.table("curriculum_books").insert(record).execute()
 
     return result.data[0] if result.data else {"message": "تم إضافة الكتاب"}
 

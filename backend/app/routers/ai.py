@@ -130,9 +130,15 @@ async def delete_conversation(conversation_id: str, current_user: dict = Depends
 
 @router.get("/books")
 async def get_books_for_chat(current_user: dict = Depends(get_current_user), db=Depends(get_db)):
-    from app.services import storage as b2
-    result = db.table("curriculum_books").select("id, title, subject, grade, summary, file_url, file_name, file_size, mime_type, file_path").eq("is_active", True).execute()
-    return b2.attach_download_urls(result.data)
+    # select("*") بدل تسمية الأعمدة صراحةً — يمنع خطأ 500 لو أعمدة الملفات لسه ماتعملتش (migration_v8)
+    result = db.table("curriculum_books").select("*").eq("is_active", True).execute()
+    books = result.data or []
+    try:
+        from app.services import storage as b2
+        books = b2.attach_download_urls(books)
+    except Exception:
+        pass
+    return books
 
 
 @router.post("/generate-image")
