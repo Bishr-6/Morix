@@ -12,15 +12,40 @@ logger = logging.getLogger(__name__)
 
 _SERVICE = "s3"
 
+_b2_cfg = None
+
+
+def _cfg() -> dict:
+    """إعدادات B2: من متغيرات البيئة (Vercel)، مع إمكانية تجاوزها من جدول runtime_config
+    في Supabase — عشان نقدر نصحّح المفتاح بدون صلاحية Vercel. مُخزَّن مؤقتاً مرة لكل عملية."""
+    global _b2_cfg
+    if _b2_cfg is not None:
+        return _b2_cfg
+    c = {
+        "key_id": (getattr(settings, "b2_key_id", "") or "").strip(),
+        "app_key": (getattr(settings, "b2_app_key", "") or "").strip(),
+        "bucket": (getattr(settings, "b2_bucket", "") or "").strip(),
+        "endpoint": (getattr(settings, "b2_endpoint", "") or "").strip(),
+        "region": (getattr(settings, "b2_region", "") or "").strip() or "us-east-005",
+    }
+    try:
+        from app.database import get_supabase
+        rows = get_supabase().table("runtime_config").select("key, value").execute()
+        m = {(r.get("key") or ""): (r.get("value") or "").strip() for r in (rows.data or [])}
+        for env_key, cfg_key in (("b2_key_id", "key_id"), ("b2_app_key", "app_key"),
+                                 ("b2_bucket", "bucket"), ("b2_endpoint", "endpoint"), ("b2_region", "region")):
+            if m.get(env_key):
+                c[cfg_key] = m[env_key]
+    except Exception as e:
+        logger.warning(f"runtime_config read skipped: {e}")
+    _b2_cfg = c
+    return c
+
 
 def is_configured() -> bool:
     """هل مفاتيح Backblaze B2 مضبوطة؟"""
-    return bool(
-        getattr(settings, "b2_key_id", "")
-        and getattr(settings, "b2_app_key", "")
-        and getattr(settings, "b2_bucket", "")
-        and getattr(settings, "b2_endpoint", "")
-    )
+    c = _cfg()
+    return bool(c["key_id"] and c["app_key"] and c["bucket"] and c["endpoint"])
 
 
 _b2_healthy = None
@@ -55,12 +80,11 @@ def _uri_encode(s: str, encode_slash: bool = True) -> str:
 
 
 def _host() -> str:
-    ep = (settings.b2_endpoint or "").strip().replace("https://", "").replace("http://", "").rstrip("/")
-    return ep
+    return _cfg()["endpoint"].replace("https://", "").replace("http://", "").rstrip("/")
 
 
 def _region() -> str:
-    return (getattr(settings, "b2_region", "") or "").strip() or "us-east-005"
+    return _cfg()["region"]
 
 
 def _hmac(key: bytes, msg: str) -> bytes:
@@ -82,10 +106,10 @@ def presign(method: str, key: str, expires: int = 3600) -> str | None:
 
     region = _region()
     host = _host()
-    # .strip() يحمي من أي مسافات/أسطر زيادة وقت لصق المفاتيح في Vercel
-    bucket = (settings.b2_bucket or "").strip()
-    access_key = (settings.b2_key_id or "").strip()
-    secret_key = (settings.b2_app_key or "").strip()
+    c = _cfg()
+    bucket = c["bucket"]
+    access_key = c["key_id"]
+    secret_key = c["app_key"]
 
     now = datetime.now(timezone.utc)
     amzdate = now.strftime("%Y%m%dT%H%M%SZ")
