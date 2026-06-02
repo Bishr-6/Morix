@@ -7,7 +7,10 @@ from app.auth import get_current_user
 from app.database import get_db
 import io
 import csv
+import re
+import uuid
 import logging
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/manager", tags=["المدير"])
@@ -474,13 +477,37 @@ async def extract_book_text(
     return {"text": text, "chars": len(text), "filename": file.filename}
 
 
+@router.post("/books/upload-url")
+async def get_book_upload_url(
+    body: dict,
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """توليد رابط رفع موقّع لرفع ملف الكتاب مباشرة إلى Supabase Storage.
+    الرفع يتم من المتصفح مباشرةً للتخزين — يتخطّى حد 4.5MB في Vercel."""
+    filename = (body.get("filename") or "book").strip()
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", filename)[-80:] or "book"
+    path = f"{uuid.uuid4().hex}_{safe}"
+    try:
+        res = db.storage.from_("books").create_signed_upload_url(path)
+        token = res.get("token") if isinstance(res, dict) else None
+        if not token:
+            raise RuntimeError("لم يتم الحصول على token من Supabase")
+        upload_url = f"{settings.supabase_url}/storage/v1/object/upload/sign/books/{path}?token={token}"
+        public_url = f"{settings.supabase_url}/storage/v1/object/public/books/{path}"
+        return {"upload_url": upload_url, "path": path, "public_url": public_url}
+    except Exception as e:
+        logger.error(f"create_signed_upload_url failed: {e}")
+        raise HTTPException(status_code=500, detail=f"تعذر تجهيز رفع الملف: {str(e)[:150]}")
+
+
 @router.post("/books")
 async def add_book(
     book_data: dict,
     current_user: dict = Depends(require_manager),
     db=Depends(get_db)
 ):
-    """إضافة كتاب منهجي جديد"""
+    """إضافة كتاب منهجي جديد (مع ملف اختياري مخزّن في Supabase Storage)"""
     from app.services.book_summarizer import summarize_book
 
     title = book_data.get("title", "")
@@ -497,10 +524,32 @@ async def add_book(
         "grade": book_data.get("grade", ""),
         "summary": summary,
         "key_concepts": book_data.get("key_concepts", []),
+        "file_path": book_data.get("file_path"),
+        "file_url": book_data.get("file_url"),
+        "file_name": book_data.get("file_name"),
+        "file_size": book_data.get("file_size"),
+        "mime_type": book_data.get("mime_type"),
         "is_active": True
     }).execute()
 
     return result.data[0] if result.data else {"message": "تم إضافة الكتاب"}
+
+
+@router.delete("/books/{book_id}")
+async def delete_book(
+    book_id: str,
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """حذف كتاب وملفه من التخزين"""
+    book = db.table("curriculum_books").select("file_path").eq("id", book_id).execute()
+    if book.data and book.data[0].get("file_path"):
+        try:
+            db.storage.from_("books").remove([book.data[0]["file_path"]])
+        except Exception as e:
+            logger.warning(f"remove book file failed: {e}")
+    db.table("curriculum_books").delete().eq("id", book_id).execute()
+    return {"message": "تم حذف الكتاب"}
 
 
 # ============================================================

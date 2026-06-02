@@ -167,6 +167,15 @@
               {{ summaryLoading ? '...' : t('summarize_book') }}
             </button>
           </div>
+          <!-- مكتبة الكتب: تحميل/عرض الملفات المرفوعة من المدير -->
+          <div v-if="books.length" style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+            <div v-for="b in books" :key="'f'+b.id"
+                 style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px">
+              <span style="font-size:13px">📚 {{ b.title }} <span style="opacity:.6">— {{ b.subject }}</span></span>
+              <a v-if="b.file_url" :href="b.file_url" target="_blank" rel="noopener"
+                 style="color:#10b981;font-weight:700;font-size:13px;text-decoration:none;white-space:nowrap">📥 تحميل</a>
+            </div>
+          </div>
           <div v-if="bookSummary" class="summary-box">
             <div class="summary-acts">
               <button class="btn-s" @click="speakSummary">{{ isSpeaking ? '⏸ ' + t('stop_audio') : '🔊 ' + t('listen_btn') }}</button>

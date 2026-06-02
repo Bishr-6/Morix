@@ -481,18 +481,18 @@
                   <p style="color:#94a3b8;font-size:12px">PDF · PowerPoint (PPTX) · TXT</p>
                 </div>
 
-                <!-- حالة: يتم الاستخراج -->
+                <!-- حالة: يتم الرفع والمعالجة -->
                 <div v-else-if="bookExtractLoading" style="color:#fbbf24">
                   <div style="font-size:32px;margin-bottom:8px">⏳</div>
-                  <p style="font-weight:600">جاري استخراج النص من الملف...</p>
+                  <p style="font-weight:600">جاري رفع الملف ومعالجته...</p>
                 </div>
 
-                <!-- حالة: تم الاستخراج بنجاح -->
-                <div v-else-if="bookFileText && !bookExtractLoading">
+                <!-- حالة: تم الرفع بنجاح -->
+                <div v-else-if="bookFilePath && !bookExtractLoading">
                   <div style="font-size:32px;margin-bottom:8px">✅</div>
                   <p style="color:#10b981;font-weight:700">{{ bookFileName }}</p>
                   <p style="color:#94a3b8;font-size:12px;margin-top:4px">
-                    تم استخراج {{ Math.round(bookFileText.length / 1000) }}K حرف — سيُولَّد الملخص بالـ AI عند الإضافة
+                    تم رفع الملف وحفظه بنجاح ✓<span v-if="bookFileText"> — سيُولَّد ملخص بالـ AI عند الإضافة</span>
                   </p>
                   <button @click.stop="clearBookFile" style="margin-top:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer">
                     🗑️ إزالة الملف
@@ -535,6 +535,13 @@
               <p class="text-sm line-clamp-3" style="color: #94a3b8; line-height:1.7">
                 {{ book.summary || '⏳ لم يُولَّد الملخص بعد — ارفع ملف الكتاب لتوليده' }}
               </p>
+              <div class="flex items-center gap-3 mt-3">
+                <a v-if="book.file_url" :href="book.file_url" target="_blank" rel="noopener"
+                   style="color:#10b981;font-size:13px;font-weight:700;text-decoration:none">📥 تحميل / عرض الكتاب</a>
+                <span v-else style="color:#64748b;font-size:12px">📄 بدون ملف</span>
+                <button @click="removeBook(book.id)"
+                        style="margin-inline-start:auto;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:8px;padding:3px 10px;font-size:12px;cursor:pointer">🗑️ حذف</button>
+              </div>
             </div>
           </div>
         </div>
@@ -948,6 +955,10 @@ const bookFileText = ref('')
 const bookFileName = ref('')
 const bookExtractLoading = ref(false)
 const bookExtractError = ref('')
+const bookFilePath = ref('')
+const bookFileUrl = ref('')
+const bookFileSize = ref(0)
+const bookMime = ref('')
 
 async function onBookFileChange(e) {
   const file = e.target.files?.[0]
@@ -967,6 +978,22 @@ function clearBookFile() {
   bookFileText.value = ''
   bookFileName.value = ''
   bookExtractError.value = ''
+  bookFilePath.value = ''
+  bookFileUrl.value = ''
+  bookFileSize.value = 0
+  bookMime.value = ''
+}
+
+async function uploadBookToStorage(file) {
+  // رابط رفع موقّع من الباك، ثم رفع مباشر إلى Supabase (يتخطّى حد 4.5MB في Vercel)
+  const { data } = await managerAPI.getBookUploadUrl(file.name, file.type || 'application/octet-stream')
+  const put = await fetch(data.upload_url, {
+    method: 'PUT',
+    headers: { 'content-type': file.type || 'application/octet-stream' },
+    body: file,
+  })
+  if (!put.ok) throw new Error('فشل رفع الملف للتخزين (' + put.status + ')')
+  return { path: data.path, url: data.public_url }
 }
 
 async function extractBookFile(file) {
@@ -983,6 +1010,8 @@ async function extractBookFile(file) {
 
   bookFileName.value = file.name
   bookFileText.value = ''
+  bookFilePath.value = ''
+  bookFileUrl.value = ''
   bookExtractError.value = ''
   bookExtractLoading.value = true
 
@@ -991,32 +1020,37 @@ async function extractBookFile(file) {
     newBook.value.title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ').trim()
   }
 
-  // TXT / MD — نقرأها مباشرة في المتصفح
-  if (ext === '.txt' || ext === '.md') {
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      bookFileText.value = (ev.target.result || '').slice(0, 80000)
-      bookExtractLoading.value = false
-    }
-    reader.onerror = () => {
-      bookExtractError.value = 'فشل قراءة الملف'
-      bookExtractLoading.value = false
-    }
-    reader.readAsText(file, 'utf-8')
+  // 1) رفع الملف نفسه للتخزين الدائم (أي حجم — مباشر إلى Supabase)
+  try {
+    const up = await uploadBookToStorage(file)
+    bookFilePath.value = up.path
+    bookFileUrl.value = up.url
+    bookFileSize.value = file.size
+    bookMime.value = file.type || ''
+  } catch (e) {
+    bookExtractError.value = e.message || 'فشل رفع الملف للتخزين'
+    bookFileName.value = ''
+    bookExtractLoading.value = false
     return
   }
 
-  // PDF / PPTX — نرسلهم للباك إند للاستخراج
+  // 2) استخراج النص لتوليد الملخص (أفضل جهد — لا يُفشل العملية إن تعذّر)
   try {
-    const res = await managerAPI.extractBookText(file)
-    bookFileText.value = res.data.text || ''
-    if (!bookFileText.value.trim()) {
-      bookExtractError.value = 'لم يُستخرج نص من الملف — تأكد أنه يحتوي على نص قابل للقراءة'
-      bookFileName.value = ''
+    if (ext === '.txt' || ext === '.md') {
+      bookFileText.value = await new Promise((resolve) => {
+        const r = new FileReader()
+        r.onload = (ev) => resolve((ev.target.result || '').slice(0, 80000))
+        r.onerror = () => resolve('')
+        r.readAsText(file, 'utf-8')
+      })
+    } else if (file.size <= 4 * 1024 * 1024) {
+      // PDF/PPTX ≤ 4MB — الباك يستخرج النص (حد Vercel للرفع عبر الباك)
+      const res = await managerAPI.extractBookText(file)
+      bookFileText.value = res.data.text || ''
     }
+    // ملفات أكبر من 4MB: تُخزَّن بنجاح بدون ملخص تلقائي
   } catch (e) {
-    bookExtractError.value = e.response?.data?.detail || 'فشل استخراج النص من الملف'
-    bookFileName.value = ''
+    bookFileText.value = ''
   } finally {
     bookExtractLoading.value = false
   }
@@ -1124,7 +1158,12 @@ async function addBook() {
       title: newBook.value.title.trim(),
       subject: newBook.value.subject.trim(),
       grade: newBook.value.grade?.trim() || '',
-      raw_text: bookFileText.value || ''
+      raw_text: bookFileText.value || '',
+      file_path: bookFilePath.value || null,
+      file_url: bookFileUrl.value || null,
+      file_name: bookFileName.value || null,
+      file_size: bookFileSize.value || null,
+      mime_type: bookMime.value || null
     })
     // تصفير الحقول
     newBook.value = { title: '', subject: '', grade: '' }
@@ -1136,6 +1175,16 @@ async function addBook() {
     alert('❌ خطأ في إضافة الكتاب: ' + (e.response?.data?.detail || e.message))
   } finally {
     bookLoading.value = false
+  }
+}
+
+async function removeBook(id) {
+  if (!confirm('حذف هذا الكتاب وملفه نهائياً؟')) return
+  try {
+    await managerAPI.deleteBook(id)
+    books.value = books.value.filter(b => b.id !== id)
+  } catch (e) {
+    alert('تعذر الحذف: ' + (e.response?.data?.detail || e.message))
   }
 }
 

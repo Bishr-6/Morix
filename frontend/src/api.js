@@ -68,6 +68,8 @@ export const managerAPI = {
   exportCSV: (schoolId) => api.get(`/manager/export/${schoolId}`, { responseType: 'blob' }),
   getBooks: () => api.get('/manager/books'),
   addBook: (data) => api.post('/manager/books', data),
+  getBookUploadUrl: (filename, contentType) => api.post('/manager/books/upload-url', { filename, content_type: contentType }),
+  deleteBook: (id) => api.delete(`/manager/books/${id}`),
   extractBookText: (file) => {
     const fd = new FormData()
     fd.append('file', file)

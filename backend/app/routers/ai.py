@@ -130,7 +130,7 @@ async def delete_conversation(conversation_id: str, current_user: dict = Depends
 
 @router.get("/books")
 async def get_books_for_chat(current_user: dict = Depends(get_current_user), db=Depends(get_db)):
-    result = db.table("curriculum_books").select("id, title, subject, grade, summary").eq("is_active", True).execute()
+    result = db.table("curriculum_books").select("id, title, subject, grade, summary, file_url, file_name, file_size, mime_type").eq("is_active", True).execute()
     return result.data
 
 
