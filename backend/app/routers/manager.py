@@ -571,6 +571,31 @@ async def delete_book(
     return {"message": "تم حذف الكتاب"}
 
 
+@router.post("/init-books-storage")
+async def init_books_storage(
+    current_user: dict = Depends(require_manager),
+    db=Depends(get_db),
+):
+    """تجهيز التخزين: ينشئ bucket عام اسمه 'books' في Supabase (idempotent) ويرجّع تشخيصاً.
+    يُستخدم لمرة واحدة لتفعيل جسر Supabase عندما تكون مفاتيح B2 غير مضبوطة."""
+    from app.services import storage as st
+    out = {"b2_configured": st.is_configured()}
+    try:
+        db.storage.create_bucket("books", options={"public": True})
+        out["bucket"] = "created"
+    except Exception as e:
+        out["bucket"] = "exists_or_error: " + str(e)[:250]
+    try:
+        buckets = db.storage.list_buckets()
+        out["buckets"] = [
+            (getattr(bk, "name", None) or getattr(bk, "id", None) or str(bk))
+            for bk in (buckets or [])
+        ]
+    except Exception as e:
+        out["list_error"] = str(e)[:250]
+    return out
+
+
 # ============================================================
 # 👔 ميزات المدير المتقدمة
 # ============================================================
