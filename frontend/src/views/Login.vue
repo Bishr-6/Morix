@@ -1,5 +1,5 @@
 <template>
-  <div class="landing" :dir="dir">
+  <div class="landing" :class="{ light: theme === 'light' }" :dir="dir">
     <!-- Matrix Background Canvas -->
     <canvas ref="bgCanvas" class="bg-canvas" />
 
@@ -29,6 +29,9 @@
           <img :src="L.flagImg" :alt="L.name" style="width:20px;height:14px;border-radius:2px;object-fit:cover" />
         </button>
       </div>
+      <button class="theme-toggle" @click="toggleTheme" :title="theme === 'dark' ? t('theme_light') : t('theme_dark')">
+        {{ theme === 'dark' ? '☀️' : '🌙' }}
+      </button>
       <button class="nav-cta" @click="scrollToLogin">{{ t('start_now') }}</button>
     </nav>
 
@@ -182,6 +185,13 @@ const password = ref('')
 const showPass = ref(false)
 const loading = ref(false)
 const error = ref('')
+
+// ── ثيم صفحة الدخول (داكن افتراضي + فاتح) — مستقل ومحفوظ ──
+const theme = ref(localStorage.getItem('morix_login_theme') || 'dark')
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  localStorage.setItem('morix_login_theme', theme.value)
+}
 
 // ── Matrix canvas ──
 const bgCanvas = ref(null)
@@ -690,6 +700,68 @@ nav, section, footer { position: relative; z-index: 1; }
 }
 .footer-brand { display: flex; align-items: center; gap: 10px; color: #7ec8e3; font-size: 14px; }
 .footer-copy { color: #3a5a6a; font-size: 13px; margin: 0; }
+
+/* ── Theme toggle button ── */
+.theme-toggle {
+  background: rgba(0,255,159,0.06);
+  border: 1px solid rgba(0,255,159,0.15);
+  border-radius: 50%;
+  width: 38px; height: 38px;
+  font-size: 17px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.15s, background 0.2s;
+}
+.theme-toggle:hover { transform: scale(1.12); background: rgba(0,255,159,0.15); }
+
+/* ── Light theme (toggle on login — default stays dark) ── */
+.landing.light { background: #eef2f7; color: #1e293b; }
+.landing.light .bg-canvas { opacity: 0.06; }
+.landing.light .navbar { background: rgba(255,255,255,0.9); border-bottom-color: rgba(0,0,0,0.08); }
+.landing.light .brand-name,
+.landing.light .hero-title,
+.landing.light .section-title,
+.landing.light .feat-title,
+.landing.light .role-title,
+.landing.light .login-info-title,
+.landing.light .card-title { color: #0f172a; text-shadow: none; }
+.landing.light .nav-link { color: #475569; }
+.landing.light .nav-link:hover { color: #059669; }
+.landing.light .hero-sub,
+.landing.light .fc-label,
+.landing.light .stat-label,
+.landing.light .section-sub,
+.landing.light .feat-desc,
+.landing.light .role-list li,
+.landing.light .login-info-sub,
+.landing.light .card-sub,
+.landing.light .field label,
+.landing.light .footer-brand,
+.landing.light .footer-copy,
+.landing.light .lf-item { color: #475569; }
+.landing.light .float-card,
+.landing.light .feature-card,
+.landing.light .role-card,
+.landing.light .login-card {
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+}
+.landing.light .stats-section { background: rgba(5,150,105,0.05); border-color: rgba(0,0,0,0.06); }
+.landing.light .roles-section { background: rgba(0,0,0,0.02); }
+.landing.light .stat-num,
+.landing.light .hero-badge,
+.landing.light .section-tag { color: #059669; }
+.landing.light .stat-num { text-shadow: none; }
+.landing.light .field input,
+.landing.light .pass-wrap input {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.12);
+  color: #0f172a;
+}
+.landing.light .field input::placeholder { color: #94a3b8; }
+.landing.light .footer { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
+.landing.light .theme-toggle { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); }
+.landing.light .nav-lang-switcher { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {
