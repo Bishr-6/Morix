@@ -804,7 +804,7 @@ const sections = computed(() => [
 const currentSection = ref('chat')
 const sidebarCollapsed = ref(false)
 const mobileOpen = ref(false)
-const currentSectionLabel = computed(() => sections.find(s=>s.id===currentSection.value)?.label||'')
+const currentSectionLabel = computed(() => sections.value.find(s=>s.id===currentSection.value)?.label||'')
 
 const profile = ref({ name:'', learning_style:null, grade:'', streak_count:0, total_stars:0 })
 const firstName = computed(() => (auth.user?.full_name||profile.value.name||'طالب').split(' ')[0])
