@@ -5,6 +5,7 @@ from app.models.schemas import SchoolSetupRequest, StatsResponse
 from app.services.account_generator import generate_accounts
 from app.auth import get_current_user
 from app.database import get_db
+from app.services import storage as b2
 import io
 import csv
 import re
@@ -404,7 +405,7 @@ async def get_books(
 ):
     """جلب كتب المنهج"""
     result = db.table("curriculum_books").select("*").eq("is_active", True).execute()
-    return result.data
+    return b2.attach_download_urls(result.data)
 
 
 @router.post("/extract-book-text")
@@ -483,11 +484,19 @@ async def get_book_upload_url(
     current_user: dict = Depends(require_manager),
     db=Depends(get_db),
 ):
-    """توليد رابط رفع موقّع لرفع ملف الكتاب مباشرة إلى Supabase Storage.
+    """توليد رابط رفع موقّع لرفع ملف الكتاب مباشرة إلى التخزين (Backblaze B2، أو Supabase احتياطياً).
     الرفع يتم من المتصفح مباشرةً للتخزين — يتخطّى حد 4.5MB في Vercel."""
     filename = (body.get("filename") or "book").strip()
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", filename)[-80:] or "book"
     path = f"{uuid.uuid4().hex}_{safe}"
+
+    # 1) Backblaze B2 (التخزين المفضّل — يدعم الملفات الكبيرة بدون حد 50MB)
+    if b2.is_configured():
+        url = b2.presign_put(path)
+        if url:
+            return {"upload_url": url, "path": path, "public_url": None}
+
+    # 2) احتياطي: Supabase Storage (لو B2 غير مضبوط)
     try:
         res = db.storage.from_("books").create_signed_upload_url(path)
         token = res.get("token") if isinstance(res, dict) else None
@@ -543,11 +552,15 @@ async def delete_book(
 ):
     """حذف كتاب وملفه من التخزين"""
     book = db.table("curriculum_books").select("file_path").eq("id", book_id).execute()
-    if book.data and book.data[0].get("file_path"):
-        try:
-            db.storage.from_("books").remove([book.data[0]["file_path"]])
-        except Exception as e:
-            logger.warning(f"remove book file failed: {e}")
+    fp = book.data[0].get("file_path") if book.data else None
+    if fp:
+        if b2.is_configured():
+            b2.delete_object(fp)
+        else:
+            try:
+                db.storage.from_("books").remove([fp])
+            except Exception as e:
+                logger.warning(f"remove book file failed: {e}")
     db.table("curriculum_books").delete().eq("id", book_id).execute()
     return {"message": "تم حذف الكتاب"}
 

@@ -997,8 +997,8 @@ async function uploadBookToStorage(file) {
 }
 
 async function extractBookFile(file) {
-  if (file.size > 50 * 1024 * 1024) {
-    bookExtractError.value = 'الملف أكبر من 50MB — اختر ملفاً أصغر'
+  if (file.size > 500 * 1024 * 1024) {
+    bookExtractError.value = 'الملف أكبر من 500MB — اختر ملفاً أصغر'
     return
   }
   const allowed = ['.pdf', '.pptx', '.txt', '.md']

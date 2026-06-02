@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     # CORS
     frontend_url: str = "http://localhost:5173"
 
+    # Backblaze B2 (تخزين ملفات الكتب — S3-compatible)
+    b2_key_id: str = ""
+    b2_app_key: str = ""
+    b2_bucket: str = ""
+    b2_endpoint: str = ""
+    b2_region: str = "us-east-005"
+
     class Config:
         env_file = str(BASE_DIR / ".env")
         case_sensitive = False
