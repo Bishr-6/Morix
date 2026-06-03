@@ -15,8 +15,8 @@
 
     <!-- Right: Controls -->
     <div class="mn-right">
-      <!-- Theme pills -->
-      <div class="mn-pills" title="الثيم">
+      <!-- Theme pills (desktop) -->
+      <div class="mn-pills mn-themes" title="الثيم">
         <button v-for="th in themeList" :key="th.k"
           :class="['mn-pill', { active: currentTheme === th.k }]"
           @click="$emit('theme', th.k)" :title="th.label"
@@ -24,9 +24,9 @@
         </button>
       </div>
 
-      <div class="mn-sep" />
+      <div class="mn-sep mn-desk" />
 
-      <!-- Language flags -->
+      <!-- Language flags (desktop) -->
       <div class="mn-pills mn-langs">
         <button v-for="(L, code) in LANGUAGES" :key="code"
           :class="['mn-pill', 'lang-pill', { active: currentLang === code }]"
@@ -35,7 +35,12 @@
         </button>
       </div>
 
-      <div class="mn-sep" />
+      <!-- Mobile menu button (theme+lang in vertical dropdown) -->
+      <button class="mn-pill mn-mobile-btn" @click.stop="menuOpen=!menuOpen" title="القائمة">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M2 5h16M2 10h16M2 15h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+
+      <div class="mn-sep mn-desk" />
 
       <!-- User chip -->
       <div class="mn-user">
@@ -44,12 +49,31 @@
         <span class="mn-name">{{ name }}</span>
       </div>
     </div>
+
+    <!-- Mobile dropdown (theme + languages, vertical) -->
+    <div v-if="menuOpen" class="mn-backdrop" @click="menuOpen=false"></div>
+    <div v-if="menuOpen" class="mn-dropdown">
+      <div class="mn-dd-title">🎨 الثيم</div>
+      <button v-for="th in themeList" :key="'th'+th.k"
+        :class="['mn-dd-item', { active: currentTheme === th.k }]"
+        @click="$emit('theme', th.k); menuOpen=false">
+        <span v-html="th.svg" style="display:inline-flex;margin-left:8px"></span>{{ th.label }}
+      </button>
+      <div class="mn-dd-title">🌐 اللغة</div>
+      <button v-for="(L, code) in LANGUAGES" :key="'lg'+code"
+        :class="['mn-dd-item', { active: currentLang === code }]"
+        @click="$emit('lang', code); menuOpen=false">
+        <img :src="L.flagImg" :alt="L.name" style="width:22px;height:15px;border-radius:3px;margin-left:8px" />{{ L.name }}
+      </button>
+    </div>
   </header>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { LANGUAGES } from '../composables/useI18n.js'
+
+const menuOpen = ref(false)
 
 const props = defineProps({
   title:        { type: String, default: '' },
@@ -143,9 +167,46 @@ const themeList = [
 }
 .mn-name { font-size: 13px; color: var(--text2); font-weight: 500; white-space: nowrap; }
 
-/* Mobile */
+/* Mobile menu button (hidden on desktop) */
+.mn-mobile-btn { display: none; color: var(--accent, #4f9eff); }
+.morix-nav { position: relative; }
+.mn-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 49; }
+.mn-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 8px;
+  width: 240px; max-height: 70vh; overflow-y: auto;
+  background: var(--card, #0b0e1f);
+  border: 1px solid var(--border, #1a1f3a);
+  border-radius: 14px; padding: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+  z-index: 60;
+}
+.mn-dd-title {
+  font-size: 11px; font-weight: 700;
+  color: var(--t2, #94a3b8);
+  text-transform: uppercase; letter-spacing: 1px;
+  padding: 8px 8px 6px;
+}
+.mn-dd-item {
+  display: flex; align-items: center; width: 100%;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text, #fff); padding: 10px 10px;
+  border-radius: 8px; cursor: pointer;
+  font-size: 13px; text-align: right;
+  font-family: inherit; margin-bottom: 2px;
+}
+.mn-dd-item:hover {
+  background: var(--nav-hover-bg, rgba(99,102,241,0.08));
+}
+.mn-dd-item.active {
+  background: var(--nav-active-bg, rgba(99,102,241,0.15));
+  border-color: var(--accent, #4f9eff);
+  color: var(--accent, #4f9eff);
+}
+
+/* Mobile breakpoint */
 @media (max-width: 768px) {
-  .mn-name, .mn-sep, .mn-langs { display: none; }
+  .mn-name, .mn-themes, .mn-langs, .mn-desk { display: none; }
+  .mn-mobile-btn { display: flex; }
   .mn-title { font-size: 14px; }
   .morix-nav { padding: 8px 14px; }
 }
