@@ -48,7 +48,7 @@
         <a href="#stats" class="mm-link" @click="mobileMenuOpen=false">📊 {{ t('stats_nav') }}</a>
         <a href="#features" class="mm-link" @click="mobileMenuOpen=false">⭐ {{ t('features_nav') }}</a>
         <a href="#roles" class="mm-link" @click="mobileMenuOpen=false">👥 {{ t('roles_nav') }}</a>
-        <a href="/about" class="mm-link" @click="mobileMenuOpen=false">ℹ️ {{ t('about_us') || 'من نحن' }}</a>
+        <a href="/about" class="mm-link" @click="mobileMenuOpen=false">ℹ️ من نحن</a>
       </div>
       <div class="mm-section">
         <div class="mm-title">🎨 {{ t('theme') }}</div>
