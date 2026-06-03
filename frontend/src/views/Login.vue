@@ -40,34 +40,44 @@
       </button>
     </nav>
 
-    <!-- قائمة الموبايل المنسدلة -->
-    <div v-if="mobileMenuOpen" class="mobile-menu-overlay" @click="mobileMenuOpen=false"></div>
-    <div :class="['mobile-menu', { open: mobileMenuOpen }]">
-      <div class="mm-section">
-        <div class="mm-title">📂 {{ t('roles_nav') || 'الأقسام' }}</div>
-        <a href="#stats" class="mm-link" @click="mobileMenuOpen=false">📊 {{ t('stats_nav') }}</a>
-        <a href="#features" class="mm-link" @click="mobileMenuOpen=false">⭐ {{ t('features_nav') }}</a>
-        <a href="#roles" class="mm-link" @click="mobileMenuOpen=false">👥 {{ t('roles_nav') }}</a>
-        <a href="/about" class="mm-link" @click="mobileMenuOpen=false">ℹ️ من نحن</a>
-      </div>
-      <div class="mm-section">
-        <div class="mm-title">🎨 {{ t('theme') }}</div>
-        <button class="mm-link" @click="toggleTheme(); mobileMenuOpen=false">
-          {{ theme === 'dark' ? '☀️ ' + (t('theme_light')) : '🌙 ' + (t('theme_dark')) }}
+    <!-- قائمة الموبايل المنسدلة — inline styles + ألوان ثابتة لضمان العمل على كل الأجهزة -->
+    <teleport to="body">
+      <div v-if="mobileMenuOpen" @click="mobileMenuOpen=false"
+           :style="{position:'fixed',inset:'0',background:'rgba(0,0,0,0.55)',zIndex:'9998',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}"></div>
+      <div v-if="mobileMenuOpen"
+           :style="{position:'fixed',top:'0',right:'0',bottom:'0',width:'84vw',maxWidth:'330px',background:theme==='light'?'#ffffff':'#0b1226',borderLeft:theme==='light'?'1px solid #e5e7eb':'1px solid #1e2a4a',padding:'70px 16px 24px',overflowY:'auto',zIndex:'9999',color:theme==='light'?'#0f172a':'#e6edf3',fontFamily:'inherit',boxShadow:'-8px 0 30px rgba(0,0,0,0.5)'}">
+        <button @click="mobileMenuOpen=false"
+                :style="{position:'absolute',top:'14px',left:'14px',background:'rgba(239,68,68,0.15)',border:'1px solid rgba(239,68,68,0.4)',color:'#ef4444',width:'40px',height:'40px',borderRadius:'10px',fontSize:'18px',cursor:'pointer',fontWeight:'700'}">✕</button>
+
+        <!-- الأقسام -->
+        <div :style="{fontSize:'12px',fontWeight:'700',color:'#10b981',padding:'6px 8px',letterSpacing:'1px'}">📂 الأقسام</div>
+        <a v-for="(item, i) in navItems" :key="i" :href="item.href" @click="mobileMenuOpen=false"
+           :style="{display:'block',padding:'13px 14px',marginBottom:'4px',background:theme==='light'?'#f3f4f6':'#1a2240',border:'1px solid '+(theme==='light'?'#e5e7eb':'#293459'),borderRadius:'10px',color:theme==='light'?'#0f172a':'#e6edf3',textDecoration:'none',fontSize:'14px',fontWeight:'600',minHeight:'44px'}">
+          {{ item.icon }} {{ item.label }}
+        </a>
+
+        <!-- الثيم -->
+        <div :style="{fontSize:'12px',fontWeight:'700',color:'#10b981',padding:'14px 8px 6px',letterSpacing:'1px'}">🎨 الثيم</div>
+        <button @click="toggleTheme()"
+                :style="{display:'block',width:'100%',padding:'13px 14px',marginBottom:'4px',background:theme==='light'?'#f3f4f6':'#1a2240',border:'1px solid '+(theme==='light'?'#e5e7eb':'#293459'),borderRadius:'10px',color:theme==='light'?'#0f172a':'#e6edf3',fontSize:'14px',fontWeight:'600',cursor:'pointer',textAlign:'right',fontFamily:'inherit',minHeight:'44px'}">
+          {{ theme === 'dark' ? '☀️ التحويل للفاتح' : '🌙 التحويل للداكن' }}
         </button>
-      </div>
-      <div class="mm-section">
-        <div class="mm-title">🌐 {{ t('language') }}</div>
+
+        <!-- اللغات -->
+        <div :style="{fontSize:'12px',fontWeight:'700',color:'#10b981',padding:'14px 8px 6px',letterSpacing:'1px'}">🌐 اللغة</div>
         <button v-for="(L, code) in LANGUAGES" :key="code"
                 @click="setLang(code); mobileMenuOpen=false"
-                class="mm-link mm-lang"
-                :class="{ active: lang === code }">
-          <img :src="L.flagImg" :alt="L.name" style="width:22px;height:15px;border-radius:3px;object-fit:cover;margin-left:8px" />
-          {{ L.name }}
+                :style="{display:'flex',alignItems:'center',gap:'10px',width:'100%',padding:'13px 14px',marginBottom:'4px',background:lang===code?(theme==='light'?'#ecfdf5':'#064e3b'):(theme==='light'?'#f3f4f6':'#1a2240'),border:'1px solid '+(lang===code?'#10b981':(theme==='light'?'#e5e7eb':'#293459')),borderRadius:'10px',color:theme==='light'?'#0f172a':'#e6edf3',fontSize:'14px',fontWeight:'600',cursor:'pointer',textAlign:'right',fontFamily:'inherit',minHeight:'44px'}">
+          <img :src="L.flagImg" :alt="L.name" :style="{width:'24px',height:'16px',borderRadius:'3px',objectFit:'cover',flexShrink:'0'}" />
+          <span>{{ L.name }}</span>
+        </button>
+
+        <button @click="scrollToLogin(); mobileMenuOpen=false"
+                :style="{display:'block',width:'100%',marginTop:'18px',padding:'14px',background:'linear-gradient(135deg,#10b981,#06b6d4)',color:'#ffffff',border:'none',borderRadius:'12px',fontSize:'15px',fontWeight:'800',cursor:'pointer',fontFamily:'inherit'}">
+          🚀 ابدأ الآن
         </button>
       </div>
-      <button class="mm-cta" @click="scrollToLogin(); mobileMenuOpen=false">{{ t('start_now') }}</button>
-    </div>
+    </teleport>
 
     <!-- ======= HERO ======= -->
     <section class="hero">
@@ -229,6 +239,12 @@ function toggleTheme() {
 
 // قائمة الموبايل
 const mobileMenuOpen = ref(false)
+const navItems = [
+  { href: '#stats', icon: '📊', label: 'الإحصائيات' },
+  { href: '#features', icon: '⭐', label: 'المميزات' },
+  { href: '#roles', icon: '👥', label: 'الأدوار' },
+  { href: '/about', icon: 'ℹ️', label: 'من نحن' },
+]
 
 // ── Matrix canvas ──
 const bgCanvas = ref(null)
@@ -800,62 +816,19 @@ nav, section, footer { position: relative; z-index: 1; }
 .landing.light .theme-toggle { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); }
 .landing.light .nav-lang-switcher { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
 
-/* ── Mobile menu (hamburger drawer) ── */
+/* ── Mobile hamburger button (drawer is inline-styled + teleported) ── */
 .nav-mobile-btn {
   display: none;
   background: rgba(0,255,159,0.1);
   border: 1px solid rgba(0,255,159,0.3);
   color: #00ff9f;
   border-radius: 10px;
-  width: 40px; height: 40px;
-  font-size: 20px; cursor: pointer;
+  width: 42px; height: 42px;
+  font-size: 22px; cursor: pointer;
   align-items: center; justify-content: center;
+  font-weight: 700;
 }
 .landing.light .nav-mobile-btn { background: rgba(5,150,105,0.1); border-color: rgba(5,150,105,0.3); color: #059669; }
-.mobile-menu-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px); z-index: 200;
-}
-.mobile-menu {
-  position: fixed; top: 0; right: 0; height: 100vh; width: 82vw; max-width: 320px;
-  background: rgba(2,10,32,0.98); border-left: 1px solid rgba(0,255,159,0.18);
-  z-index: 210; transform: translateX(100%); transition: transform 0.28s ease;
-  padding: 70px 18px 24px; overflow-y: auto;
-  box-shadow: -8px 0 30px rgba(0,0,0,0.6);
-}
-.mobile-menu.open { transform: translateX(0); }
-.landing.light .mobile-menu { background: rgba(255,255,255,0.98); border-left-color: rgba(0,0,0,0.08); }
-.mm-section { margin-bottom: 22px; }
-.mm-title {
-  font-size: 12px; font-weight: 700; color: #00ff9f;
-  text-transform: uppercase; letter-spacing: 1px;
-  padding: 0 6px; margin-bottom: 8px;
-}
-.landing.light .mm-title { color: #059669; }
-.mm-link {
-  display: flex; align-items: center; gap: 6px;
-  width: 100%; padding: 12px 14px; margin-bottom: 4px;
-  background: rgba(255,255,255,0.04); border: 1px solid transparent;
-  border-radius: 10px; color: #dff4ff;
-  font-size: 14px; text-decoration: none; cursor: pointer;
-  text-align: right; font-family: inherit;
-  transition: background 0.15s, border-color 0.15s;
-}
-.mm-link:hover, .mm-link.active {
-  background: rgba(0,255,159,0.12);
-  border-color: rgba(0,255,159,0.3);
-}
-.landing.light .mm-link { background: rgba(0,0,0,0.04); color: #1e293b; }
-.landing.light .mm-link:hover, .landing.light .mm-link.active {
-  background: rgba(5,150,105,0.1); border-color: rgba(5,150,105,0.3);
-}
-.mm-lang { font-weight: 600; }
-.mm-cta {
-  width: 100%; margin-top: 12px;
-  background: linear-gradient(135deg, #00ff9f, #00c8ff);
-  color: #000; border: none; border-radius: 12px;
-  padding: 14px; font-size: 15px; font-weight: 800; cursor: pointer;
-}
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {

@@ -50,23 +50,29 @@
       </div>
     </div>
 
-    <!-- Mobile dropdown (theme + languages, vertical) -->
-    <div v-if="menuOpen" class="mn-backdrop" @click="menuOpen=false"></div>
-    <div v-if="menuOpen" class="mn-dropdown">
-      <div class="mn-dd-title">🎨 الثيم</div>
+  </header>
+
+  <!-- Mobile dropdown — fixed position + inline styles لضمان العمل على كل الأجهزة (iOS/Android/HarmonyOS) -->
+  <teleport to="body">
+    <div v-if="menuOpen" @click="menuOpen=false"
+         :style="{position:'fixed',inset:'0',background:'rgba(0,0,0,0.55)',zIndex:'9998',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}"></div>
+    <div v-if="menuOpen"
+         :style="{position:'fixed',top:'64px',right:'12px',width:'250px',maxHeight:'75vh',overflowY:'auto',background:isLight?'#ffffff':'#1a1f3a',border:isLight?'1px solid #e5e7eb':'1px solid #334155',borderRadius:'14px',padding:'12px',boxShadow:'0 12px 40px rgba(0,0,0,0.55)',zIndex:'9999',color:isLight?'#0f172a':'#f1f5f9',fontFamily:'inherit'}">
+      <div :style="{fontSize:'12px',fontWeight:'700',color:isLight?'#059669':'#10b981',padding:'4px 8px 8px',letterSpacing:'0.5px'}">🎨 الثيم</div>
       <button v-for="th in themeList" :key="'th'+th.k"
-        :class="['mn-dd-item', { active: currentTheme === th.k }]"
-        @click="$emit('theme', th.k); menuOpen=false">
-        <span v-html="th.svg" style="display:inline-flex;margin-left:8px"></span>{{ th.label }}
+        @click="$emit('theme', th.k); menuOpen=false"
+        :style="{display:'flex',alignItems:'center',width:'100%',background:currentTheme===th.k?(isLight?'#ecfdf5':'#064e3b'):'transparent',border:currentTheme===th.k?(isLight?'1px solid #10b981':'1px solid #34d399'):'1px solid transparent',color:isLight?'#0f172a':'#f1f5f9',padding:'12px 12px',borderRadius:'10px',cursor:'pointer',fontSize:'14px',textAlign:'right',fontFamily:'inherit',marginBottom:'4px',minHeight:'44px',gap:'8px'}">
+        <span v-html="th.svg" style="display:inline-flex"></span>{{ th.labelAr }}
       </button>
-      <div class="mn-dd-title">🌐 اللغة</div>
+      <div :style="{fontSize:'12px',fontWeight:'700',color:isLight?'#059669':'#10b981',padding:'14px 8px 8px',letterSpacing:'0.5px'}">🌐 اللغة</div>
       <button v-for="(L, code) in LANGUAGES" :key="'lg'+code"
-        :class="['mn-dd-item', { active: currentLang === code }]"
-        @click="$emit('lang', code); menuOpen=false">
-        <img :src="L.flagImg" :alt="L.name" style="width:22px;height:15px;border-radius:3px;margin-left:8px" />{{ L.name }}
+        @click="$emit('lang', code); menuOpen=false"
+        :style="{display:'flex',alignItems:'center',width:'100%',background:currentLang===code?(isLight?'#ecfdf5':'#064e3b'):'transparent',border:currentLang===code?(isLight?'1px solid #10b981':'1px solid #34d399'):'1px solid transparent',color:isLight?'#0f172a':'#f1f5f9',padding:'12px 12px',borderRadius:'10px',cursor:'pointer',fontSize:'14px',textAlign:'right',fontFamily:'inherit',marginBottom:'4px',minHeight:'44px',gap:'10px'}">
+        <img :src="L.flagImg" :alt="L.name" :style="{width:'24px',height:'16px',borderRadius:'3px',objectFit:'cover',flexShrink:'0'}" />
+        <span>{{ L.name }}</span>
       </button>
     </div>
-  </header>
+  </teleport>
 </template>
 
 <script setup>
@@ -85,11 +91,13 @@ const props = defineProps({
 
 defineEmits(['theme', 'lang'])
 
+const isLight = computed(() => props.currentTheme === 'light')
+
 const themeList = [
-  { k: 'dark',    svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>`, label: 'Dark' },
-  { k: 'light',   svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><circle cx="10" cy="10" r="4"/><path d="M10 1v2m0 14v2m-7-9H1m18 0h-2m-2.05-5.95l-1.41 1.41m-7.08 7.08l-1.41 1.41m0-9.9l1.41 1.41m7.08 7.08l1.41 1.41"/></svg>`, label: 'Light' },
-  { k: 'library', svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>`, label: 'Library' },
-  { k: 'neon',    svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11.3 1.05a1 1 0 00-1.1.45L5.7 9H2a1 1 0 00-.8 1.6l7.5 10a1 1 0 001.8-.6L9.7 13H18a1 1 0 00.8-1.6l-7.5-10.35z"/></svg>`, label: 'Neon' },
+  { k: 'dark',    labelAr: 'داكن',    svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>` },
+  { k: 'light',   labelAr: 'فاتح',    svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><circle cx="10" cy="10" r="4"/><path d="M10 1v2m0 14v2m-7-9H1m18 0h-2m-2.05-5.95l-1.41 1.41m-7.08 7.08l-1.41 1.41m0-9.9l1.41 1.41m7.08 7.08l1.41 1.41"/></svg>` },
+  { k: 'library', labelAr: 'مكتبة',   svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M2 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm5-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1H7zm5 0a1 1 0 00-.8.4l4 12a1 1 0 001.2.6l1.9-.6a1 1 0 00.6-1.2l-4-12a1 1 0 00-1.2-.6L12.2 3z"/></svg>` },
+  { k: 'neon',    labelAr: 'نيون',    svg: `<svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M11.3 1.05a1 1 0 00-1.1.45L5.7 9H2a1 1 0 00-.8 1.6l7.5 10a1 1 0 001.8-.6L9.7 13H18a1 1 0 00.8-1.6l-7.5-10.35z"/></svg>` },
 ]
 </script>
 
@@ -167,46 +175,13 @@ const themeList = [
 }
 .mn-name { font-size: 13px; color: var(--text2); font-weight: 500; white-space: nowrap; }
 
-/* Mobile menu button (hidden on desktop) */
-.mn-mobile-btn { display: none; color: var(--accent, #4f9eff); }
-.morix-nav { position: relative; }
-.mn-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 49; }
-.mn-dropdown {
-  position: absolute; top: calc(100% + 4px); left: 8px;
-  width: 240px; max-height: 70vh; overflow-y: auto;
-  background: var(--card, #0b0e1f);
-  border: 1px solid var(--border, #1a1f3a);
-  border-radius: 14px; padding: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-  z-index: 60;
-}
-.mn-dd-title {
-  font-size: 11px; font-weight: 700;
-  color: var(--t2, #94a3b8);
-  text-transform: uppercase; letter-spacing: 1px;
-  padding: 8px 8px 6px;
-}
-.mn-dd-item {
-  display: flex; align-items: center; width: 100%;
-  background: transparent; border: 1px solid transparent;
-  color: var(--text, #fff); padding: 10px 10px;
-  border-radius: 8px; cursor: pointer;
-  font-size: 13px; text-align: right;
-  font-family: inherit; margin-bottom: 2px;
-}
-.mn-dd-item:hover {
-  background: var(--nav-hover-bg, rgba(99,102,241,0.08));
-}
-.mn-dd-item.active {
-  background: var(--nav-active-bg, rgba(99,102,241,0.15));
-  border-color: var(--accent, #4f9eff);
-  color: var(--accent, #4f9eff);
-}
+/* Mobile menu button — hidden on desktop, shown on mobile */
+.mn-mobile-btn { display: none; color: #10b981; min-width: 36px; min-height: 36px; }
 
 /* Mobile breakpoint */
 @media (max-width: 768px) {
-  .mn-name, .mn-themes, .mn-langs, .mn-desk { display: none; }
-  .mn-mobile-btn { display: flex; }
+  .mn-name, .mn-themes, .mn-langs, .mn-desk { display: none !important; }
+  .mn-mobile-btn { display: flex !important; }
   .mn-title { font-size: 14px; }
   .morix-nav { padding: 8px 14px; }
 }
