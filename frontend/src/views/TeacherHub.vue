@@ -1483,5 +1483,5 @@ select.inp{cursor:pointer;}
 .ppt-title{color:var(--text);font-size:16px;font-weight:700;margin-bottom:10px;}
 .ppt-points{padding-right:16px;margin:0 0 8px;color:var(--t2);font-size:13px;line-height:2;}
 .ppt-notes{color:var(--t2);font-size:12px;padding:8px;background:rgba(99,102,241,.08);border-radius:8px;border-right:3px solid var(--accent);}
-@media(max-width:768px){.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}.settings-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.sidebar{position:fixed;top:0;right:0;height:100vh;width:80vw;max-width:300px;transform:translateX(100%);transition:transform .25s ease;z-index:100;box-shadow:-4px 0 24px rgba(0,0,0,.5);overflow-y:auto}.sidebar.open{transform:translateX(0)}.stats-grid{grid-template-columns:1fr 1fr}.settings-grid{grid-template-columns:1fr}}
 </style>

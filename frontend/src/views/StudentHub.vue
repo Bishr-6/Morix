@@ -1681,5 +1681,5 @@ textarea.inp { resize:vertical; }
 .btn-s.danger { background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#f87171; }
 .empty { text-align:center;padding:48px;color:var(--text2);font-size:15px; }
 code { background:var(--bg3);border-radius:4px;padding:2px 6px;font-size:13px; }
-@media(max-width:768px){.sidebar{display:none}.opts-grid,.match-grid,.stats-grid,.settings-grid{grid-template-columns:1fr}.conv-panel{display:none}}
+@media(max-width:768px){.sidebar{position:fixed;top:0;right:0;height:100vh;width:80vw;max-width:300px;transform:translateX(100%);transition:transform .25s ease;z-index:100;box-shadow:-4px 0 24px rgba(0,0,0,.5);overflow-y:auto}.sidebar.open{transform:translateX(0)}.opts-grid,.match-grid,.stats-grid,.settings-grid{grid-template-columns:1fr}.conv-panel{display:none}}
 </style>
