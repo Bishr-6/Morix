@@ -15,6 +15,21 @@ def _require_admin(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
+@router.get("/live")
+async def admin_live(current_user: dict = Depends(_require_admin)):
+    """كل البثوث المباشرة النشطة (للإشراف والانضمام)."""
+    from app.services import live
+    return live.list_all()
+
+
+@router.post("/live/end")
+async def admin_end_live(body: dict, current_user: dict = Depends(_require_admin)):
+    """المشرف الإداري يقدر يُنهي أي بث."""
+    from app.services import live
+    live.end(session_id=(body or {}).get("id"))
+    return {"message": "تم إنهاء البث"}
+
+
 # ============================================
 # نظرة عامة
 # ============================================

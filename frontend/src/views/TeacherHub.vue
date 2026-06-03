@@ -1,6 +1,20 @@
 <template>
   <div class="hub hub-teacher">
     <MatrixBackground />
+
+    <!-- 📡 البث المباشر -->
+    <LiveClass v-if="liveOverlay" :room="liveRoom" :name="firstName" :title="liveTitle" @close="endLiveSession" />
+    <button v-if="!liveOverlay" @click="openLiveStart" style="position:fixed;bottom:18px;left:18px;z-index:9000;background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff;border:none;padding:12px 20px;border-radius:30px;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(239,68,68,.5);font-size:14px">📡 بث مباشر</button>
+    <div v-if="liveStartOpen" @click.self="liveStartOpen=false" style="position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px">
+      <div style="background:var(--card,#0b0e1f);border:1px solid var(--border,#1a1f3a);border-radius:16px;padding:24px;width:100%;max-width:380px;color:var(--text,#fff)">
+        <h3 style="margin:0 0 14px">📡 بدء حصة مباشرة</h3>
+        <select v-model="livePickIdx" class="memorix-input" style="margin-bottom:12px" dir="rtl">
+          <option v-for="(c,i) in liveClasses" :key="i" :value="i">{{ c.grade }} {{ c.section }} — {{ c.subject }}</option>
+        </select>
+        <button @click="doStartLive" :disabled="liveBusy||!liveClasses.length" class="btn-primary" style="width:100%">{{ liveBusy ? '...' : 'ابدأ الحصة الآن' }}</button>
+        <p v-if="!liveClasses.length" style="color:#f59e0b;font-size:13px;margin-top:10px">لا توجد صفوف مكلّف بها — تأكد من تكليفك من المدير</p>
+      </div>
+    </div>
     <!-- Mobile menu -->
     <button class="mobile-toggle" @click="mobileOpen = !mobileOpen" aria-label="Menu">{{ mobileOpen ? '✕' : '☰' }}</button>
     <div :class="['mobile-overlay', { open: mobileOpen }]" @click="mobileOpen = false"></div>
@@ -751,10 +765,41 @@ import { useTheme } from '../composables/useTheme.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 import MatrixBackground from '../components/MatrixBackground.vue'
 import NavBar from '../components/NavBar.vue'
+import LiveClass from '../components/LiveClass.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 const firstName = ref(auth.user?.full_name?.split(' ')?.[0] || 'معلم')
+
+// 📡 البث المباشر
+const liveOverlay = ref(false)
+const liveRoom = ref('')
+const liveTitle = ref('')
+const liveStartOpen = ref(false)
+const liveClasses = ref([])
+const livePickIdx = ref(0)
+const liveBusy = ref(false)
+async function openLiveStart() {
+  try { const r = await teacherAPI.getMyClasses(); liveClasses.value = r.data || [] } catch {}
+  livePickIdx.value = 0
+  liveStartOpen.value = true
+}
+async function doStartLive() {
+  const c = liveClasses.value[livePickIdx.value]
+  if (!c) return
+  liveBusy.value = true
+  try {
+    const r = await teacherAPI.startLive({ grade: c.grade, section: c.section, subject: c.subject })
+    liveRoom.value = r.data.room
+    liveTitle.value = 'حصة ' + (c.subject || '') + ' — ' + (c.grade || '') + ' ' + (c.section || '')
+    liveStartOpen.value = false
+    liveOverlay.value = true
+  } catch (e) { alert('تعذّر بدء البث') } finally { liveBusy.value = false }
+}
+async function endLiveSession() {
+  liveOverlay.value = false
+  try { await teacherAPI.endLive() } catch {}
+}
 
 // Settings
 const tSettings = ref({ theme:'dark', language:'ar', notifications_enabled:true, avatar_url:'', email:'', full_name:'' })

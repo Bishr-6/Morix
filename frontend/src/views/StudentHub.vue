@@ -2,6 +2,13 @@
   <div class="hub hub-student">
     <MatrixBackground />
 
+    <!-- 📡 البث المباشر -->
+    <LiveClass v-if="liveOverlay" :room="liveRoom" :name="firstName" :title="liveTitle" @close="liveOverlay=false" />
+    <div v-if="activeLive && !liveOverlay" @click="joinLive"
+         style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:9000;background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff;padding:12px 22px;border-radius:30px;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(239,68,68,.5);font-size:14px;white-space:nowrap">
+      📡 حصة مباشرة الآن — اضغط للانضمام
+    </div>
+
     <!-- Mobile menu button -->
     <button class="mobile-toggle" @click="mobileOpen = !mobileOpen" aria-label="Menu">
       {{ mobileOpen ? '✕' : '☰' }}
@@ -777,6 +784,7 @@ import NavBar from '../components/NavBar.vue'
 import { useTheme } from '../composables/useTheme.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 import MatrixBackground from '../components/MatrixBackground.vue'
+import LiveClass from '../components/LiveClass.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -808,6 +816,22 @@ const currentSectionLabel = computed(() => sections.value.find(s=>s.id===current
 
 const profile = ref({ name:'', learning_style:null, grade:'', streak_count:0, total_stars:0 })
 const firstName = computed(() => (auth.user?.full_name||profile.value.name||'طالب').split(' ')[0])
+
+// 📡 البث المباشر
+const liveOverlay = ref(false)
+const liveRoom = ref('')
+const liveTitle = ref('')
+const activeLive = ref(null)
+let liveTimer = null
+async function loadLive() {
+  try { const r = await studentAPI.getLive(); activeLive.value = (r.data && r.data[0]) || null } catch {}
+}
+function joinLive() {
+  if (!activeLive.value) return
+  liveRoom.value = activeLive.value.room
+  liveTitle.value = activeLive.value.subject || ('حصة ' + (activeLive.value.host_name || ''))
+  liveOverlay.value = true
+}
 
 // Chat
 const needsDiagnostic = ref(false)
@@ -941,6 +965,8 @@ onMounted(async () => {
   await loadUserSettings()
   loadMoodHistory()
   loadTutorPersonalities()
+  loadLive()
+  liveTimer = setInterval(loadLive, 25000)
 })
 
 async function loadProfile() {

@@ -46,6 +46,34 @@ async def get_my_classes(current_user: dict = Depends(_require_teacher), db=Depe
 
 
 # ============================================
+# 📡 البث المباشر (Jitsi)
+# ============================================
+@router.post("/live/start")
+async def start_live(body: dict, current_user: dict = Depends(_require_teacher), db=Depends(get_db)):
+    """المعلم يبدأ حصة بث مباشر لصف/شعبة."""
+    from app.services import live
+    grade = (body.get("grade") or "").strip()
+    section = (body.get("section") or "").strip()
+    subject = (body.get("subject") or "").strip()
+    if not _assignment_allows(_get_assignments(db, current_user["id"]), grade, section):
+        raise HTTPException(status_code=403, detail="غير مسموح: أنت غير مكلّف بهذا الصف/الشعبة")
+    return live.start(current_user["id"], current_user.get("full_name", "المعلم"), grade, section, subject)
+
+
+@router.post("/live/end")
+async def end_live(current_user: dict = Depends(_require_teacher)):
+    from app.services import live
+    live.end(host_id=current_user["id"])
+    return {"message": "تم إنهاء البث"}
+
+
+@router.get("/live/mine")
+async def my_live(current_user: dict = Depends(_require_teacher)):
+    from app.services import live
+    return [s for s in live.list_all() if s.get("host_id") == current_user["id"]]
+
+
+# ============================================
 # الواجبات
 # ============================================
 @router.get("/homework")

@@ -9,6 +9,13 @@ from datetime import date, datetime, timezone
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/student", tags=["الطالب"])
 
+
+@router.get("/live")
+async def student_live(current_user: dict = Depends(get_current_user)):
+    """البثوث المباشرة النشطة لصف/شعبة الطالب (للإشعار + الانضمام)."""
+    from app.services import live
+    return live.for_student(current_user.get("grade"), current_user.get("section"))
+
 DIAGNOSTIC_QUESTIONS = [
     {
         "id": 1,

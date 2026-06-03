@@ -142,6 +142,8 @@ export const studentAPI = {
 
   // 🎬 توليد سكريبت فيديو
   generateVideo: (data) => api.post('/student/generate-video', data),
+  // 📡 البث المباشر
+  getLive: () => api.get('/student/live'),
 }
 
 // ============================================
@@ -233,6 +235,10 @@ export const teacherAPI = {
   pedagogicalCoach: (challenge) => api.post('/teacher/pedagogical-coach', { challenge }),
   researchDigest: () => api.get('/teacher/research-digest'),
   promptLibrary: () => api.get('/teacher/prompt-library'),
+  // 📡 البث المباشر
+  startLive: (data) => api.post('/teacher/live/start', data),
+  endLive: () => api.post('/teacher/live/end'),
+  myLive: () => api.get('/teacher/live/mine'),
 }
 
 // ============================================
@@ -251,6 +257,9 @@ export const adminAPI = {
   makeAnnouncement: (data) => api.post('/admin/announcement', data),
   listAnnouncements: () => api.get('/admin/announcements'),
   incidentReport: (data) => api.post('/admin/incident-report', data),
+  // 📡 البث المباشر
+  getLive: () => api.get('/admin/live'),
+  endLive: (id) => api.post('/admin/live/end', { id }),
 }
 
 // ============================================
