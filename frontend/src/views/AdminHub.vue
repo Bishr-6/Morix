@@ -1,6 +1,13 @@
 <template>
   <div class="hub hub-admin">
     <MatrixBackground />
+
+    <!-- 📡 البث المباشر -->
+    <LiveClass v-if="liveOverlay" :room="liveRoom" :name="firstName" :title="liveTitle" @close="liveOverlay=false" />
+    <div v-if="activeLive && !liveOverlay" @click="joinLive"
+         style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:9000;background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff;padding:12px 22px;border-radius:30px;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(239,68,68,.5);font-size:14px;white-space:nowrap">
+      📡 بث مباشر الآن من {{ activeLive.host_name }} — انضم للإشراف
+    </div>
     <!-- Mobile menu -->
     <button class="mobile-toggle" @click="mobileOpen = !mobileOpen" aria-label="Menu">{{ mobileOpen ? '✕' : '☰' }}</button>
     <div :class="['mobile-overlay', { open: mobileOpen }]" @click="mobileOpen = false"></div>
@@ -259,10 +266,27 @@ import { useTheme } from '../composables/useTheme.js'
 import { useI18n, LANGUAGES } from '../composables/useI18n.js'
 import MatrixBackground from '../components/MatrixBackground.vue'
 import NavBar from '../components/NavBar.vue'
+import LiveClass from '../components/LiveClass.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 const firstName = computed(() => (auth.user?.full_name || 'مشرف').split(' ')[0])
+
+// 📡 البث المباشر
+const liveOverlay = ref(false)
+const liveRoom = ref('')
+const liveTitle = ref('')
+const activeLive = ref(null)
+let liveTimer = null
+async function loadLive() {
+  try { const r = await adminAPI.getLive(); activeLive.value = (r.data && r.data[0]) || null } catch {}
+}
+function joinLive() {
+  if (!activeLive.value) return
+  liveRoom.value = activeLive.value.room
+  liveTitle.value = (activeLive.value.subject || 'بث') + ' — ' + (activeLive.value.host_name || '')
+  liveOverlay.value = true
+}
 
 // Settings
 const settings = ref({ theme:'dark', language:'ar', notifications_enabled:true, avatar_url:'', email:'', full_name:'' })
@@ -334,6 +358,8 @@ const settingsMsg = ref('')
 
 onMounted(async () => {
   await Promise.all([loadStats(), loadStudents(), loadSettings()])
+  loadLive()
+  liveTimer = setInterval(loadLive, 25000)
 })
 
 async function loadStats() {
