@@ -534,5 +534,5 @@ async function genIncident() {
 .t-btn.active{background:rgba(99,102,241,.2);border-color:var(--accent);color:var(--accent);}
 .toggle-lbl{display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--t2);font-size:14px;}
 .toggle-lbl input{accent-color:var(--accent);width:18px;height:18px;}
-@media(max-width:768px){.sidebar{position:fixed;top:0;right:0;height:100vh;width:80vw;max-width:300px;transform:translateX(100%);transition:transform .25s ease;z-index:100;box-shadow:-4px 0 24px rgba(0,0,0,.5);overflow-y:auto}.sidebar.open{transform:translateX(0)}.stats-grid{grid-template-columns:1fr 1fr}.settings-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.sidebar{position:fixed;top:0;right:0;height:100vh;width:80vw;max-width:300px;transform:translateX(100%);transition:transform .25s ease;z-index:1001;box-shadow:-4px 0 24px rgba(0,0,0,.5);overflow-y:auto;background:#0b1226 !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}.sidebar.open{transform:translateX(0)}.sidebar .nav-item,.sidebar .nav-icon{color:#cbd5e1 !important}.sidebar .nav-item.active{color:#5b9dff !important;background:rgba(91,157,255,.15) !important}.sidebar .nav-label,.sidebar .brand-name{color:#e6edf3 !important}.stats-grid{grid-template-columns:1fr 1fr}.settings-grid{grid-template-columns:1fr}}
 </style>
